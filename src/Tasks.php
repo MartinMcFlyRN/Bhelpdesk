@@ -18,8 +18,10 @@ final class Tasks
 {
     private const SELECT = '
         SELECT k.*, d.name AS department_name, o.name AS operator_name,
-               c.name AS created_by_name, x.name AS done_by_name
+               c.name AS created_by_name, x.name AS done_by_name,
+               t.number AS ticket_number, t.subject AS ticket_subject
           FROM tasks k
+          LEFT JOIN tickets t     ON t.id = k.ticket_id
           LEFT JOIN departments d ON d.id = k.department_id
           LEFT JOIN operators o   ON o.id = k.operator_id
           LEFT JOIN operators c   ON c.id = k.created_by
@@ -171,12 +173,27 @@ final class Tasks
         return $v['due_date'] . ' ' . ($v['due_time'] !== '' ? $v['due_time'] : '00:00') . ':00';
     }
 
-    public static function create(array $v, int $operatorId): int
+    /** $ticket: the ticket the task is created from (its history records it) */
+    public static function create(array $v, array $op, ?array $ticket = null): int
     {
-        return Db::insert(
-            'INSERT INTO tasks (title, description, due_at, has_time, target, department_id, operator_id, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [$v['title'], $v['description'] !== '' ? $v['description'] : null, self::dueAt($v), (int) ($v['due_time'] !== ''), $v['target'], $v['department_id'], $v['operator_id'], $operatorId]
+        $id = Db::insert(
+            'INSERT INTO tasks (title, description, due_at, has_time, target, department_id, operator_id, ticket_id, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [$v['title'], $v['description'] !== '' ? $v['description'] : null, self::dueAt($v), (int) ($v['due_time'] !== ''), $v['target'], $v['department_id'], $v['operator_id'], $ticket ? (int) $ticket['id'] : null, (int) $op['id']]
         );
+        if ($ticket) {
+            $task = self::find($id);
+            Tickets::addMessage((int) $ticket['id'], 'system', (int) $op['id'], json_encode([
+                'event' => 'task_added', 'by' => $op['name'], 'task' => $v['title'],
+                'to' => self::assigneeLabel($task), 'due' => self::dueLabel($task),
+            ], JSON_UNESCAPED_UNICODE), true, null);
+        }
+        return $id;
+    }
+
+    /** Tasks linked to a ticket (sidebar of the ticket) */
+    public static function forTicket(int $ticketId): array
+    {
+        return Db::all(self::SELECT . ' WHERE k.ticket_id = ? ORDER BY k.done_at IS NOT NULL, k.due_at, k.id', [$ticketId]);
     }
 
     public static function update(int $id, array $v): void
@@ -203,9 +220,12 @@ final class Tasks
         ];
     }
 
-    public static function markDone(int $id, int $operatorId): void
+    public static function markDone(array $task, array $op): void
     {
-        Db::exec('UPDATE tasks SET done_at = NOW(), done_by = ? WHERE id = ? AND done_at IS NULL', [$operatorId, $id]);
+        $n = Db::exec('UPDATE tasks SET done_at = NOW(), done_by = ? WHERE id = ? AND done_at IS NULL', [(int) $op['id'], (int) $task['id']]);
+        if ($n && $task['ticket_id'] !== null) {
+            Tickets::addMessage((int) $task['ticket_id'], 'system', (int) $op['id'], json_encode(['event' => 'task_done', 'by' => $op['name'], 'task' => $task['title']], JSON_UNESCAPED_UNICODE), true, null);
+        }
     }
 
     public static function reopen(int $id): void

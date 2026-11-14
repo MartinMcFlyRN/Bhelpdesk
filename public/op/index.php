@@ -307,6 +307,7 @@ $r->get('/ticket/{id}', static function (array $p) use ($loadTicket): void {
         'messages'     => $messages,
         'attachments'  => Attachments::forMessages(array_column($messages, 'id')),
         'participants' => Tickets::participants((int) $t['id']),
+        'tasks'        => Tasks::forTicket((int) $t['id']),
         // messages received by email whose source can be opened
         'sources'      => array_flip(array_map('intval', Db::column(
             'SELECT mm.ticket_message_id FROM mail_messages mm JOIN ticket_messages tm ON tm.id = mm.ticket_message_id WHERE tm.ticket_id = ? AND mm.raw_path IS NOT NULL',
@@ -549,8 +550,15 @@ $loadTask = static function (array $p): array {
     return $t;
 };
 
-$taskForm = static function (array $op, ?array $task, array $values, array $errors): void {
+// ticket a new task is created from (?ticket=ID / hidden field), only if the operator can see it
+$taskTicket = static function (array $op, mixed $id): ?array {
+    $t = (int) $id > 0 ? Tickets::find((int) $id) : null;
+    return $t && Tickets::canSee($t, $op) ? $t : null;
+};
+
+$taskForm = static function (array $op, ?array $task, array $values, array $errors, ?array $ticket = null): void {
     View::render('op', 'tasks/form', [
+        'ticket'      => $ticket,
         'title'       => __($task ? 'tasks.edit_title' : 'tasks.new_title'),
         'op'          => $op,
         'task'        => $task,
@@ -585,22 +593,24 @@ $taskList = static function (bool $mine): void {
 $r->get('/tasks', static fn () => $taskList(false));
 $r->get('/tasks/mine', static fn () => $taskList(true));
 
-$r->get('/tasks/new', static function () use ($taskForm): void {
+$r->get('/tasks/new', static function () use ($taskForm, $taskTicket): void {
     $op = Auth::require();
-    $taskForm($op, null, ['title' => '', 'description' => '', 'due_date' => date('Y-m-d'), 'due_time' => '', 'assign' => 'o:' . (int) $op['id']], []);
+    $taskForm($op, null, ['title' => '', 'description' => '', 'due_date' => date('Y-m-d'), 'due_time' => '', 'assign' => 'o:' . (int) $op['id']], [], $taskTicket($op, $_GET['ticket'] ?? 0));
 });
 
-$r->post('/tasks', static function () use ($taskForm): void {
+$r->post('/tasks', static function () use ($taskForm, $taskTicket): void {
     $op = Auth::require();
+    $ticket = $taskTicket($op, $_POST['ticket_id'] ?? 0);
     $res = Tasks::validate($_POST);
     if ($res['errors']) {
         http_response_code(422);
-        $taskForm($op, null, $res['values'], $res['errors']);
+        $taskForm($op, null, $res['values'], $res['errors'], $ticket);
         return;
     }
-    $id = Tasks::create($res['values'], (int) $op['id']);
+    $id = Tasks::create($res['values'], $op, $ticket);
     flash('success', 'tasks.created');
-    redirect('/op/tasks/' . $id);
+    // created from a ticket: back to the ticket
+    redirect($ticket ? '/op/ticket/' . (int) $ticket['id'] : '/op/tasks/' . $id);
 });
 
 $r->get('/tasks/{id}', static function (array $p) use ($loadTask): void {
@@ -650,7 +660,7 @@ $r->post('/tasks/{id}/done', static function (array $p) use ($loadTask): void {
     $op = Auth::require();
     $t = $loadTask($p);
     if (Tasks::canComplete($t, $op)) {
-        Tasks::markDone((int) $t['id'], (int) $op['id']);
+        Tasks::markDone($t, $op);
         flash('success', 'tasks.done_ok', ['title' => $t['title']]);
     }
     redirect('/op/tasks/' . $t['id']);

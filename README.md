@@ -124,6 +124,7 @@ mariadb bhelpdesk < sql/migrations/014_operator_alerts.sql
 mariadb bhelpdesk < sql/migrations/015_email_templates.sql
 mariadb bhelpdesk < sql/migrations/016_mail_source.sql
 mariadb bhelpdesk < sql/migrations/017_tasks.sql
+mariadb bhelpdesk < sql/migrations/018_task_ticket.sql
 ```
 
 ## Operators area
@@ -209,6 +210,7 @@ Nobody is alerted for what they did themselves. Alerts contain the ticket data, 
 - From that moment it appears in the **box under the menu**, on every page, for its operators (overdue tasks in red), with a counter next to *Task*. Clicking it opens the detail with **Done**: the task leaves the box of everybody and goes to the list as done (who and when). It can be reopened.
 - **All tasks** shows every task to every operator, with assignee and state (scheduled, to do, overdue, done); **My tasks** only those assigned to me, to my departments or to everyone.
 - The assignees and the administrators mark tasks done; the creator and the administrators edit or delete them.
+- **Tasks of a ticket**: the *Tasks* box in the ticket sidebar lists the tasks linked to it and *+ New task* creates one already linked (back to the ticket after saving). The task shows the ticket (detail, list, box under the menu) and the ticket history records when a task is created and done. Merging tickets moves their tasks to the kept ticket; deleting a ticket keeps its tasks without the link.
 
 ## Bulk actions in the ticket list
 

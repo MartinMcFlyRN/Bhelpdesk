@@ -1,5 +1,5 @@
-<?php $isNew = $task === null; ?>
-<p><a href="<?= $isNew ? '/op/tasks' : '/op/tasks/' . (int) $task['id'] ?>">← <?= t('tasks.back') ?></a></p>
+<?php $isNew = $task === null; $ticket = $ticket ?? null; ?>
+<p><a href="<?= $ticket ? '/op/ticket/' . (int) $ticket['id'] : ($isNew ? '/op/tasks' : '/op/tasks/' . (int) $task['id']) ?>">← <?= t($ticket ? 'tasks.back_ticket' : 'tasks.back') ?></a></p>
 <h1><?= t($isNew ? 'tasks.new_title' : 'tasks.edit_title') ?></h1>
 
 <?php if ($errors): ?>
@@ -9,6 +9,12 @@
 <form method="post" action="<?= $isNew ? '/op/tasks' : '/op/tasks/' . (int) $task['id'] ?>" class="form card task-form">
     <?= \Bhelpdesk\Csrf::field() ?>
     <input type="hidden" name="format" value="text">
+    <?php if ($ticket): ?>
+        <input type="hidden" name="ticket_id" value="<?= (int) $ticket['id'] ?>">
+        <p class="task-ticket-ref">🎫 <?= t('tasks.linked_ticket') ?> <a href="/op/ticket/<?= (int) $ticket['id'] ?>">#<?= e($ticket['number']) ?> · <?= e($ticket['subject']) ?></a></p>
+    <?php elseif (!$isNew && !empty($task['ticket_number'])): ?>
+        <p class="task-ticket-ref">🎫 <?= t('tasks.linked_ticket') ?> <a href="/op/ticket/<?= (int) $task['ticket_id'] ?>">#<?= e($task['ticket_number']) ?> · <?= e((string) $task['ticket_subject']) ?></a></p>
+    <?php endif; ?>
     <label><?= t('tasks.f_title') ?>
         <input type="text" name="title" required maxlength="200" value="<?= e($values['title']) ?>" autofocus>
     </label>

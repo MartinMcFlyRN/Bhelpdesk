@@ -78,7 +78,7 @@ $todoTasks = !empty($op) ? \Bhelpdesk\Tasks::activeFor($op) : [];
             <?php foreach (array_slice($todoTasks, 0, 6) as $k): $kState = \Bhelpdesk\Tasks::state($k); ?>
                 <li class="task-<?= e($kState) ?>">
                     <a href="/op/tasks/<?= (int) $k['id'] ?>"><?= e($k['title']) ?></a>
-                    <small><?= e(\Bhelpdesk\Tasks::assigneeLabel($k)) ?> · <?= e(\Bhelpdesk\Tasks::dueLabel($k)) ?><?= $kState === 'late' ? ' · <b>' . t('tasks.state_late') . '</b>' : '' ?></small>
+                    <small><?= !empty($k['ticket_number']) ? '🎫 #' . e($k['ticket_number']) . ' · ' : '' ?><?= e(\Bhelpdesk\Tasks::assigneeLabel($k)) ?> · <?= e(\Bhelpdesk\Tasks::dueLabel($k)) ?><?= $kState === 'late' ? ' · <b>' . t('tasks.state_late') . '</b>' : '' ?></small>
                 </li>
             <?php endforeach; ?>
             <?php if (count($todoTasks) > 6): ?><li class="more"><a href="/op/tasks/mine?state=todo"><?= t('tasks.banner_more', ['n' => count($todoTasks) - 6]) ?></a></li><?php endif; ?>

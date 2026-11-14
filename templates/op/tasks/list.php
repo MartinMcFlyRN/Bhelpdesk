@@ -28,7 +28,8 @@ $qs = static fn (array $over): string => $base . '?' . http_build_query(array_fi
     <?php endif; ?>
     <?php foreach ($rows as $k): $state = Tasks::state($k); ?>
         <tr class="task-row task-<?= e($state) ?>">
-            <td><a href="/op/tasks/<?= (int) $k['id'] ?>"><strong><?= e($k['title']) ?></strong></a></td>
+            <td><a href="/op/tasks/<?= (int) $k['id'] ?>"><strong><?= e($k['title']) ?></strong></a>
+                <?php if (!empty($k['ticket_number'])): ?><br><small>🎫 <a href="/op/ticket/<?= (int) $k['ticket_id'] ?>">#<?= e($k['ticket_number']) ?></a> <span class="muted"><?= e(mb_strimwidth((string) $k['ticket_subject'], 0, 60, '…')) ?></span></small><?php endif; ?></td>
             <td class="nowrap"><?= e(Tasks::dueLabel($k)) ?></td>
             <td><?= e(Tasks::assigneeLabel($k)) ?></td>
             <td><span class="task-state task-state-<?= e($state) ?>"><?= t('tasks.state_' . $state) ?></span>

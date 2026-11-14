@@ -287,6 +287,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     target         ENUM('all','department','operator') NOT NULL DEFAULT 'all',
     department_id  INT UNSIGNED NULL,
     operator_id    INT UNSIGNED NULL,
+    ticket_id      INT UNSIGNED NULL,                    -- task created from a ticket
     created_by     INT UNSIGNED NULL,
     created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -295,6 +296,8 @@ CREATE TABLE IF NOT EXISTS tasks (
     KEY ix_tasks_active (done_at, due_at),
     KEY ix_tasks_operator (operator_id),
     KEY ix_tasks_department (department_id),
+    KEY ix_tasks_ticket (ticket_id),
+    CONSTRAINT fk_tasks_ticket     FOREIGN KEY (ticket_id)     REFERENCES tickets(id)     ON DELETE SET NULL,
     CONSTRAINT fk_tasks_department FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
     CONSTRAINT fk_tasks_operator   FOREIGN KEY (operator_id)   REFERENCES operators(id)   ON DELETE CASCADE,
     CONSTRAINT fk_tasks_created_by FOREIGN KEY (created_by)    REFERENCES operators(id)   ON DELETE SET NULL,

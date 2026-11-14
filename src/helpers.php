@@ -109,6 +109,10 @@ function system_message(string $body): string
     switch ($ev['event']) {
         case 'reopened':
             return __('log.reopened');
+        case 'task_added':
+            return __('log.task_added', ['who' => (string) ($ev['by'] ?? '?'), 'task' => (string) ($ev['task'] ?? ''), 'to' => (string) ($ev['to'] ?? ''), 'due' => (string) ($ev['due'] ?? '')]);
+        case 'task_done':
+            return __('log.task_done', ['who' => (string) ($ev['by'] ?? '?'), 'task' => (string) ($ev['task'] ?? '')]);
         case 'merged':
             return __('log.merged', ['who' => (string) ($ev['by'] ?? '?'), 'tickets' => implode(', ', (array) ($ev['tickets'] ?? []))]);
         case 'email_files_skipped':

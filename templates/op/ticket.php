@@ -94,6 +94,25 @@
 
     <aside class="side-stack">
         <?php require BHD_ROOT . '/templates/op/ticket_customers.php'; ?>
+        <div class="card ticket-tasks">
+            <div class="row-between">
+                <h2><?= t('tasks.ticket_box') ?><?php if ($tasks): ?> <span class="count"><?= count($tasks) ?></span><?php endif; ?></h2>
+                <a class="btn btn-small" href="/op/tasks/new?ticket=<?= (int) $ticket['id'] ?>">+ <?= t('tasks.new') ?></a>
+            </div>
+            <?php if (!$tasks): ?>
+                <p class="muted hint"><?= t('tasks.ticket_none') ?></p>
+            <?php else: ?>
+                <ul class="ticket-task-list">
+                    <?php foreach ($tasks as $k): $kState = \Bhelpdesk\Tasks::state($k); ?>
+                        <li class="task-<?= e($kState) ?>">
+                            <a href="/op/tasks/<?= (int) $k['id'] ?>"><?= e($k['title']) ?></a>
+                            <span class="task-state task-state-<?= e($kState) ?>"><?= t('tasks.state_' . $kState) ?></span>
+                            <small class="muted"><?= e(\Bhelpdesk\Tasks::assigneeLabel($k)) ?> · <?= e(\Bhelpdesk\Tasks::dueLabel($k)) ?><?= $kState === 'done' ? ' · ' . e((string) ($k['done_by_name'] ?? '')) : '' ?></small>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+        </div>
         <div class="card">
         <h2><?= t('opticket.manage') ?></h2>
         <form method="post" action="/op/ticket/<?= (int) $ticket['id'] ?>/update" class="form">

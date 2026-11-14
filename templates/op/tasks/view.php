@@ -7,6 +7,9 @@
 
 <div class="layout-side">
     <div>
+        <?php if (!empty($task['ticket_number'])): ?>
+            <p class="task-ticket-ref">🎫 <?= t('tasks.linked_ticket') ?> <a href="/op/ticket/<?= (int) $task['ticket_id'] ?>">#<?= e($task['ticket_number']) ?> · <?= e((string) $task['ticket_subject']) ?></a></p>
+        <?php endif; ?>
         <div class="card task-detail task-<?= e($state) ?>">
             <?php if (!empty($task['description'])): ?>
                 <div class="rich"><?= \Bhelpdesk\Html::sanitize((string) $task['description']) ?></div>
@@ -28,6 +31,9 @@
 
     <aside class="card">
         <dl class="meta">
+            <?php if (!empty($task['ticket_number'])): ?>
+                <dt><?= t('tasks.col_ticket') ?></dt><dd><a href="/op/ticket/<?= (int) $task['ticket_id'] ?>">#<?= e($task['ticket_number']) ?></a> · <?= e((string) $task['ticket_subject']) ?></dd>
+            <?php endif; ?>
             <dt><?= t('tasks.col_date') ?></dt><dd><?= e(Tasks::dueLabel($task)) ?></dd>
             <dt><?= t('tasks.col_assignee') ?></dt><dd><?= e(Tasks::assigneeLabel($task)) ?></dd>
             <dt><?= t('tasks.col_created_by') ?></dt><dd><?= e((string) ($task['created_by_name'] ?? '—')) ?> · <?= e(fmt_date((string) $task['created_at'])) ?></dd>
