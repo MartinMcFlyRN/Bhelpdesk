@@ -162,7 +162,9 @@ return [
     'opticket.updated_at'       => 'Updated',
     'opticket.closed_at'        => 'Closed',
     'opticket.note_added'       => 'Internal note added.',
-    'opticket.reply_sent'       => 'Reply sent.',
+    'opticket.reply_sent_to'    => 'Reply sent to ticket #:number.',
+    'opticket.role_customer'    => 'Customer',
+    'opticket.role_staff'       => 'Staff',
     'opticket.saved'            => 'Ticket updated.',
 
     // ---- System log inside tickets ----

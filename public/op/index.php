@@ -352,8 +352,13 @@ $r->post('/ticket/{id}/reply', static function (array $p) use ($loadTicket): voi
     if (!$internal && !$t['assigned_to']) {
         Tickets::update(Tickets::find((int) $t['id']), $op, ['assigned_to' => $op['id']]);
     }
-    flash('success', $internal ? 'opticket.note_added' : 'opticket.reply_sent');
-    redirect('/op/ticket/' . $t['id']);
+    if ($internal) {
+        flash('success', 'opticket.note_added');
+        redirect('/op/ticket/' . $t['id']);
+    }
+    // after a reply to the customer, back to the ticket list
+    flash('success', 'opticket.reply_sent_to', ['number' => $t['number']]);
+    redirect('/op/');
 });
 
 // ---------- Images inserted with the editor (signatures, replies, canned responses) ----------

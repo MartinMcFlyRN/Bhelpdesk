@@ -157,7 +157,9 @@ return [
     'opticket.updated_at'       => 'Aggiornato',
     'opticket.closed_at'        => 'Chiuso',
     'opticket.note_added'       => 'Nota interna aggiunta.',
-    'opticket.reply_sent'       => 'Risposta inviata.',
+    'opticket.reply_sent_to'    => 'Risposta inviata sul ticket #:number.',
+    'opticket.role_customer'    => 'Cliente',
+    'opticket.role_staff'       => 'Staff',
     'opticket.saved'            => 'Ticket aggiornato.',
 
     // ---- System log inside tickets ----

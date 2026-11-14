@@ -23,6 +23,8 @@
             <article class="msg msg-<?= e($m['author_type']) ?><?= $m['is_internal'] ? ' msg-internal' : '' ?>">
                 <header>
                     <strong><?= $m['author_type'] === 'operator' ? e($m['operator_name'] ?? __('opticket.operator')) : e($m['customer_name'] ?? $ticket['customer_name']) ?></strong>
+                    <?php if ($m['author_type'] === 'customer'): ?><span class="msg-role msg-role-customer"><?= t('opticket.role_customer') ?></span>
+                    <?php elseif (!$m['is_internal']): ?><span class="msg-role msg-role-support"><?= t('opticket.role_staff') ?></span><?php endif; ?>
                     <?php if ($m['is_internal']): ?><span class="badge"><?= t('opticket.internal_badge') ?></span><?php endif; ?>
                     <?php if (!empty($m['via_email'])): ?><span class="badge badge-mail" title="<?= t('mailin.via_email_title') ?>">✉ <?= t('mailin.via_email') ?></span><?php endif; ?>
                     <span class="muted"><?= fmt_date($m['created_at']) ?><?= $m['ip'] ? ' · ' . e($m['ip']) : '' ?></span>

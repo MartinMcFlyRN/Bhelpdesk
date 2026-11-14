@@ -421,3 +421,25 @@ input.tiny { width: 5.5rem !important; display: inline-block !important; margin:
 .chip:hover { background: #ede9fe; border-color: #c4b5fd; }
 .tpl-default { margin-bottom: 1rem; }
 @media (max-width: 1000px) { .tpl-layout { grid-template-columns: 1fr; } }
+
+/* Operator area: conversation like the customer area. Customer on the left
+   (white, blue), public replies of the staff on the right (indigo), internal
+   notes on the right (amber), history events centred. */
+.area-op .thread { display: flex; flex-direction: column; gap: .9rem; }
+.area-op .thread .msg { margin: 0; max-width: 88%; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+.area-op .thread .msg-system { margin: 0; }
+.area-op .msg-customer { align-self: flex-start; background: #fff; border-left: 5px solid #0ea5e9; }
+.area-op .msg-customer header strong { color: #075985; }
+.area-op .msg-operator {
+    align-self: flex-end;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-left: 1px solid #c7d2fe;
+    border-right: 5px solid #4f46e5;
+    box-shadow: 0 2px 6px rgba(79, 70, 229, .12);
+}
+.area-op .msg-operator header strong { color: #3730a3; }
+.area-op .msg-operator.msg-internal { background: #fffbeb; border-color: #fde68a; border-right: 5px solid #f59e0b; box-shadow: none; }
+.area-op .msg-operator.msg-internal header strong { color: #92400e; }
+.msg-role-customer { background: #e0f2fe; color: #075985; }
+@media (max-width: 800px) { .area-op .thread .msg { max-width: 100%; } }
