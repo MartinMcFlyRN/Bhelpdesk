@@ -252,3 +252,22 @@ document.querySelectorAll('select[name="role"]').forEach(function (sel) {
     });
     refresh();
 })();
+
+// Email identity form: default port when the security changes, POP3 fields only when enabled
+document.querySelectorAll('select[data-port-for]').forEach(function (sel) {
+    var port = sel.form.querySelector('input[name="' + sel.getAttribute('data-port-for') + '"]');
+    var ports = sel.getAttribute('data-ports').split(','); // ssl, starttls, none
+    var keys = ['ssl', 'starttls', 'none'];
+    sel.addEventListener('change', function () {
+        var known = ports.indexOf(String(port.value)) !== -1;
+        if (port && (known || port.value === '')) {
+            port.value = ports[keys.indexOf(sel.value)];
+        }
+    });
+});
+document.querySelectorAll('input[data-toggle]').forEach(function (chk) {
+    var box = document.getElementById(chk.getAttribute('data-toggle'));
+    var sync = function () { box.hidden = !chk.checked; };
+    chk.addEventListener('change', sync);
+    sync();
+});

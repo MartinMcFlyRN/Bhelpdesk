@@ -115,6 +115,7 @@ mariadb bhelpdesk < sql/migrations/008_canned_signatures.sql
 mariadb bhelpdesk < sql/migrations/009_operator_departments.sql
 mariadb bhelpdesk < sql/migrations/010_rich_text.sql
 mariadb bhelpdesk < sql/migrations/011_merge.sql
+mariadb bhelpdesk < sql/migrations/012_mail_identities.sql
 ```
 
 ## Operators area
@@ -134,7 +135,23 @@ mariadb bhelpdesk < sql/migrations/011_merge.sql
 
 **Direct links.** When a ticket is opened a unique link `/customer/t/<token>` is generated (shown on the confirmation page; it will be sent by email with the notifications). It opens that ticket without signing in and expires **`customer_link_days` days (default 30, editable in /op/config/general) after the last reply** visible to the customer — every new reply extends it; internal notes do not. After that the page says *Link expired* and invites to sign in. Tokens are stored as SHA-256 hashes only. Removing a customer from a ticket revokes their links. Operators can create a new link for any customer of the ticket (🔗 in the Customers card) to send it by hand. Old `/customer/ticket/N?t=…` links keep working (migration 007 converts them).
 
-**Email (preview).** `Mailer` sends plain-text UTF-8 messages. With `mail.driver = 'log'` (default) nothing is sent: messages are appended to `storage/mail.log`, handy for testing. With `'mail'` the server's sendmail/postfix is used. The sender (**Default from** address and name) is set in */op/config/general → Email*. SMTP and ticket notifications come next.
+**Email.** `Mailer` sends plain-text UTF-8 messages through the SMTP account of an **email identity** (see *E-mail identities* below). `mail.driver` in `config.php`: `'auto'` (default) uses the identity's SMTP and falls back to PHP `mail()` when there is no identity or SMTP server; `'smtp'` refuses to send without SMTP; `'mail'` always uses `mail()`; `'log'` sends nothing and appends messages to `storage/mail.log` (handy for testing).
+
+## E-mail identities (/op/config/email)
+
+An identity is an email address with:
+
+- **SMTP** (sending): server, port, encryption (SSL/TLS, STARTTLS or none), username/password, certificate check. Leave the server empty to send with PHP `mail()`. Authentication uses AUTH PLAIN or LOGIN; the client is built in (no external libraries).
+- **POP3** (receiving, optional): server, port, encryption, username/password, certificate check, and what to do with messages on the server after download: delete them, **keep the last N days** (older ones are deleted) or never delete them.
+- a **department** (required): tickets created from the mail it downloads go to that department.
+
+Each **department** chooses its **sending identity** (*Departments → Sending identity*); when left automatic it uses an identity receiving for that department, else the **identity for system emails**. That one (chosen at the bottom of the E-mail page) sends emails not tied to a department, such as password creation/reset; without it the *Default from* of General settings is used.
+
+*Test SMTP* sends a test message and shows the server dialogue (credentials hidden); *Test POP3* signs in and counts the messages without downloading or deleting anything.
+
+Passwords are encrypted (libsodium secretbox) with a key created automatically in **`storage/app.key`** (mode 0600). **Back it up together with the database**: without it saved passwords cannot be decrypted and must be entered again. The forms never show saved passwords: leave the field empty to keep them.
+
+Downloading mail and opening tickets from it (POP3 fetcher run by cron), and reply notifications, come next.
 
 ## Bulk actions in the ticket list
 
@@ -193,6 +210,7 @@ Reserved to operators with the **Administrator** role (others get 403; the link 
 
 - **General** — application name, public URL, time zone, default from address/name for emails, default/offered languages, ticket reopening, hide operator names from customers (they see "Staff Operator"), captcha, attachment limits (with a warning when they exceed the PHP limits of the server), operator session timeout, rate limits. Saved in the `settings` table, they override `config/config.php`. Database, allowed IPs, trusted proxies, cookie and storage settings stay in `config.php` only and are shown read-only.
 - **Departments** — create, rename, reorder, activate/deactivate, **email signature** (added at the end of reply emails for tickets of that department; operators see a preview under the reply form). A department used by tickets cannot be deleted (deactivate it: it disappears from the customer form but stays on existing tickets).
+- **E-mail** — email identities with SMTP/POP3 accounts, the department receiving their mail and the identity for system emails (see *E-mail identities*).
 - **Canned responses** — ready-made texts, for all departments or one; operators insert them from the *Insert canned response* menu of the reply form (at the cursor position). Deactivated responses are hidden.
 - **Operators** — assign one or more **departments** to each agent (required for agents), create, edit name/email/role, reset password, activate/deactivate. Safeguards: you cannot remove your own admin role or disable yourself, and at least one active administrator always remains.
 
@@ -274,9 +292,9 @@ CSRF on every POST · separate sessions per area (cookie `BHD_CUST` path `/custo
 
 ## Roadmap
 
-1. Email notifications (new ticket, replies) via SMTP, in the customer's language
+1. Tickets from email (POP3 fetcher of the identities) and email notifications (new ticket, replies with department signature), in the customer's language
 2. Attachments on replies (customer and operator)
-3. Tickets from email (piping/IMAP)
+3. Reply threading by ticket number / Message-ID
 4. Canned responses, SLA/due dates
 5. TOTP 2FA for operators
 6. Customer accounts with ticket history

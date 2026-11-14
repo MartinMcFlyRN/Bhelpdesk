@@ -43,6 +43,9 @@ final class Settings
         'throttle.password_mail'   => ['section' => 'security',    'type' => 'pair'],
     ];
 
+    /** Settings stored by other pages (e.g. /op/config/email) */
+    public const EXTRA_KEYS = ['mail.default_identity'];
+
     /** Fallback values when a key is missing from both DB and config.php */
     public const DEFAULTS = [
         'app_name'                 => 'Bhelpdesk',
@@ -83,7 +86,7 @@ final class Settings
             return;
         }
         foreach ($rows as $r) {
-            if (!isset(self::FIELDS[$r['name']])) {
+            if (!isset(self::FIELDS[$r['name']]) && !in_array($r['name'], self::EXTRA_KEYS, true)) {
                 continue;
             }
             $v = json_decode((string) $r['value'], true);

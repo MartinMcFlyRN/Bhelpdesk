@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{AccessLinks, Attachments, Auth, Canned, CustomerAuth, Customers, Db, Departments, Html, IpGuard, Lang, Media, Operators, Router, Session, Settings, Throttle, Tickets, View};
+use Bhelpdesk\{AccessLinks, Attachments, Auth, Canned, CustomerAuth, Customers, Db, Departments, Html, IpGuard, Lang, MailIdentities, Mailer, Media, Operators, Router, Session, Settings, Throttle, Tickets, View};
 
 // ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
@@ -642,7 +642,7 @@ $loadDep = static function (array $p): array {
 $r->get('/config/departments/{id}', static function (array $p) use ($cfgView, $loadDep): void {
     Auth::requireAdmin();
     $d = $loadDep($p);
-    $cfgView('department_edit', __('dep.edit'), ['dep' => $d, 'errors' => []]);
+    $cfgView('department_edit', __('dep.edit'), ['dep' => $d, 'errors' => [], 'identities' => MailIdentities::options()]);
 });
 
 $r->post('/config/departments/{id}', static function (array $p) use ($cfgView, $loadDep): void {
@@ -651,7 +651,7 @@ $r->post('/config/departments/{id}', static function (array $p) use ($cfgView, $
     $res = Departments::validate($_POST, (int) $d['id']);
     if ($res['errors']) {
         http_response_code(422);
-        $cfgView('department_edit', __('dep.edit'), ['dep' => array_merge($d, $res['values']), 'errors' => $res['errors']]);
+        $cfgView('department_edit', __('dep.edit'), ['dep' => array_merge($d, $res['values']), 'errors' => $res['errors'], 'identities' => MailIdentities::options()]);
         return;
     }
     Departments::update((int) $d['id'], $res['values']);
@@ -668,6 +668,146 @@ $r->post('/config/departments/{id}/delete', static function (array $p) use ($loa
     }
     flash('error', 'dep.in_use');
     redirect('/op/config/departments/' . $d['id']);
+});
+
+// ---------- E-mail identities (SMTP + POP3) ----------
+$identityPage = static function (?array $item, array $values, array $errors) use ($cfgView): void {
+    $cfgView('email_edit', __('cfg.menu.email'), [
+        'item'        => $item,
+        'values'      => $values,
+        'errors'      => $errors,
+        'departments' => Departments::all(),
+        'test'        => $item ? ($_SESSION['mail_test'][$item['id']] ?? null) : null,
+    ]);
+    if ($item) {
+        unset($_SESSION['mail_test'][$item['id']]);
+    }
+};
+
+$r->get('/config/email', static function () use ($cfgView): void {
+    Auth::requireAdmin();
+    $cfgView('email', __('cfg.menu.email'), [
+        'items'   => MailIdentities::all(),
+        'options' => MailIdentities::options(),
+        'default' => (int) config('mail.default_identity', 0),
+    ]);
+});
+
+$r->post('/config/email/default', static function (): void {
+    Auth::requireAdmin();
+    MailIdentities::setDefault((int) ($_POST['default_identity'] ?? 0) ?: null);
+    flash('success', 'mi.default_saved');
+    redirect('/op/config/email');
+});
+
+$r->get('/config/email/new', static function () use ($identityPage): void {
+    Auth::requireAdmin();
+    $identityPage(null, [
+        'name' => (string) config('app_name', 'Bhelpdesk'), 'email' => '', 'department_id' => 0, 'active' => 1,
+        'smtp_host' => '', 'smtp_port' => 587, 'smtp_security' => 'starttls', 'smtp_user' => '', 'smtp_verify' => 1,
+        'pop_enabled' => 0, 'pop_host' => '', 'pop_port' => 995, 'pop_security' => 'ssl', 'pop_user' => '', 'pop_verify' => 1,
+        'pop_keep' => 'days', 'pop_keep_days' => 30,
+    ], []);
+});
+
+$r->post('/config/email', static function () use ($identityPage): void {
+    Auth::requireAdmin();
+    $res = MailIdentities::validate($_POST);
+    if ($res['errors']) {
+        http_response_code(422);
+        $identityPage(null, $res['values'], $res['errors']);
+        return;
+    }
+    $id = MailIdentities::save($res['values']);
+    flash('success', 'mi.created');
+    redirect('/op/config/email/' . $id);
+});
+
+$loadIdentity = static function (array $p): array {
+    $i = MailIdentities::find((int) $p['id']);
+    if (!$i) {
+        http_response_code(404);
+        View::render('op', 'error', ['title' => __('error.not_found.title'), 'message' => __('error.not_found.message')]);
+        exit;
+    }
+    return $i;
+};
+
+$r->get('/config/email/{id}', static function (array $p) use ($identityPage, $loadIdentity): void {
+    Auth::requireAdmin();
+    $i = $loadIdentity($p);
+    $identityPage($i, $i, []);
+});
+
+$r->post('/config/email/{id}', static function (array $p) use ($identityPage, $loadIdentity): void {
+    Auth::requireAdmin();
+    $i = $loadIdentity($p);
+    $res = MailIdentities::validate($_POST, $i);
+    if ($res['errors']) {
+        http_response_code(422);
+        $identityPage($i, $res['values'] + ['smtp_pass' => $i['smtp_pass'], 'pop_pass' => $i['pop_pass']], $res['errors']);
+        return;
+    }
+    MailIdentities::save($res['values'], (int) $i['id']);
+    flash('success', 'mi.saved');
+    redirect('/op/config/email/' . $i['id']);
+});
+
+$r->post('/config/email/{id}/delete', static function (array $p) use ($loadIdentity): void {
+    Auth::requireAdmin();
+    $i = $loadIdentity($p);
+    MailIdentities::delete((int) $i['id']);
+    flash('success', 'mi.deleted');
+    redirect('/op/config/email');
+});
+
+// Connection tests: SMTP sends a test message, POP3 logs in and counts the messages
+$r->post('/config/email/{id}/test', static function (array $p) use ($loadIdentity): void {
+    $op = Auth::requireAdmin();
+    $i = $loadIdentity($p);
+    $what = ($_POST['what'] ?? '') === 'pop' ? 'pop' : 'smtp';
+    $result = ['what' => $what, 'ok' => false, 'message' => '', 'log' => []];
+    try {
+        if ($what === 'smtp') {
+            if ($i['smtp_host'] === '') {
+                throw new \RuntimeException(__('mi.no_smtp'));
+            }
+            $to = filter_var($_POST['to'] ?? '', FILTER_VALIDATE_EMAIL) ?: (string) $op['email'];
+            $smtp = MailIdentities::smtp($i);
+            $raw = Mailer::raw(
+                Mailer::headers($i['email'], $i['name'], $to, __('mi.test_subject', ['app' => (string) config('app_name', 'Bhelpdesk')])),
+                Mailer::encodeBody(__('mi.test_body', ['identity' => $i['name'] . ' <' . $i['email'] . '>', 'who' => $op['name'], 'date' => fmt_date(date('Y-m-d H:i:s'))]))
+            );
+            try {
+                $smtp->send($i['email'], [$to], $raw);
+            } finally {
+                $result['log'] = $smtp->log();
+            }
+            $result['ok'] = true;
+            $result['message'] = __('mi.test_smtp_ok', ['to' => $to]);
+        } else {
+            if (!$i['pop_enabled'] || $i['pop_host'] === '') {
+                throw new \RuntimeException(__('mi.no_pop'));
+            }
+            $pop = MailIdentities::pop3($i);
+            try {
+                $pop->connect();
+                $st = $pop->stat();
+            } finally {
+                $pop->quit();
+            }
+            $result['ok'] = true;
+            $result['message'] = __('mi.test_pop_ok', ['n' => $st['count'], 'size' => \Bhelpdesk\Attachments::humanSize($st['size'])]);
+            MailIdentities::markPop((int) $i['id'], true, $result['message']);
+        }
+    } catch (\Throwable $ex) {
+        $result['message'] = $ex->getMessage();
+        if ($what === 'pop') {
+            MailIdentities::markPop((int) $i['id'], false, $ex->getMessage());
+        }
+    }
+    $_SESSION['mail_test'][$i['id']] = $result;
+    redirect('/op/config/email/' . $i['id'] . '#test');
 });
 
 // ---------- Canned responses ----------

@@ -57,12 +57,13 @@ return [
     'customer_link_days' => 30,
 
     // ---- Email ----
-    // driver 'log'  = do not send, append messages to storage/mail.log (default, for testing)
+    // Senders, SMTP and POP3 accounts are configured in /op/config/email (identities).
+    // driver 'auto' = SMTP of the identity, or PHP mail() when it has no SMTP server (default)
+    // driver 'smtp' = SMTP only
     // driver 'mail' = PHP mail() through the server's sendmail/postfix
-    // (SMTP will come with the email notifications)
-    // The sender ("Default from" address and name) is set in /op/config/general.
+    // driver 'log'  = nothing is sent, messages go to storage/mail.log (testing)
     'mail' => [
-        'driver' => 'log',
+        'driver' => 'auto',
     ],
 
     // Customers may reply to a closed ticket (it gets reopened)

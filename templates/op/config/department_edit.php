@@ -18,6 +18,15 @@
                 </div>
                 <label class="check"><input type="checkbox" name="active" value="1" <?= $dep['active'] ? 'checked' : '' ?>> <?= t('dep.active_label') ?></label>
                 <small class="muted hint field-help"><?= t('dep.active_help') ?></small>
+                <label><?= t('dep.send_identity') ?>
+                    <select name="send_identity_id">
+                        <option value="0"><?= t('dep.send_identity_auto') ?></option>
+                        <?php foreach ($identities as $idn): ?>
+                            <option value="<?= (int) $idn['id'] ?>" <?= (int) ($dep['send_identity_id'] ?? 0) === (int) $idn['id'] ? 'selected' : '' ?>><?= e($idn['name'] . ' <' . $idn['email'] . '>') ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="muted hint"><?= t('dep.send_identity_help') ?></small>
+                </label>
                 <label><?= t('dep.signature') ?>
                     <textarea name="signature" rows="6" data-editor="signature" placeholder="<?= t('dep.signature_placeholder') ?>"><?= e($dep['signature'] ?? '') ?></textarea>
                     <small class="muted hint"><?= t('dep.signature_help') ?></small>

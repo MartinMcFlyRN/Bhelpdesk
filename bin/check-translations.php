@@ -30,6 +30,9 @@ foreach ($it as $f) {
     preg_match_all("/(?:\\b__|\\bt)\\(\\s*'([a-z0-9_.]*[a-z0-9_])'/", $src, $m);
     preg_match_all("/flash\\(\\s*'[a-z]+'\\s*,\\s*(?:\\\$\\w+\\s*\\?\\s*)?'([a-z0-9_.]+)'(?:\\s*:\\s*'([a-z0-9_.]+)')?/", $src, $m2);
     foreach (array_merge($m[1], $m2[1], array_filter($m2[2])) as $k) {
+        if (str_ends_with($k, '_')) {
+            continue; // prefix of a key built at runtime, e.g. t('mi.sec_' . $s)
+        }
         $used[$k][] = substr($p, strlen($root) + 1);
     }
     // keys picked in expressions, e.g. __($first ? 'a.b' : 'a.c'): any string literal equal to a key
@@ -47,7 +50,7 @@ foreach (['status.open', 'status.answered', 'status.on_hold', 'status.closed',
 
 // keys built from a prefix at runtime (settings labels/help, config menu)
 foreach (array_keys($base) as $k) {
-    if (str_starts_with($k, 'set.') || str_starts_with($k, 'cfg.menu.') || str_starts_with($k, 'ph.')) {
+    if (str_starts_with($k, 'set.') || str_starts_with($k, 'cfg.menu.') || str_starts_with($k, 'ph.') || str_starts_with($k, 'mi.sec_') || str_starts_with($k, 'mi.keep_')) {
         $used[$k][] = '(dynamic)';
     }
 }
