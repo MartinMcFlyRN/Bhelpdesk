@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{AccessLinks, Attachments, Auth, Canned, CustomerAuth, Customers, Db, Departments, Html, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, Operators, Router, Session, Settings, Throttle, Tickets, View};
+use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Canned, CustomerAuth, Customers, Db, Departments, Html, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, Operators, Router, Session, Settings, Throttle, Tickets, View};
 
 // ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
@@ -254,6 +254,7 @@ $r->post('/tickets/new', static function () use ($newTicketPage, $allowedDepartm
 
     Db::exec('UPDATE tickets SET priority = ? WHERE id = ?', [$v['priority'], $tid]);
     Tickets::logOpened($tid, $op);
+    Alerts::newTicket($tid, (int) $op['id'], (string) $op['name']);
     foreach ($cc as $row) {
         $res = Customers::resolve($row['email'], $row['name']);
         if ($res['id']) {
@@ -462,7 +463,11 @@ $profilePage = static function (array $form, array $errors): void {
 
 $r->get('/profile', static function () use ($profilePage): void {
     $op = Auth::require();
-    $profilePage(['name' => $op['name'], 'email' => $op['email']], []);
+    $me = Operators::find((int) $op['id']);
+    $profilePage([
+        'name' => $me['name'], 'email' => $me['email'], 'language' => (string) $me['language'],
+        'alert_new' => (bool) $me['alert_new'], 'alert_reply' => (bool) $me['alert_reply'], 'alert_assign' => (bool) $me['alert_assign'],
+    ], []);
 });
 
 $r->post('/profile', static function () use ($profilePage): void {

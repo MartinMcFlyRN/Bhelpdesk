@@ -409,3 +409,4 @@ input.tiny { width: 5.5rem !important; display: inline-block !important; margin:
 .mail-ignored, .mail-big { background: #fef3c7; color: #92400e; }
 .mail-error { background: #fee2e2; color: #991b1b; }
 .badge-mail { background: #e0f2fe; color: #075985; }
+.form label.narrow { max-width: 360px; }

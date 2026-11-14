@@ -468,6 +468,7 @@ final class Tickets
             }
             if ((int) $dep !== (int) $ticket['department_id']) {
                 Db::exec('UPDATE tickets SET department_id = ? WHERE id = ?', [$dep, $id]);
+                Alerts::transferred($id, $ticket['department_id'] !== null ? (int) $ticket['department_id'] : null, $op);
                 $name = $dep ? (string) Db::value('SELECT name FROM departments WHERE id = ?', [$dep]) : null;
                 $log[] = ['department', $name];
             }
@@ -481,6 +482,9 @@ final class Tickets
             }
             if ((int) $to !== (int) $ticket['assigned_to']) {
                 Db::exec('UPDATE tickets SET assigned_to = ? WHERE id = ?', [$to, $id]);
+                if ($to !== null) {
+                    Alerts::assigned($id, (int) $to, $op);
+                }
                 $name = $to ? (string) Db::value('SELECT name FROM operators WHERE id = ?', [$to]) : null;
                 $log[] = ['assigned', $name];
             }

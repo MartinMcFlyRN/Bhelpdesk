@@ -26,6 +26,21 @@
             <label><?= t('ops.email') ?> <input type="email" name="email" required maxlength="190" value="<?= e($form['email']) ?>"></label>
         </div>
 
+        <h2><?= t('alert.prefs_title') ?></h2>
+        <p class="muted hint"><?= t('alert.prefs_hint') ?></p>
+        <?php if (!config('mail.alerts', true)): ?><p class="alert alert-error"><?= t('alert.prefs_disabled') ?></p><?php endif; ?>
+        <label class="check"><input type="checkbox" name="alert_new" value="1" <?= !empty($form['alert_new']) ? 'checked' : '' ?>> <?= t('alert.pref_new') ?></label>
+        <label class="check"><input type="checkbox" name="alert_reply" value="1" <?= !empty($form['alert_reply']) ? 'checked' : '' ?>> <?= t('alert.pref_reply') ?></label>
+        <label class="check"><input type="checkbox" name="alert_assign" value="1" <?= !empty($form['alert_assign']) ? 'checked' : '' ?>> <?= t('alert.pref_assign') ?></label>
+        <label class="narrow"><?= t('alert.language') ?>
+            <select name="language">
+                <option value=""><?= t('alert.language_default', ['lang' => \Bhelpdesk\Lang::available()[(string) config('default_language', 'en')] ?? 'English']) ?></option>
+                <?php foreach (\Bhelpdesk\Lang::available() as $code => $label): ?>
+                    <option value="<?= e($code) ?>" <?= ($form['language'] ?? '') === $code ? 'selected' : '' ?>><?= e($label) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
+
         <h2><?= t('profile.change_password') ?></h2>
         <p class="muted hint"><?= t('profile.password_hint') ?></p>
         <div class="row-2">

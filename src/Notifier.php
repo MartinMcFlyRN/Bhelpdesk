@@ -161,7 +161,7 @@ final class Notifier
     /** In-Reply-To (last message received for the ticket) and References (last 10 messages) */
     private static function thread(int $ticketId, ?string $inReplyTo): array
     {
-        $ids = Db::column('SELECT message_id FROM mail_messages WHERE ticket_id = ? AND message_id IS NOT NULL ORDER BY id DESC LIMIT 10', [$ticketId]);
+        $ids = Db::column("SELECT message_id FROM mail_messages WHERE ticket_id = ? AND message_id IS NOT NULL AND status NOT IN ('alert', 'error') ORDER BY id DESC LIMIT 10", [$ticketId]);
         $lastIn = $inReplyTo ?? Db::value("SELECT message_id FROM mail_messages WHERE ticket_id = ? AND direction = 'in' AND message_id IS NOT NULL ORDER BY id DESC LIMIT 1", [$ticketId]);
         if ($inReplyTo !== null && !in_array($inReplyTo, $ids, true)) {
             array_unshift($ids, $inReplyTo);

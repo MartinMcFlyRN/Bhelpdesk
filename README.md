@@ -120,6 +120,7 @@ mariadb bhelpdesk < sql/migrations/010_rich_text.sql
 mariadb bhelpdesk < sql/migrations/011_merge.sql
 mariadb bhelpdesk < sql/migrations/012_mail_identities.sql
 mariadb bhelpdesk < sql/migrations/013_mail_messages.sql
+mariadb bhelpdesk < sql/migrations/014_operator_alerts.sql
 ```
 
 ## Operators area
@@ -173,6 +174,16 @@ Test without POP3: `sudo -u bhelpdesk php bin/fetch-mail.php --file=message.eml 
 - operator replies to all customers of the ticket: HTML + text, department signature, attachments up to 10 MB in total (the others are listed), relative image/link URLs made absolute with `base_url`.
 
 Subjects carry `[#number]`; `Message-ID`, `In-Reply-To` and `References` keep the conversation threaded in mail clients and route replies back to the ticket. Send failures are shown to the operator and logged. Messages received by email have an *email* badge in the ticket.
+
+## Email alerts to operators
+
+Each operator chooses in **their profile** which alerts to receive and their language:
+
+- **new tickets** in their departments (administrators: all departments), also tickets **moved** to a department they could not see before;
+- **customer replies** (web or email) on tickets assigned to them, and on unassigned tickets of their departments (when a ticket is assigned only the assignee is alerted);
+- a ticket **assigned** to them.
+
+Nobody is alerted for what they did themselves. Alerts are plain text with the ticket data, an excerpt of the customer's message and the link to `/op/ticket/N`, sent with the department's identity (`Auto-Submitted: auto-generated`). They are sent **after the page has been delivered** (`fastcgi_finish_request`), so operators and customers do not wait for the SMTP server. They can be turned off for everyone in *General → Email*. Emails coming from an operator's address are not turned into tickets: operators answer from the ticket page.
 
 ## Bulk actions in the ticket list
 
@@ -313,9 +324,8 @@ CSRF on every POST · separate sessions per area (cookie `BHD_CUST` path `/custo
 
 ## Roadmap
 
-1. Email alerts to operators (new ticket, customer reply, assignment)
-2. Attachments on customer replies from the web
-3. IMAP (folders, IDLE) besides POP3
-4. SLA/due dates
+1. Attachments on customer replies from the web
+2. IMAP (folders, IDLE) besides POP3
+3. SLA/due dates
 5. TOTP 2FA for operators
 6. Customer accounts with ticket history

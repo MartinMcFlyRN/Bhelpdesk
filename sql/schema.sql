@@ -18,9 +18,13 @@ CREATE TABLE IF NOT EXISTS operators (
     username       VARCHAR(50)  NOT NULL,
     name           VARCHAR(100) NOT NULL,
     email          VARCHAR(190) NOT NULL,
+    language       VARCHAR(10)  NULL,                -- language of the alert emails (NULL = default)
     password_hash  VARCHAR(255) NOT NULL,
     role           ENUM('admin','agent') NOT NULL DEFAULT 'agent',
     active         TINYINT(1) NOT NULL DEFAULT 1,
+    alert_new      TINYINT(1) NOT NULL DEFAULT 1,    -- email: new tickets in my departments
+    alert_reply    TINYINT(1) NOT NULL DEFAULT 1,    -- email: customer replies (my tickets / unassigned of my departments)
+    alert_assign   TINYINT(1) NOT NULL DEFAULT 1,    -- email: ticket assigned to me
     last_login_at  DATETIME NULL,
     last_login_ip  VARCHAR(45) NULL,
     created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

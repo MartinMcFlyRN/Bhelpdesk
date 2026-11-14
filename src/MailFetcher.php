@@ -165,7 +165,7 @@ final class MailFetcher
         $refs = array_values(array_unique(array_merge($m->ids('in-reply-to'), array_reverse($m->ids('references')))));
         if ($refs) {
             $in = implode(',', array_fill(0, count($refs), '?'));
-            $tid = Db::value("SELECT ticket_id FROM mail_messages WHERE message_id IN ($in) AND ticket_id IS NOT NULL ORDER BY id DESC LIMIT 1", $refs);
+            $tid = Db::value("SELECT ticket_id FROM mail_messages WHERE message_id IN ($in) AND ticket_id IS NOT NULL AND status <> 'alert' ORDER BY id DESC LIMIT 1", $refs);
             if ($tid) {
                 $ticket = self::followMerged((int) $tid);
                 $strong = $ticket !== null;
@@ -247,6 +247,9 @@ final class MailFetcher
 
         if ($status === 'ticket') {
             Notifier::ticketOpened($ticketId, null, $msgId);
+            Alerts::newTicket($ticketId, null, 'email');
+        } else {
+            Alerts::customerReply($ticketId, $messageId);
         }
         return ['status' => $status, 'ticket_id' => $ticketId, 'note' => ''];
     }
@@ -280,6 +283,9 @@ final class MailFetcher
         $own = array_map('strtolower', Db::column('SELECT email FROM mail_identities'));
         if (in_array($sender, $own, true)) {
             return __('mailin.ign_own');
+        }
+        if (Db::value('SELECT 1 FROM operators WHERE email = ?', [$sender])) {
+            return __('mailin.ign_operator');
         }
         if ($m->has('x-bhelpdesk-ticket')) {
             return __('mailin.ign_own');

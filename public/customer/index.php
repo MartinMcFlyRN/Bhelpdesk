@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{AccessLinks, Attachments, Captcha, CustomerAuth, Customers, Lang, Notifier, Router, Session, Throttle, Tickets, View};
+use Bhelpdesk\{AccessLinks, Alerts, Attachments, Captcha, CustomerAuth, Customers, Lang, Notifier, Router, Session, Throttle, Tickets, View};
 
 Session::start('BHD_CUST', '/customer/');
 
@@ -250,6 +250,7 @@ $r->post('/new', static function (): void {
     $t = Tickets::create($in['name'], $in['email'], $depId, $in['subject'], $in['message'], $ip, Lang::current(), $upload['files'], $in['phone'] !== '' ? $in['phone'] : null);
     // confirmation email with the ticket number and the direct link (department's identity)
     Notifier::ticketOpened($t['id']);
+    Alerts::newTicket($t['id'], null, 'web');
     // whoever just opened the ticket can see it in this session through its link
     $_SESSION['links'][$t['number']] = ['h' => hash('sha256', basename($t['link'])), 'c' => $t['customer_id']];
     $_SESSION['just_created'] = $t;
@@ -364,7 +365,7 @@ $r->post('/ticket/{number}/reply', static function (array $p) use ($canSee, $den
     if ($body === '') {
         flash('error', 'ticket.empty_message');
     } else {
-        Tickets::customerReply($ticket, $body, client_ip(), (int) $ticket['viewer_id']);
+        Alerts::customerReply((int) $ticket['id'], Tickets::customerReply($ticket, $body, client_ip(), (int) $ticket['viewer_id']));
         flash('success', 'ticket.reply_sent');
     }
     redirect('/customer/ticket/' . $number);
