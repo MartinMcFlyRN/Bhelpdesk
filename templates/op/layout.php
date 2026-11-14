@@ -36,6 +36,13 @@ $todoTasks = !empty($op) ? \Bhelpdesk\Tasks::activeFor($op) : [];
                     </div>
                 </details>
                 <a href="/op/customers"<?= $navActive('/op/customers') ?>><?= t('nav.customers') ?></a>
+                <details class="nav-menu<?= str_starts_with($uri, '/op/billing') ? ' active' : '' ?>">
+                    <summary><?= t('nav.billing') ?> <span class="caret" aria-hidden="true">▾</span></summary>
+                    <div class="menu" role="menu">
+                        <a role="menuitem" href="/op/billing/invoices"<?= $navActive('/op/billing/invoices') ?>><?= t('nav.invoices') ?></a>
+                        <a role="menuitem" href="/op/billing/quotes"<?= $navActive('/op/billing/quotes') ?>><?= t('nav.quotes') ?></a>
+                    </div>
+                </details>
             </nav>
             <?php endif; ?>
         </div>

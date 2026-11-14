@@ -271,3 +271,12 @@ document.querySelectorAll('input[data-toggle]').forEach(function (chk) {
     chk.addEventListener('change', sync);
     sync();
 });
+
+// <select data-autosubmit>: submit the form when the choice changes (no inline handlers: strict CSP)
+document.querySelectorAll('[data-autosubmit]').forEach(function (el) {
+    el.addEventListener('change', function () {
+        if (el.form) {
+            el.form.submit();
+        }
+    });
+});

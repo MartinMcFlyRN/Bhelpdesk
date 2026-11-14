@@ -508,3 +508,21 @@ a.badge-mail:hover { background: #bae6fd; }
 .ticket-task-list li small { width: 100%; }
 .ticket-task-list li.task-done a { color: var(--muted); text-decoration: line-through; }
 .task-ticket-ref { background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 8px; padding: .5rem .75rem; margin: 0 0 1rem; }
+
+/* Billing: invoices */
+.invoices-table td.num, .invoices-table th.num { text-align: right; }
+.invoices-table tr.inv-issued td { color: var(--muted); }
+.invoices-table tr.inv-due td:first-child { box-shadow: inset 4px 0 0 #f59e0b; }
+.inv-text { color: var(--text); }
+.inv-summary { margin: -.25rem 0 .75rem; }
+.inv-toggle { display: inline-block; border: 1px solid #fcd34d; background: #fffbeb; color: #92400e; border-radius: 999px; padding: .15rem .6rem; font: inherit; font-size: .82rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.inv-toggle.on { border-color: #86efac; background: #dcfce7; color: #166534; }
+span.inv-toggle { cursor: default; }
+.inv-toggle.small { font-size: .72rem; padding: .05rem .45rem; }
+.inv-due-tag { display: inline-block; background: #fef3c7; color: #92400e; border-radius: 4px; padding: 0 .35rem; font-size: .72rem; font-weight: 700; }
+.inv-rec-monthly, .inv-rec-bimonthly { background: #e0e7ff; color: #3730a3; }
+.inv-rec-yearly { background: #fae8ff; color: #86198f; }
+.inv-issued-check { background: #f9fafb; border: 1px solid var(--border); border-radius: 8px; padding: .65rem .8rem; }
+.tabs-search { display: flex; gap: .4rem; align-items: center; }
+.tabs-search .inline-select { width: auto; margin: 0; padding: .4rem .5rem; border: 1px solid var(--border); border-radius: 6px; font: inherit; background: #fff; }
+input.readonly { background: #f9fafb !important; color: var(--muted); }

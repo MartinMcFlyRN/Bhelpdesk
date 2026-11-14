@@ -76,6 +76,28 @@
             </ul>
         <?php endif; ?>
     </div>
+    <div class="card">
+        <div class="row-between">
+            <h2><?= t('inv.title') ?> <span class="count-pill"><?= count($invoices) ?></span></h2>
+            <a class="btn btn-small" href="/op/billing/invoices/new?customer=<?= (int) $customer['id'] ?>">+ <?= t('inv.new') ?></a>
+        </div>
+        <?php if (!$invoices): ?>
+            <p class="muted"><?= t('inv.empty') ?></p>
+        <?php else: ?>
+            <ul class="ticket-mini">
+            <?php foreach ($invoices as $inv): ?>
+                <li>
+                    <a href="/op/billing/invoices/<?= (int) $inv['id'] ?>"><strong><?= (int) $inv['id'] ?></strong> <?= e(mb_strimwidth(preg_replace('/\s+/', ' ', (string) $inv['description']), 0, 50, '…')) ?></a>
+                    <div>
+                        <strong><?= e(\Bhelpdesk\Invoices::money((float) $inv['amount'])) ?></strong>
+                        <span class="badge"><?= t('inv.rec_' . $inv['recurrence']) ?></span>
+                        <span class="inv-toggle small <?= $inv['issued'] ? 'on' : '' ?>"><?= $inv['issued'] ? t('inv.state_issued') : t('inv.state_todo') ?></span>
+                    </div>
+                </li>
+            <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+    </div>
     </aside>
     <?php endif; ?>
 </div>

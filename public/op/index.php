@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Canned, CustomerAuth, Customers, Db, Departments, EmailTemplates, Html, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, Operators, Router, Session, Settings, Tasks, Throttle, Tickets, View};
+use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Canned, CustomerAuth, Customers, Db, Departments, EmailTemplates, Html, Invoices, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, Operators, Router, Session, Settings, Tasks, Throttle, Tickets, View};
 
 // ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
@@ -688,6 +688,123 @@ $r->post('/tasks/{id}/delete', static function (array $p) use ($loadTask): void 
 });
 
 // =====================================================================
+//  Billing: invoices and quotes (every operator)
+// =====================================================================
+$loadInvoice = static function (array $p): array {
+    $i = Invoices::find((int) $p['id']);
+    if (!$i) {
+        http_response_code(404);
+        View::render('op', 'error', ['title' => __('error.not_found.title'), 'message' => __('error.not_found.message')]);
+        exit;
+    }
+    return $i;
+};
+
+$invoiceForm = static function (?array $invoice, array $values, array $errors): void {
+    View::render('op', 'billing/invoice_form', [
+        'title'   => $invoice ? __('inv.edit_title', ['id' => $invoice['id']]) : __('inv.new_title'),
+        'op'      => Auth::user(),
+        'invoice' => $invoice,
+        'values'  => $values,
+        'errors'  => $errors,
+    ]);
+};
+
+$r->get('/billing', static fn () => redirect('/op/billing/invoices'));
+
+$r->get('/billing/invoices', static function (): void {
+    $op = Auth::require();
+    $f = [
+        'status'     => in_array($_GET['status'] ?? '', ['todo', 'issued', 'all'], true) ? $_GET['status'] : 'todo',
+        'recurrence' => in_array($_GET['recurrence'] ?? '', Invoices::RECURRENCES, true) ? $_GET['recurrence'] : '',
+        'q'          => trim((string) ($_GET['q'] ?? '')),
+    ];
+    $page = max(1, (int) ($_GET['page'] ?? 1));
+    $res = Invoices::search($f, $page);
+    View::render('op', 'billing/invoices', [
+        'title'   => __('inv.title'),
+        'op'      => $op,
+        'filters' => $f,
+        'rows'    => $res['rows'],
+        'total'   => $res['total'],
+        'sum'     => $res['sum'],
+        'page'    => $page,
+        'perPage' => 30,
+    ]);
+});
+
+$r->get('/billing/invoices/new', static function () use ($invoiceForm): void {
+    Auth::require();
+    $c = isset($_GET['customer']) ? Customers::find((int) $_GET['customer']) : null;
+    $invoiceForm(null, [
+        'customer_email' => $c['email'] ?? '', 'customer_name' => $c['name'] ?? '', 'description' => '',
+        'amount_input' => '', 'start_date' => date('Y-m-d'), 'recurrence' => 'once', 'issued' => false,
+    ], []);
+});
+
+$r->post('/billing/invoices', static function () use ($invoiceForm): void {
+    $op = Auth::require();
+    $res = Invoices::validate($_POST);
+    if ($res['errors']) {
+        http_response_code(422);
+        $invoiceForm(null, $res['values'], $res['errors']);
+        return;
+    }
+    $id = Invoices::create($res['values'], (int) $op['id']);
+    flash('success', 'inv.created', ['id' => $id]);
+    redirect('/op/billing/invoices');
+});
+
+$r->get('/billing/invoices/{id}', static function (array $p) use ($invoiceForm, $loadInvoice): void {
+    Auth::require();
+    $i = $loadInvoice($p);
+    $invoiceForm($i, [
+        'customer_email' => $i['customer_email'], 'customer_name' => $i['customer_name'], 'description' => $i['description'],
+        'amount_input' => number_format((float) $i['amount'], 2, __('inv.dec_point'), ''), 'start_date' => $i['start_date'],
+        'recurrence' => $i['recurrence'], 'issued' => (bool) $i['issued'],
+    ], []);
+});
+
+$r->post('/billing/invoices/{id}', static function (array $p) use ($invoiceForm, $loadInvoice): void {
+    $op = Auth::require();
+    $i = $loadInvoice($p);
+    $res = Invoices::validate($_POST);
+    if ($res['errors']) {
+        http_response_code(422);
+        $invoiceForm($i, $res['values'], $res['errors']);
+        return;
+    }
+    Invoices::update($i, $res['values'], (int) $op['id']);
+    flash('success', 'inv.saved', ['id' => $i['id']]);
+    redirect('/op/billing/invoices');
+});
+
+// "Issued" checkbox in the list
+$r->post('/billing/invoices/{id}/issued', static function (array $p) use ($loadInvoice): void {
+    $op = Auth::require();
+    $i = $loadInvoice($p);
+    $issued = !empty($_POST['issued']);
+    Invoices::setIssued($i, $issued, (int) $op['id']);
+    flash('success', $issued ? 'inv.marked_issued' : 'inv.marked_todo', ['id' => $i['id']]);
+    $back = (string) ($_POST['back'] ?? '');
+    redirect(str_starts_with($back, '/op/billing/invoices') ? $back : '/op/billing/invoices');
+});
+
+$r->post('/billing/invoices/{id}/delete', static function (array $p) use ($loadInvoice): void {
+    $op = Auth::require();
+    $i = $loadInvoice($p);
+    if ($op['role'] === 'admin' || (int) $i['created_by'] === (int) $op['id']) {
+        Invoices::delete((int) $i['id']);
+        flash('success', 'inv.deleted', ['id' => $i['id']]);
+    }
+    redirect('/op/billing/invoices');
+});
+
+$r->get('/billing/quotes', static function (): void {
+    View::render('op', 'billing/quotes', ['title' => __('quote.title'), 'op' => Auth::require()]);
+});
+
+// =====================================================================
 //  Customers (every operator)
 // =====================================================================
 $r->get('/customers', static function (): void {
@@ -709,6 +826,7 @@ $customerForm = static function (?array $customer, array $values, array $errors)
         'values'    => $values,
         'errors'    => $errors,
         'tickets'   => $customer ? Customers::tickets((int) $customer['id'], Auth::user()) : [],
+        'invoices'  => $customer ? Invoices::forCustomer((int) $customer['id']) : [],
         'languages' => Lang::available(true),
     ]);
 };

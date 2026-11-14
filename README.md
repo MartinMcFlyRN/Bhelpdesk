@@ -125,6 +125,7 @@ mariadb bhelpdesk < sql/migrations/015_email_templates.sql
 mariadb bhelpdesk < sql/migrations/016_mail_source.sql
 mariadb bhelpdesk < sql/migrations/017_tasks.sql
 mariadb bhelpdesk < sql/migrations/018_task_ticket.sql
+mariadb bhelpdesk < sql/migrations/019_invoices.sql
 ```
 
 ## Operators area
@@ -211,6 +212,16 @@ Nobody is alerted for what they did themselves. Alerts contain the ticket data, 
 - **All tasks** shows every task to every operator, with assignee and state (scheduled, to do, overdue, done); **My tasks** only those assigned to me, to my departments or to everyone.
 - The assignees and the administrators mark tasks done; the creator and the administrators edit or delete them.
 - **Tasks of a ticket**: the *Tasks* box in the ticket sidebar lists the tasks linked to it and *+ New task* creates one already linked (back to the ticket after saving). The task shows the ticket (detail, list, box under the menu) and the ticket history records when a task is created and done. Merging tickets moves their tasks to the kept ticket; deleting a ticket keeps its tasks without the link.
+
+## Billing
+
+*Billing* in the top menu (after Customers) has **Invoice** and **Quote** (quotes: coming next).
+
+- An invoice has an automatic numeric **ID**, a **customer** chosen from the registry (search by name, company or email), a **text**, the **amount** (`120,50`, `1.234,56` and `1,234.56` are all accepted), the **day billing starts** and the **type**: one-off, monthly, every two months, yearly.
+- **Invoice issued** switches it from *to issue* to *issued* (who and when are recorded); in the list the state is a button that switches it in one click.
+- The list has *To issue / Issued / All*, filter by type, search by customer, text or ID, the count and the total amount. For recurring invoices it shows the **next billing date** computed from the start date (end of month handled: 31 January monthly -> 28/29 February); invoices to issue whose date has come are highlighted.
+- The customer page lists the customer's invoices with *+ New invoice*.
+- Every operator can use Billing; the creator and the administrators delete invoices.
 
 ## Bulk actions in the ticket list
 
