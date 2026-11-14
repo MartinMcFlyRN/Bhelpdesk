@@ -114,6 +114,7 @@ mariadb bhelpdesk < sql/migrations/007_customer_access.sql
 mariadb bhelpdesk < sql/migrations/008_canned_signatures.sql
 mariadb bhelpdesk < sql/migrations/009_operator_departments.sql
 mariadb bhelpdesk < sql/migrations/010_rich_text.sql
+mariadb bhelpdesk < sql/migrations/011_merge.sql
 ```
 
 ## Operators area
@@ -134,6 +135,14 @@ mariadb bhelpdesk < sql/migrations/010_rich_text.sql
 **Direct links.** When a ticket is opened a unique link `/customer/t/<token>` is generated (shown on the confirmation page; it will be sent by email with the notifications). It opens that ticket without signing in and expires **`customer_link_days` days (default 30, editable in /op/config/general) after the last reply** visible to the customer — every new reply extends it; internal notes do not. After that the page says *Link expired* and invites to sign in. Tokens are stored as SHA-256 hashes only. Removing a customer from a ticket revokes their links. Operators can create a new link for any customer of the ticket (🔗 in the Customers card) to send it by hand. Old `/customer/ticket/N?t=…` links keep working (migration 007 converts them).
 
 **Email (preview).** `Mailer` sends plain-text UTF-8 messages. With `mail.driver = 'log'` (default) nothing is sent: messages are appended to `storage/mail.log`, handy for testing. With `'mail'` the server's sendmail/postfix is used. The sender (**Default from** address and name) is set in */op/config/general → Email*. SMTP and ticket notifications come next.
+
+## Bulk actions in the ticket list
+
+Select tickets with the checkboxes (or *select all*): an action bar appears with **Move**, **Merge** and **Delete**, each with a confirmation dialog. Only tickets the operator can see are affected, even with a forged request.
+
+- **Move** — to any department (not only the operator's own). The change is logged in each ticket's history. If an agent moves a ticket out of their departments it leaves their list.
+- **Merge** (2+ tickets) — choose the ticket to keep (the oldest is preselected). Messages, attachments, direct links and all customers (main and additional) of the other tickets move into it, in chronological order, so every customer sees the whole conversation; the history records which tickets were merged. The other tickets are closed, disappear from lists and keep only a redirect: their old numbers and links lead to the kept ticket (operators and customers).
+- **Delete** — permanent, after ticking *Yes, delete them permanently*: messages, attachment files on disk, links and tickets merged into them are removed.
 
 ## New ticket opened by an operator
 

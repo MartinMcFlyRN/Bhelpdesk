@@ -69,13 +69,15 @@ CREATE TABLE IF NOT EXISTS tickets (
     created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     closed_at      DATETIME NULL,
+    merged_into    INT UNSIGNED NULL,
     UNIQUE KEY uq_tickets_number (number),
     KEY ix_tickets_status_updated (status, updated_at),
     KEY ix_tickets_assigned (assigned_to),
     KEY ix_tickets_customer (customer_id),
     CONSTRAINT fk_tickets_customer   FOREIGN KEY (customer_id)   REFERENCES customers(id),
     CONSTRAINT fk_tickets_department FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL,
-    CONSTRAINT fk_tickets_operator   FOREIGN KEY (assigned_to)   REFERENCES operators(id)   ON DELETE SET NULL
+    CONSTRAINT fk_tickets_operator   FOREIGN KEY (assigned_to)   REFERENCES operators(id)   ON DELETE SET NULL,
+    CONSTRAINT fk_tickets_merged     FOREIGN KEY (merged_into)   REFERENCES tickets(id)     ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS ticket_messages (

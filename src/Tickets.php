@@ -214,6 +214,107 @@ final class Tickets
         self::logEvent($ticketId, $op, ['event' => 'opened_by_operator']);
     }
 
+    // =================================================================
+    //  Bulk actions from the ticket list: move, merge, delete
+    // =================================================================
+
+    /**
+     * Move tickets to a department (any department). Each change is logged in
+     * the ticket history by update(). Returns the number of tickets moved.
+     */
+    public static function moveMany(array $ids, int $departmentId, array $op): int
+    {
+        if (!Db::value('SELECT 1 FROM departments WHERE id = ?', [$departmentId])) {
+            return 0;
+        }
+        $n = 0;
+        foreach ($ids as $id) {
+            $t = self::find((int) $id);
+            if ($t && $t['merged_into'] === null && (int) $t['department_id'] !== $departmentId) {
+                self::update($t, $op, ['department_id' => $departmentId]);
+                $n++;
+            }
+        }
+        return $n;
+    }
+
+    /**
+     * Merge $sourceIds into $targetId: messages, attachments, direct links and
+     * customers (main + additional) move to the target, so everybody involved
+     * sees the whole conversation. Sources are closed and keep merged_into as
+     * a redirect for old numbers/links.
+     */
+    public static function merge(int $targetId, array $sourceIds, array $op): int
+    {
+        $target = self::find($targetId);
+        if (!$target || $target['merged_into'] !== null) {
+            return 0;
+        }
+        $sources = [];
+        foreach (array_unique(array_map('intval', $sourceIds)) as $sid) {
+            $s = $sid !== $targetId ? self::find($sid) : null;
+            if ($s && $s['merged_into'] === null) {
+                $sources[] = $s;
+            }
+        }
+        if (!$sources) {
+            return 0;
+        }
+        $pdo = Db::pdo();
+        $pdo->beginTransaction();
+        try {
+            $mainId = (int) $target['customer_id'];
+            foreach ($sources as $s) {
+                $sid = (int) $s['id'];
+                // everyone who was on the source ticket joins the target ticket
+                $customers = array_merge(
+                    [(int) $s['customer_id']],
+                    array_map('intval', array_column(Db::all('SELECT customer_id FROM ticket_customers WHERE ticket_id = ?', [$sid]), 'customer_id'))
+                );
+                foreach (array_unique($customers) as $cid) {
+                    if ($cid !== $mainId) {
+                        Db::exec('INSERT IGNORE INTO ticket_customers (ticket_id, customer_id, added_by) VALUES (?, ?, ?)', [$targetId, $cid, (int) $op['id']]);
+                    }
+                }
+                Db::exec('DELETE FROM ticket_customers WHERE ticket_id = ?', [$sid]);
+                Db::exec('UPDATE ticket_messages SET ticket_id = ? WHERE ticket_id = ?', [$targetId, $sid]);
+                Db::exec('UPDATE attachments SET ticket_id = ? WHERE ticket_id = ?', [$targetId, $sid]);
+                Db::exec('UPDATE ticket_links SET ticket_id = ? WHERE ticket_id = ?', [$targetId, $sid]);
+                // tickets previously merged into the source now point to the target
+                Db::exec('UPDATE tickets SET merged_into = ? WHERE merged_into = ?', [$targetId, $sid]);
+                Db::exec("UPDATE tickets SET merged_into = ?, status = 'closed', closed_at = NOW(), updated_at = NOW() WHERE id = ?", [$targetId, $sid]);
+            }
+            self::logEvent($targetId, $op, [
+                'event'   => 'merged',
+                'tickets' => array_map(static fn ($s) => '#' . $s['number'] . ' ' . $s['subject'], $sources),
+            ]);
+            $pdo->commit();
+        } catch (\Throwable $ex) {
+            $pdo->rollBack();
+            throw $ex;
+        }
+        return count($sources);
+    }
+
+    /**
+     * Delete tickets for good: messages, attachments (rows and files), customers
+     * links and direct links go with them, and so do tickets merged into them.
+     */
+    public static function deleteMany(array $ids): int
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        if (!$ids) {
+            return 0;
+        }
+        $in = implode(',', array_fill(0, count($ids), '?'));
+        $files = array_column(Db::all('SELECT stored_name FROM attachments WHERE ticket_id IN (' . $in . ')', $ids), 'stored_name');
+        $n = Db::exec('DELETE FROM tickets WHERE id IN (' . $in . ')', $ids);
+        foreach ($files as $f) {
+            @unlink(Attachments::storageDir() . '/' . $f);
+        }
+        return $n;
+    }
+
     private static function customerLabel(int $customerId): string
     {
         $c = Db::one('SELECT name, email FROM customers WHERE id = ?', [$customerId]);
@@ -341,7 +442,7 @@ final class Tickets
     public static function countsByStatus(array $op): array
     {
         [$vis, $vp] = self::visibility($op);
-        $rows = Db::all('SELECT t.status, COUNT(*) n FROM tickets t WHERE ' . $vis . ' GROUP BY t.status', $vp);
+        $rows = Db::all('SELECT t.status, COUNT(*) n FROM tickets t WHERE t.merged_into IS NULL AND ' . $vis . ' GROUP BY t.status', $vp);
         $out = array_fill_keys(self::STATUSES, 0);
         foreach ($rows as $r) {
             $out[$r['status']] = (int) $r['n'];
@@ -357,7 +458,8 @@ final class Tickets
     {
         $opId = (int) $op['id'];
         [$vis, $vp] = self::visibility($op);
-        $where = [$vis];
+        // merged tickets only live on as a redirect to the ticket they were merged into
+        $where = [$vis, 't.merged_into IS NULL'];
         $p = $vp;
 
         if (!empty($f['status']) && in_array($f['status'], self::STATUSES, true)) {

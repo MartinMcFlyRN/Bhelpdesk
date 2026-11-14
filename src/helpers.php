@@ -109,6 +109,8 @@ function system_message(string $body): string
     switch ($ev['event']) {
         case 'reopened':
             return __('log.reopened');
+        case 'merged':
+            return __('log.merged', ['who' => (string) ($ev['by'] ?? '?'), 'tickets' => implode(', ', (array) ($ev['tickets'] ?? []))]);
         case 'opened_by_operator':
             return __('log.opened_by_operator', ['who' => (string) ($ev['by'] ?? '?')]);
         case 'customer_added':

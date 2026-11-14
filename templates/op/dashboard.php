@@ -36,19 +36,35 @@ $openTotal = $counts['open'] + $counts['answered'] + $counts['on_hold'];
     <button class="btn" type="submit"><?= t('dash.filter') ?></button>
 </form>
 
+<form method="post" action="/op/tickets/bulk" id="bulk-form" class="bulk-form">
+<?= \Bhelpdesk\Csrf::field() ?>
+<input type="hidden" name="back" value="<?= e((string) ($_SERVER['REQUEST_URI'] ?? '/op/')) ?>">
+
+<div class="bulk-bar" id="bulk-bar" hidden>
+    <span class="bulk-count"><strong data-bulk-count>0</strong> <?= t('bulk.selected') ?></span>
+    <button type="button" class="btn btn-small" data-open-dialog="dlg-move"><?= t('bulk.move') ?></button>
+    <button type="button" class="btn btn-small" data-open-dialog="dlg-merge" data-min="2"><?= t('bulk.merge') ?></button>
+    <button type="button" class="btn btn-small btn-danger-outline" data-open-dialog="dlg-delete"><?= t('bulk.delete') ?></button>
+    <button type="button" class="btn btn-link btn-small" data-bulk-clear><?= t('bulk.clear') ?></button>
+</div>
+
 <table class="table">
     <thead>
     <tr>
+        <th class="col-check"><input type="checkbox" data-bulk-all aria-label="<?= t('bulk.select_all') ?>"></th>
         <th><?= t('col.number') ?></th><th><?= t('col.subject') ?></th><th><?= t('col.customer') ?></th><th><?= t('col.department') ?></th>
         <th><?= t('col.priority') ?></th><th><?= t('col.status') ?></th><th><?= t('col.assignee') ?></th><th><?= t('col.updated') ?></th>
     </tr>
     </thead>
     <tbody>
     <?php if (!$rows): ?>
-        <tr><td colspan="8" class="muted center"><?= t('dash.empty') ?></td></tr>
+        <tr><td colspan="9" class="muted center"><?= t('dash.empty') ?></td></tr>
     <?php endif; ?>
     <?php foreach ($rows as $row): ?>
         <tr>
+            <td class="col-check"><input type="checkbox" name="ids[]" value="<?= (int) $row['id'] ?>" data-bulk-item
+                data-number="<?= e($row['number']) ?>" data-subject="<?= e($row['subject']) ?>" data-customer="<?= e($row['customer_name']) ?>"
+                aria-label="#<?= e($row['number']) ?>"></td>
             <td><a href="/op/ticket/<?= (int) $row['id'] ?>">#<?= e($row['number']) ?></a></td>
             <td><a href="/op/ticket/<?= (int) $row['id'] ?>"><?= e($row['subject']) ?></a></td>
             <td><a href="/op/customers/<?= (int) $row['customer_id'] ?>"><?= e($row['customer_name']) ?></a><?= !empty($row['customer_company']) ? ' <small class="muted">· ' . e($row['customer_company']) . '</small>' : '' ?><br><small class="muted"><?= e($row['customer_email']) ?><?= !empty($row['phone']) ? ' · ' . e($row['phone']) : '' ?></small></td>
@@ -61,6 +77,48 @@ $openTotal = $counts['open'] + $counts['answered'] + $counts['on_hold'];
     <?php endforeach; ?>
     </tbody>
 </table>
+
+<!-- move -->
+<dialog id="dlg-move" class="dialog">
+    <h2><?= t('bulk.move_title') ?></h2>
+    <p class="muted"><?= t('bulk.move_text') ?></p>
+    <label><?= t('col.department') ?>
+        <select name="department">
+            <option value=""><?= t('nt.choose') ?></option>
+            <?php foreach ($allDepartments as $d): ?>
+                <option value="<?= (int) $d['id'] ?>"><?= e($d['name']) ?></option>
+            <?php endforeach; ?>
+        </select>
+    </label>
+    <div class="dialog-actions">
+        <button type="button" class="btn" data-close-dialog><?= t('bulk.cancel') ?></button>
+        <button type="submit" class="btn btn-primary" name="action" value="move"><?= t('bulk.move_confirm') ?></button>
+    </div>
+</dialog>
+
+<!-- merge -->
+<dialog id="dlg-merge" class="dialog">
+    <h2><?= t('bulk.merge_title') ?></h2>
+    <p class="muted"><?= t('bulk.merge_text') ?></p>
+    <div class="merge-targets" data-merge-targets></div>
+    <div class="dialog-actions">
+        <button type="button" class="btn" data-close-dialog><?= t('bulk.cancel') ?></button>
+        <button type="submit" class="btn btn-primary" name="action" value="merge"><?= t('bulk.merge_confirm') ?></button>
+    </div>
+</dialog>
+
+<!-- delete -->
+<dialog id="dlg-delete" class="dialog">
+    <h2><?= t('bulk.delete_title') ?></h2>
+    <p><?= t('bulk.delete_text') ?></p>
+    <ul class="delete-list" data-delete-list></ul>
+    <label class="check"><input type="checkbox" name="confirm" value="1" data-delete-confirm> <?= t('bulk.delete_check') ?></label>
+    <div class="dialog-actions">
+        <button type="button" class="btn" data-close-dialog><?= t('bulk.cancel') ?></button>
+        <button type="submit" class="btn btn-danger" name="action" value="delete" data-delete-submit disabled><?= t('bulk.delete_confirm') ?></button>
+    </div>
+</dialog>
+</form>
 
 <?php $pages = (int) ceil($total / $perPage); if ($pages > 1): ?>
 <nav class="pager">

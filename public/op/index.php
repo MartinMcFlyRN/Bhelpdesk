@@ -66,11 +66,76 @@ $r->get('/', static function (): void {
         'page'        => $page,
         'perPage'     => 25,
         'counts'      => Tickets::countsByStatus($op),
+        'allDepartments' => Tickets::departments(false),
         // department filter: agents only see their own departments
         'departments' => $op['role'] === 'admin'
             ? Tickets::departments(false)
             : array_values(array_filter(Tickets::departments(false), static fn ($d) => in_array((int) $d['id'], Operators::departmentIds((int) $op['id']), true))),
     ]);
+});
+
+// =====================================================================
+//  Bulk actions from the ticket list: move / merge / delete
+//  Only tickets the operator can see are touched.
+// =====================================================================
+$r->post('/tickets/bulk', static function (): void {
+    $op = Auth::require();
+    $back = (string) ($_POST['back'] ?? '/op/');
+    if (!preg_match('#^/op/(\?[^\r\n]*)?$#', $back)) {
+        $back = '/op/';
+    }
+    $tickets = [];
+    foreach (array_unique(array_map('intval', (array) ($_POST['ids'] ?? []))) as $id) {
+        $t = Tickets::find($id);
+        if ($t && $t['merged_into'] === null && Tickets::canSee($t, $op)) {
+            $tickets[(int) $t['id']] = $t;
+        }
+    }
+    if (!$tickets) {
+        flash('error', 'bulk.none');
+        redirect($back);
+    }
+    $ids = array_keys($tickets);
+
+    switch ((string) ($_POST['action'] ?? '')) {
+        case 'move':
+            $dep = (int) ($_POST['department'] ?? 0);
+            $name = (string) Db::value('SELECT name FROM departments WHERE id = ?', [$dep]);
+            if ($name === '') {
+                flash('error', 'bulk.choose_department');
+                break;
+            }
+            $n = Tickets::moveMany($ids, $dep, $op);
+            flash('success', 'bulk.moved', ['n' => $n, 'department' => $name]);
+            break;
+
+        case 'merge':
+            $target = (int) ($_POST['target'] ?? 0);
+            if (count($ids) < 2) {
+                flash('error', 'bulk.merge_two');
+                break;
+            }
+            if (!isset($tickets[$target])) {
+                flash('error', 'bulk.merge_target');
+                break;
+            }
+            $n = Tickets::merge($target, $ids, $op);
+            flash('success', 'bulk.merged', ['n' => $n, 'number' => $tickets[$target]['number']]);
+            redirect('/op/ticket/' . $target);
+
+        case 'delete':
+            if (($_POST['confirm'] ?? '') !== '1') {
+                flash('error', 'bulk.confirm_needed');
+                break;
+            }
+            $n = Tickets::deleteMany($ids);
+            flash('success', 'bulk.deleted', ['n' => $n]);
+            break;
+
+        default:
+            flash('error', 'bulk.none');
+    }
+    redirect($back);
 });
 
 // =====================================================================
@@ -200,6 +265,11 @@ $r->post('/tickets/new', static function () use ($newTicketPage, $allowedDepartm
 // Tickets outside the operator's departments answer "not found", as if they did not exist
 $loadTicket = static function (array $p): array {
     $t = Tickets::find((int) $p['id']);
+    // merged ticket: continue on the ticket it was merged into
+    if ($t && $t['merged_into'] !== null) {
+        flash('success', 'bulk.was_merged', ['number' => $t['number']]);
+        redirect('/op/ticket/' . (int) $t['merged_into']);
+    }
     if (!$t || !Tickets::canSee($t, Auth::require())) {
         http_response_code(404);
         View::render('op', 'error', ['title' => __('error.ticket_not_found.title'), 'message' => __('error.ticket_not_found.message')]);

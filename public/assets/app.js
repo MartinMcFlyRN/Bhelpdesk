@@ -176,3 +176,79 @@ document.querySelectorAll('select[name="role"]').forEach(function (sel) {
     sel.addEventListener('change', sync);
     sync();
 });
+
+// Ticket list bulk actions: selection, action bar and confirmation dialogs
+(function () {
+    var form = document.getElementById('bulk-form');
+    if (!form) {
+        return;
+    }
+    var bar = document.getElementById('bulk-bar');
+    var all = form.querySelector('[data-bulk-all]');
+    var items = Array.prototype.slice.call(form.querySelectorAll('[data-bulk-item]'));
+    var selected = function () { return items.filter(function (i) { return i.checked; }); };
+
+    function refresh() {
+        var n = selected().length;
+        bar.hidden = n === 0;
+        form.querySelector('[data-bulk-count]').textContent = n;
+        form.querySelectorAll('[data-open-dialog]').forEach(function (b) {
+            b.disabled = n < parseInt(b.getAttribute('data-min') || '1', 10);
+        });
+        if (all) {
+            all.checked = n > 0 && n === items.length;
+            all.indeterminate = n > 0 && n < items.length;
+        }
+        items.forEach(function (i) { i.closest('tr').classList.toggle('row-selected', i.checked); });
+    }
+    items.forEach(function (i) { i.addEventListener('change', refresh); });
+    if (all) {
+        all.addEventListener('change', function () { items.forEach(function (i) { i.checked = all.checked; }); refresh(); });
+    }
+    form.querySelector('[data-bulk-clear]').addEventListener('click', function () { items.forEach(function (i) { i.checked = false; }); refresh(); });
+
+    function label(i) {
+        return '#' + i.getAttribute('data-number') + ' · ' + i.getAttribute('data-subject') + ' (' + i.getAttribute('data-customer') + ')';
+    }
+
+    form.querySelectorAll('[data-open-dialog]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var dlg = document.getElementById(btn.getAttribute('data-open-dialog'));
+            var sel = selected();
+            var targets = dlg.querySelector('[data-merge-targets]');
+            if (targets) {
+                // radio list: which ticket to keep; the oldest one (lowest id) is preselected
+                targets.textContent = '';
+                var oldest = Math.min.apply(null, sel.map(function (i) { return parseInt(i.value, 10); }));
+                sel.forEach(function (i) {
+                    var l = document.createElement('label');
+                    l.className = 'check';
+                    var r = document.createElement('input');
+                    r.type = 'radio';
+                    r.name = 'target';
+                    r.value = i.value;
+                    r.required = true;
+                    r.checked = parseInt(i.value, 10) === oldest;
+                    l.appendChild(r);
+                    l.appendChild(document.createTextNode(' ' + label(i)));
+                    targets.appendChild(l);
+                });
+            }
+            var list = dlg.querySelector('[data-delete-list]');
+            if (list) {
+                list.textContent = '';
+                sel.forEach(function (i) { var li = document.createElement('li'); li.textContent = label(i); list.appendChild(li); });
+                var chk = dlg.querySelector('[data-delete-confirm]');
+                var sub = dlg.querySelector('[data-delete-submit]');
+                chk.checked = false;
+                sub.disabled = true;
+                chk.onchange = function () { sub.disabled = !chk.checked; };
+            }
+            dlg.showModal();
+        });
+    });
+    form.querySelectorAll('[data-close-dialog]').forEach(function (b) {
+        b.addEventListener('click', function () { b.closest('dialog').close(); });
+    });
+    refresh();
+})();

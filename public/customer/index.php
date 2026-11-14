@@ -298,6 +298,20 @@ $r->get('/ticket/{number}', static function (array $p) use ($canSee, $denied): v
     if (isset($_GET['t'])) {
         redirect('/customer/t/' . rawurlencode((string) $_GET['t']));
     }
+    // merged ticket: show the ticket it was merged into
+    $raw = Tickets::findByNumber($number);
+    if ($raw && $raw['merged_into'] !== null) {
+        $into = Tickets::find((int) $raw['merged_into']);
+        if ($into) {
+            // a direct-link session opened on the old number follows the merge
+            // (the link itself now belongs to the kept ticket)
+            if (isset($_SESSION['links'][$number]) && !isset($_SESSION['links'][$into['number']])) {
+                $_SESSION['links'][$into['number']] = $_SESSION['links'][$number];
+            }
+            unset($_SESSION['links'][$number]);
+            redirect('/customer/ticket/' . rawurlencode($into['number']));
+        }
+    }
     $ticket = $canSee($number);
     if (!$ticket) {
         $denied($number);

@@ -30,7 +30,7 @@ final class Customers
                     SUM(t.status <> \'closed\') AS open_count,
                     MAX(t.updated_at) AS last_activity
                FROM customers c
-               LEFT JOIN tickets t ON t.customer_id = c.id AND ' . $vis . $where . '
+               LEFT JOIN tickets t ON t.customer_id = c.id AND t.merged_into IS NULL AND ' . $vis . $where . '
               GROUP BY c.id
               ORDER BY COALESCE(MAX(t.updated_at), c.created_at) DESC
               LIMIT ' . self::PER_PAGE . ' OFFSET ' . $offset,
@@ -99,7 +99,7 @@ final class Customers
             'SELECT t.id, t.number, t.subject, t.status, t.priority, t.created_at, t.updated_at, d.name AS department_name,
                     IF(t.customer_id = ?, \'main\', \'cc\') AS role
                FROM tickets t LEFT JOIN departments d ON d.id = t.department_id
-              WHERE (t.customer_id = ?
+              WHERE t.merged_into IS NULL AND (t.customer_id = ?
                  OR EXISTS (SELECT 1 FROM ticket_customers tc WHERE tc.ticket_id = t.id AND tc.customer_id = ?))
                 AND ' . $vis . '
               ORDER BY t.updated_at DESC',
