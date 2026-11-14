@@ -745,11 +745,6 @@ $identityPage = static function (?array $item, array $values, array $errors) use
         'errors'      => $errors,
         'departments' => Departments::all(),
         'test'        => $item ? ($_SESSION['mail_test'][$item['id']] ?? null) : null,
-        // last messages received and sent with this identity
-        'log'         => $item ? Db::all(
-            'SELECT m.*, t.number FROM mail_messages m LEFT JOIN tickets t ON t.id = m.ticket_id WHERE m.identity_id = ? ORDER BY m.id DESC LIMIT 30',
-            [(int) $item['id']]
-        ) : [],
     ]);
     if ($item) {
         unset($_SESSION['mail_test'][$item['id']]);
@@ -805,6 +800,133 @@ $loadIdentity = static function (array $p): array {
     return $i;
 };
 
+// ---------- Templates of the automatic emails ----------
+$loadTemplate = static function (array $p): string {
+    $code = (string) $p['code'];
+    if (!isset(EmailTemplates::CODES[$code])) {
+        http_response_code(404);
+        View::render('op', 'error', ['title' => __('error.not_found.title'), 'message' => __('error.not_found.message')]);
+        exit;
+    }
+    return $code;
+};
+
+$templatePage = static function (string $code, array $values, array $errors) use ($cfgView): void {
+    $cfgView('template_edit', __('tpl.' . $code), [
+        'code'     => $code,
+        'tpl'      => EmailTemplates::get($code),
+        'values'   => $values,
+        'errors'   => $errors,
+        'vars'     => EmailTemplates::CODES[$code][1],
+        'defaults' => EmailTemplates::defaults($code),
+    ]);
+};
+
+$r->get('/config/email/templates', static function () use ($cfgView): void {
+    Auth::requireAdmin();
+    $items = [];
+    foreach (EmailTemplates::CODES as $code => [$group]) {
+        $items[$group][$code] = EmailTemplates::get($code);
+    }
+    $cfgView('templates', __('cfg.menu.templates'), ['items' => $items]);
+});
+
+$r->get('/config/email/templates/{code}', static function (array $p) use ($templatePage, $loadTemplate): void {
+    Auth::requireAdmin();
+    $code = $loadTemplate($p);
+    $t = EmailTemplates::get($code);
+    $templatePage($code, ['subject' => $t['subject'], 'body' => $t['body']], []);
+});
+
+$r->post('/config/email/templates/{code}', static function (array $p) use ($templatePage, $loadTemplate): void {
+    $op = Auth::requireAdmin();
+    $code = $loadTemplate($p);
+    $res = EmailTemplates::validate($_POST);
+    if ($res['errors']) {
+        http_response_code(422);
+        $templatePage($code, $res['values'], $res['errors']);
+        return;
+    }
+    EmailTemplates::save($code, $res['values'], (int) $op['id']);
+    flash('success', 'tpl.saved');
+    redirect('/op/config/email/templates/' . $code);
+});
+
+$r->post('/config/email/templates/{code}/reset', static function (array $p) use ($loadTemplate): void {
+    Auth::requireAdmin();
+    $code = $loadTemplate($p);
+    EmailTemplates::reset($code);
+    flash('success', 'tpl.reset_done');
+    redirect('/op/config/email/templates/' . $code);
+});
+
+// test: the saved template with example data, sent to the administrator
+$r->post('/config/email/templates/{code}/test', static function (array $p) use ($loadTemplate): void {
+    $op = Auth::requireAdmin();
+    $code = $loadTemplate($p);
+    $mail = Notifier::defaultLanguage(static fn (): array => EmailTemplates::render($code, EmailTemplates::sample($code, $op)));
+    $ok = Mailer::send((string) $op['email'], '[TEST] ' . $mail['subject'], $mail['text'], null, ['html' => $mail['html']]);
+    if ($ok) {
+        flash('success', 'tpl.test_sent', ['email' => $op['email']]);
+    } else {
+        flash('error', 'mail.not_sent', ['error' => $op['email'] . ': ' . Mailer::lastError()]);
+    }
+    redirect('/op/config/email/templates/' . $code);
+});
+
+// ---------- Log of the email received and sent (last LOG_DAYS days) ----------
+$r->get('/config/email/log', static function () use ($cfgView): void {
+    Auth::requireAdmin();
+    $f = [
+        'identity'  => (int) ($_GET['identity'] ?? 0),
+        'direction' => in_array($_GET['direction'] ?? '', ['in', 'out'], true) ? $_GET['direction'] : '',
+        'status'    => in_array($_GET['status'] ?? '', ['ticket', 'reply', 'ignored', 'error', 'big', 'sent', 'alert'], true) ? $_GET['status'] : '',
+        'q'         => trim((string) ($_GET['q'] ?? '')),
+    ];
+    $where = ['m.created_at >= NOW() - INTERVAL ' . MailFetcher::LOG_DAYS . ' DAY'];
+    $params = [];
+    if ($f['identity']) {
+        $where[] = 'm.identity_id = ?';
+        $params[] = $f['identity'];
+    }
+    if ($f['direction'] !== '') {
+        $where[] = 'm.direction = ?';
+        $params[] = $f['direction'];
+    }
+    if ($f['status'] !== '') {
+        $where[] = 'm.status = ?';
+        $params[] = $f['status'];
+    }
+    if ($f['q'] !== '') {
+        $where[] = '(m.address LIKE ? OR m.subject LIKE ? OR t.number = ?)';
+        $like = '%' . addcslashes($f['q'], '%_\\') . '%';
+        array_push($params, $like, $like, ltrim($f['q'], '#'));
+    }
+    $sqlWhere = implode(' AND ', $where);
+    $total = (int) Db::value('SELECT COUNT(*) FROM mail_messages m LEFT JOIN tickets t ON t.id = m.ticket_id WHERE ' . $sqlWhere, $params);
+    $perPage = 50;
+    $page = max(1, min((int) ($_GET['page'] ?? 1), max(1, (int) ceil($total / $perPage))));
+    $rows = Db::all(
+        'SELECT m.*, t.number, i.email AS identity_email FROM mail_messages m
+           LEFT JOIN tickets t ON t.id = m.ticket_id
+           LEFT JOIN mail_identities i ON i.id = m.identity_id
+          WHERE ' . $sqlWhere . ' ORDER BY m.id DESC LIMIT ' . $perPage . ' OFFSET ' . (($page - 1) * $perPage),
+        $params
+    );
+    $cfgView('email_log', __('cfg.menu.email_log'), [
+        'rows'       => $rows,
+        'filters'    => $f,
+        'identities' => Db::all('SELECT id, email, pop_enabled, pop_checked_at, pop_status FROM mail_identities ORDER BY email'),
+        'total'      => $total,
+        'page'       => $page,
+        'pages'      => max(1, (int) ceil($total / $perPage)),
+    ]);
+});
+
+// old addresses of the templates (before the E-mail submenu)
+$r->get('/config/templates', static fn () => redirect('/op/config/email/templates'));
+$r->get('/config/templates/{code}', static fn (array $p) => redirect('/op/config/email/templates/' . rawurlencode((string) $p['code'])));
+
 $r->get('/config/email/{id}', static function (array $p) use ($identityPage, $loadIdentity): void {
     Auth::requireAdmin();
     $i = $loadIdentity($p);
@@ -829,7 +951,7 @@ $r->post('/config/email/{id}', static function (array $p) use ($identityPage, $l
 $r->get('/config/email/source/{mid}', static function (array $p) use ($emailSource): void {
     Auth::requireAdmin();
     $row = Db::one("SELECT * FROM mail_messages WHERE id = ? AND direction = 'in' AND raw_path IS NOT NULL", [(int) $p['mid']]);
-    $emailSource($row, $row && $row['identity_id'] ? '/op/config/email/' . (int) $row['identity_id'] . '#log' : '/op/config/email');
+    $emailSource($row, '/op/config/email/log' . ($row && $row['identity_id'] ? '?identity=' . (int) $row['identity_id'] : ''));
 });
 
 // Download the mailbox now (same as the cron job)
@@ -848,7 +970,7 @@ $r->post('/config/email/{id}/fetch', static function (array $p) use ($loadIdenti
             flash($r['ok'] ? 'success' : 'error', 'mailin.result', ['result' => $r['message']]);
         }
     }
-    redirect('/op/config/email/' . $i['id'] . '#log');
+    redirect('/op/config/email/log?identity=' . (int) $i['id']);
 });
 
 $r->post('/config/email/{id}/delete', static function (array $p) use ($loadIdentity): void {
@@ -919,80 +1041,6 @@ $cannedPage = static function (?array $item, array $values, array $errors) use (
         'departments' => Departments::all(),
     ]);
 };
-
-// ---------- Templates of the automatic emails ----------
-$loadTemplate = static function (array $p): string {
-    $code = (string) $p['code'];
-    if (!isset(EmailTemplates::CODES[$code])) {
-        http_response_code(404);
-        View::render('op', 'error', ['title' => __('error.not_found.title'), 'message' => __('error.not_found.message')]);
-        exit;
-    }
-    return $code;
-};
-
-$templatePage = static function (string $code, array $values, array $errors) use ($cfgView): void {
-    $cfgView('template_edit', __('tpl.' . $code), [
-        'code'     => $code,
-        'tpl'      => EmailTemplates::get($code),
-        'values'   => $values,
-        'errors'   => $errors,
-        'vars'     => EmailTemplates::CODES[$code][1],
-        'defaults' => EmailTemplates::defaults($code),
-    ]);
-};
-
-$r->get('/config/templates', static function () use ($cfgView): void {
-    Auth::requireAdmin();
-    $items = [];
-    foreach (EmailTemplates::CODES as $code => [$group]) {
-        $items[$group][$code] = EmailTemplates::get($code);
-    }
-    $cfgView('templates', __('cfg.menu.templates'), ['items' => $items]);
-});
-
-$r->get('/config/templates/{code}', static function (array $p) use ($templatePage, $loadTemplate): void {
-    Auth::requireAdmin();
-    $code = $loadTemplate($p);
-    $t = EmailTemplates::get($code);
-    $templatePage($code, ['subject' => $t['subject'], 'body' => $t['body']], []);
-});
-
-$r->post('/config/templates/{code}', static function (array $p) use ($templatePage, $loadTemplate): void {
-    $op = Auth::requireAdmin();
-    $code = $loadTemplate($p);
-    $res = EmailTemplates::validate($_POST);
-    if ($res['errors']) {
-        http_response_code(422);
-        $templatePage($code, $res['values'], $res['errors']);
-        return;
-    }
-    EmailTemplates::save($code, $res['values'], (int) $op['id']);
-    flash('success', 'tpl.saved');
-    redirect('/op/config/templates/' . $code);
-});
-
-$r->post('/config/templates/{code}/reset', static function (array $p) use ($loadTemplate): void {
-    Auth::requireAdmin();
-    $code = $loadTemplate($p);
-    EmailTemplates::reset($code);
-    flash('success', 'tpl.reset_done');
-    redirect('/op/config/templates/' . $code);
-});
-
-// test: the saved template with example data, sent to the administrator
-$r->post('/config/templates/{code}/test', static function (array $p) use ($loadTemplate): void {
-    $op = Auth::requireAdmin();
-    $code = $loadTemplate($p);
-    $mail = Notifier::defaultLanguage(static fn (): array => EmailTemplates::render($code, EmailTemplates::sample($code, $op)));
-    $ok = Mailer::send((string) $op['email'], '[TEST] ' . $mail['subject'], $mail['text'], null, ['html' => $mail['html']]);
-    if ($ok) {
-        flash('success', 'tpl.test_sent', ['email' => $op['email']]);
-    } else {
-        flash('error', 'mail.not_sent', ['error' => $op['email'] . ': ' . Mailer::lastError()]);
-    }
-    redirect('/op/config/templates/' . $code);
-});
 
 $r->get('/config/canned', static function () use ($cannedPage): void {
     Auth::requireAdmin();

@@ -1,7 +1,7 @@
 <div class="cfg-layout">
     <?php require BHD_ROOT . '/templates/op/config/_menu.php'; ?>
     <div class="cfg-content">
-        <p><a href="/op/config/templates">← <?= t('cfg.back') ?></a></p>
+        <p><a href="/op/config/email/templates">← <?= t('cfg.back') ?></a></p>
         <h1><?= t('tpl.' . $code) ?></h1>
         <p class="muted"><?= t('tpl.' . $code . '.when') ?>
             <?php if ($tpl['custom']): ?> · <?= t('tpl.modified', ['date' => fmt_date((string) $tpl['updated_at']), 'who' => (string) ($tpl['updated_by'] ?? '—')]) ?><?php else: ?> · <?= t('tpl.using_default') ?><?php endif; ?>
@@ -12,7 +12,7 @@
         <?php endif; ?>
 
         <div class="tpl-layout">
-            <form method="post" action="/op/config/templates/<?= e($code) ?>" class="form card">
+            <form method="post" action="/op/config/email/templates/<?= e($code) ?>" class="form card">
                 <?= \Bhelpdesk\Csrf::field() ?>
                 <input type="hidden" name="format" value="text">
                 <label><?= t('tpl.subject') ?>
@@ -47,7 +47,7 @@
         <div class="card narrow-left">
             <h2><?= t('tpl.test_title') ?></h2>
             <p class="muted hint"><?= t('tpl.test_hint', ['email' => (string) (\Bhelpdesk\Auth::user()['email'] ?? '')]) ?></p>
-            <form method="post" action="/op/config/templates/<?= e($code) ?>/test" class="inline">
+            <form method="post" action="/op/config/email/templates/<?= e($code) ?>/test" class="inline">
                 <?= \Bhelpdesk\Csrf::field() ?>
                 <button class="btn" type="submit"><?= t('tpl.test_send') ?></button>
             </form>
@@ -60,7 +60,7 @@
                 <p><strong><?= e($defaults['subject']) ?></strong></p>
                 <div class="rich"><?= \Bhelpdesk\Html::sanitize($defaults['body']) ?></div>
             </details>
-            <form method="post" action="/op/config/templates/<?= e($code) ?>/reset" class="inline">
+            <form method="post" action="/op/config/email/templates/<?= e($code) ?>/reset" class="inline">
                 <?= \Bhelpdesk\Csrf::field() ?>
                 <button class="btn btn-danger" type="submit" data-confirm="<?= t('tpl.reset_confirm') ?>"><?= t('tpl.reset') ?></button>
             </form>

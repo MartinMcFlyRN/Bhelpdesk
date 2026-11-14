@@ -2,7 +2,7 @@
     <?php require BHD_ROOT . '/templates/op/config/_menu.php'; ?>
     <div class="cfg-content">
         <div class="page-head">
-            <h1><?= t('cfg.menu.email') ?></h1>
+            <h1><?= t('mi.accounts_title') ?></h1>
             <a class="btn btn-primary" href="/op/config/email/new">+ <?= t('mi.new') ?></a>
         </div>
         <p class="muted"><?= t('mi.hint') ?></p>

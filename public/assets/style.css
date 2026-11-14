@@ -451,3 +451,14 @@ a.badge-mail:hover { background: #bae6fd; }
 .src-headers dt { font-weight: 600; color: var(--muted); }
 .src-headers dd { margin: 0; overflow-wrap: anywhere; }
 .eml-source { background: #0f172a; color: #e2e8f0; padding: 1rem; border-radius: var(--radius); font-size: .8rem; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 75vh; overflow: auto; }
+
+/* Configuration menu: groups with sub-items (E-mail -> Account, Template, Log) */
+.cfg-group { margin: .1rem 0; }
+.cfg-menu a.cfg-group-title { font-weight: 600; }
+.cfg-group.open a.cfg-group-title { color: #5b21b6; }
+.cfg-menu a.cfg-sub { padding: .4rem .6rem .4rem 1.4rem; font-size: .95rem; position: relative; }
+.cfg-menu a.cfg-sub::before { content: ''; position: absolute; left: .75rem; top: .45rem; bottom: .45rem; border-left: 2px solid #e5e7eb; }
+.cfg-menu a.cfg-sub.active::before { border-left-color: #7c3aed; }
+.mail-boxes { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: 1rem; }
+.mail-box { display: flex; flex-direction: column; gap: .3rem; align-items: flex-start; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: .7rem .9rem; max-width: 360px; }
+.mail-alert { background: #ede9fe; color: #5b21b6; }

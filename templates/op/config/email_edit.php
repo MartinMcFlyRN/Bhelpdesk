@@ -116,39 +116,17 @@ $saved = static fn (string $field): bool => !$isNew && !empty($item[$field]);
             </form>
         </div>
 
-        <div class="card" id="log">
-            <div class="row-between">
-                <h2><?= t('mailin.log_title') ?></h2>
-                <form method="post" action="/op/config/email/<?= (int) $item['id'] ?>/fetch" class="inline">
-                    <?= \Bhelpdesk\Csrf::field() ?>
-                    <button class="btn" type="submit" <?= !$item['pop_enabled'] ? 'disabled' : '' ?>><?= t('mailin.fetch_now') ?></button>
-                </form>
-            </div>
-            <p class="muted hint"><?= t('mailin.log_hint') ?></p>
-            <?php if (!$log): ?>
-                <p class="muted"><?= t('mailin.log_empty') ?></p>
-            <?php else: ?>
-            <div class="table-wrap">
-                <table class="table mail-log">
-                    <thead><tr><th><?= t('mailin.col_date') ?></th><th></th><th><?= t('mailin.col_address') ?></th><th><?= t('mailin.col_subject') ?></th><th><?= t('mailin.col_result') ?></th></tr></thead>
-                    <tbody>
-                    <?php foreach ($log as $row): ?>
-                        <tr>
-                            <td class="nowrap"><?= e(fmt_date((string) $row['created_at'])) ?></td>
-                            <td title="<?= t($row['direction'] === 'in' ? 'mailin.dir_in' : 'mailin.dir_out') ?>"><?= $row['direction'] === 'in' ? '↓' : '↑' ?></td>
-                            <td><?= e((string) $row['address']) ?></td>
-                            <td><?php if (!empty($row['raw_path'])): ?><a href="/op/config/email/source/<?= (int) $row['id'] ?>" target="_blank" rel="noopener" title="<?= t('src.open') ?>"><?= e((string) $row['subject']) ?> ↗</a><?php else: ?><?= e((string) $row['subject']) ?><?php endif; ?></td>
-                            <td>
-                                <span class="mail-status mail-<?= e($row['status']) ?>"><?= t('mailin.st_' . $row['status']) ?></span>
-                                <?php if ($row['number']): ?> <a href="/op/ticket/<?= (int) $row['ticket_id'] ?>">#<?= e($row['number']) ?></a><?php endif; ?>
-                                <?php if ($row['note']): ?><br><small class="muted"><?= e($row['note']) ?></small><?php endif; ?>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
+        <div class="card narrow-left">
+            <h2><?= t('mailin.fetch_title') ?></h2>
+            <p class="muted hint"><?= t('mailin.fetch_hint') ?></p>
+            <?php if ($item['pop_checked_at']): ?>
+                <p><small class="<?= str_starts_with((string) $item['pop_status'], 'OK') ? 'text-ok' : 'text-err' ?>"><?= e(fmt_date((string) $item['pop_checked_at'])) ?> · <?= e((string) $item['pop_status']) ?></small></p>
             <?php endif; ?>
+            <form method="post" action="/op/config/email/<?= (int) $item['id'] ?>/fetch" class="inline">
+                <?= \Bhelpdesk\Csrf::field() ?>
+                <button class="btn" type="submit" <?= !$item['pop_enabled'] ? 'disabled' : '' ?>><?= t('mailin.fetch_now') ?></button>
+            </form>
+            <a class="btn btn-link" href="/op/config/email/log?identity=<?= (int) $item['id'] ?>"><?= t('mailin.see_log') ?></a>
         </div>
 
         <div class="card narrow-left danger-zone">

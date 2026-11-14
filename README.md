@@ -146,6 +146,8 @@ mariadb bhelpdesk < sql/migrations/016_mail_source.sql
 
 ## E-mail identities (/op/config/email)
 
+The **E-mail** section of the configuration has three pages: **Account** (the identities below), **Template** (texts of the automatic emails) and **Log** (email received and sent).
+
 An identity is an email address with:
 
 - **SMTP** (sending): server, port, encryption (SSL/TLS, STARTTLS or none), username/password, certificate check. Leave the server empty to send with PHP `mail()`. Authentication uses AUTH PLAIN or LOGIN; the client is built in (no external libraries).
@@ -160,7 +162,7 @@ Passwords are encrypted (libsodium secretbox) with a key created automatically i
 
 ## Tickets from email and notifications
 
-**Download.** `bin/fetch-mail.php` (cron every minute, `deploy/bhelpdesk.cron`, as the PHP-FPM user) downloads the POP3 mailbox of every active identity with POP3 enabled; *Download now* on the identity page does the same. A lock prevents two runs at once; at most 50 new messages per identity per run. Each message is recorded by its POP3 UIDL in `mail_messages`, so it is processed once; the identity page shows the last 30 messages received and sent with the result.
+**Download.** `bin/fetch-mail.php` (cron every minute, `deploy/bhelpdesk.cron`, as the PHP-FPM user) downloads the POP3 mailbox of every active identity with POP3 enabled; *Download now* on the identity page does the same. A lock prevents two runs at once; at most 50 new messages per identity per run. Each message is recorded by its POP3 UIDL in `mail_messages`, so it is processed once; **E-mail -> Log** shows the messages received and sent in the last 60 days with their result (filters by account, direction, result, address/subject/ticket number). Older rows are deleted, except those still needed: messages still on the POP3 server (they prevent downloading them again) and messages of existing tickets (their Message-IDs route the replies).
 
 - **New message** → new ticket in the identity's department, customer created from the sender (Reply-To for no-reply senders such as website forms). People in To/Cc become additional customers (setting; not operators, not helpdesk addresses).
 - **Reply** → added to the ticket when `In-Reply-To`/`References` point to a message of the ticket, or when the subject contains `[#123456]` **and** the sender is already a customer of that ticket (a guessed number opens a new ticket instead). Senders matched by Message-ID but not on the ticket are added to it. Replies to closed tickets reopen them (or open a new ticket when reopening is disabled). The quoted conversation is removed (our `##- … -##` marker, "On … wrote:" / "Il … ha scritto:", Outlook headers, `>` lines, Gmail/Outlook HTML quotes).
@@ -168,7 +170,7 @@ Passwords are encrypted (libsodium secretbox) with a key created automatically i
 - **Ignored**: our own addresses (loop protection), `Auto-Submitted`, `Precedence: bulk/list/junk`, auto-reply headers, mailing lists (`List-Id`), bounces and delivery reports, no-reply senders, duplicates (same Message-ID), more than *N* new tickets per hour from one sender (setting, default 10), messages over 30 MB (`mail.max_message_mb`, left on the server).
 - **Retention on the server**: delete after download, keep the last N days (messages older than N days since download are deleted), or never delete. Messages that failed with an error are left on the server.
 
-**Source of the emails.** The original message of every downloaded email is saved compressed in `storage/mail/YYYY/MM/` (random name, `.eml.gz`). In the ticket the *✉ email* badge of a message received by email opens its source (headers and raw message, with *Download .eml*); operators see it only for tickets they can see. In the identity log administrators open the source of every downloaded message, ignored ones included. Sources of messages that did not become tickets or replies are deleted after 30 days; the others are deleted with their ticket. Messages downloaded before this feature have no source.
+**Source of the emails.** The original message of every downloaded email is saved compressed in `storage/mail/YYYY/MM/` (random name, `.eml.gz`). In the ticket the *✉ email* badge of a message received by email opens its source (headers and raw message, with *Download .eml*);  In *E-mail -> Log* administrators open the source of every downloaded message, ignored ones included. In the ticket the source is available to everyone who can see the ticket: the operators of its department, the assignee and the administrators. Sources of messages that did not become tickets or replies are deleted after 30 days; the others are deleted with their ticket. Messages downloaded before this feature have no source.
 
 Test without POP3: `sudo -u bhelpdesk php8.3 bin/fetch-mail.php --file=/path/message.eml --identity=ID` (without a valid identity the command lists the existing ones). Use the same PHP version as PHP-FPM and the `bhelpdesk` user, so stored attachments get the right owner.
 
@@ -179,7 +181,7 @@ Test without POP3: `sudo -u bhelpdesk php8.3 bin/fetch-mail.php --file=/path/mes
 
 Subjects carry `[#number]`; `Message-ID`, `In-Reply-To` and `References` keep the conversation threaded in mail clients and route replies back to the ticket. Send failures are shown to the operator and logged. Messages received by email have an *email* badge in the ticket.
 
-## Email templates (/op/config/templates)
+## Email templates (/op/config/email/templates)
 
 The texts of all automatic emails are edited by administrators, with the same editor as signatures: ticket opened, operator reply, password creation and reset (customers); new ticket, customer reply, assignment, moved ticket (operator alerts). They are **not** in the translation files: every email is sent in a single version whatever the recipient's language, so the template contains all the languages needed (the defaults have Italian and English). Labels filled in by placeholders (status, priority) use the default language.
 

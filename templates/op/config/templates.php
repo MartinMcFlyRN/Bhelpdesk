@@ -11,10 +11,10 @@
                 <tbody>
                 <?php foreach ($items[$group] as $code => $tpl): ?>
                     <tr>
-                        <td><a href="/op/config/templates/<?= e($code) ?>"><strong><?= t('tpl.' . $code) ?></strong></a><br><small class="muted"><?= t('tpl.' . $code . '.when') ?></small></td>
+                        <td><a href="/op/config/email/templates/<?= e($code) ?>"><strong><?= t('tpl.' . $code) ?></strong></a><br><small class="muted"><?= t('tpl.' . $code . '.when') ?></small></td>
                         <td class="muted"><?= e($tpl['subject']) ?></td>
                         <td><?= $tpl['custom'] ? '<span class="badge badge-main">' . t('tpl.custom') . '</span>' : '<span class="badge">' . t('tpl.default') . '</span>' ?></td>
-                        <td class="right"><a class="btn btn-small" href="/op/config/templates/<?= e($code) ?>"><?= t('cfg.edit') ?></a></td>
+                        <td class="right"><a class="btn btn-small" href="/op/config/email/templates/<?= e($code) ?>"><?= t('cfg.edit') ?></a></td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>

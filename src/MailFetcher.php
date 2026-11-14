@@ -23,6 +23,7 @@ final class MailFetcher
 {
     public const MAX_PER_RUN = 50;          // messages downloaded per identity per run
     public const RAW_KEEP_DAYS = 30;        // source of ignored / failed messages kept this long
+    public const LOG_DAYS = 60;             // the email log keeps (and shows) the last 60 days
     private const SMALL_INLINE = 15360;     // inline images below 15 KB (logos in signatures) are skipped
 
     /** Source file of the message being processed (set by process(), written by record()) */
@@ -72,6 +73,46 @@ final class MailFetcher
         }
     }
 
+    /**
+     * Log retention (LOG_DAYS). Rows older than that are deleted unless still needed:
+     * rows of messages still on the POP3 server (they prevent downloading them again)
+     * and rows of tickets that still exist (their Message-IDs route the replies).
+     */
+    private static function purgeLog(): void
+    {
+        $old = 'created_at < NOW() - INTERVAL ' . self::LOG_DAYS . ' DAY';
+        self::deleteRows(Db::all(
+            "SELECT id, raw_path FROM mail_messages WHERE $old AND (
+                (direction = 'out' AND (status IN ('alert', 'error') OR ticket_id IS NULL))
+                OR (direction = 'in' AND identity_id IS NULL AND (ticket_id IS NULL OR status NOT IN ('ticket', 'reply')))
+             ) LIMIT 5000"
+        ));
+    }
+
+    /** Old rows of an identity whose message is no longer on the server */
+    private static function purgeIdentityLog(int $identityId, array $uidl): void
+    {
+        $onServer = array_flip(array_map('strval', $uidl));
+        $rows = Db::all(
+            "SELECT id, raw_path, pop_uid FROM mail_messages
+              WHERE direction = 'in' AND identity_id = ? AND created_at < NOW() - INTERVAL " . self::LOG_DAYS . " DAY
+                AND (ticket_id IS NULL OR status NOT IN ('ticket', 'reply')) LIMIT 5000",
+            [$identityId]
+        );
+        self::deleteRows(array_values(array_filter($rows, static fn (array $r): bool => $r['pop_uid'] === null || !isset($onServer[$r['pop_uid']]))));
+    }
+
+    private static function deleteRows(array $rows): void
+    {
+        if (!$rows) {
+            return;
+        }
+        self::deleteRaw(array_filter(array_column($rows, 'raw_path')));
+        foreach (array_chunk(array_map('intval', array_column($rows, 'id')), 500) as $ids) {
+            Db::exec('DELETE FROM mail_messages WHERE id IN (' . implode(',', $ids) . ')');
+        }
+    }
+
     /** Sources of messages that did not become tickets are kept RAW_KEEP_DAYS days */
     private static function cleanRaw(): void
     {
@@ -102,6 +143,7 @@ final class MailFetcher
         $sql = 'SELECT * FROM mail_identities WHERE active = 1 AND pop_enabled = 1 AND pop_host <> \'\'';
         $rows = $identityId ? Db::all($sql . ' AND id = ?', [$identityId]) : Db::all($sql . ' ORDER BY id');
         self::cleanRaw();
+        self::purgeLog();
         $out = [];
         foreach ($rows as $i) {
             try {
@@ -135,6 +177,7 @@ final class MailFetcher
             $pop->connect();
             $uidl = $pop->uidl();
             $sizes = $pop->list();
+            self::purgeIdentityLog((int) $i['id'], $uidl);
             $known = [];
             foreach (Db::all("SELECT pop_uid, status, created_at FROM mail_messages WHERE direction = 'in' AND identity_id = ? AND pop_uid IS NOT NULL", [(int) $i['id']]) as $r) {
                 $known[$r['pop_uid']] = $r;
