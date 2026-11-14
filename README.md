@@ -109,7 +109,7 @@ mariadb bhelpdesk < sql/migrations/003_settings.sql
 
 Reserved to operators with the **Administrator** role (others get 403; the link is not shown to them). It lives under `/op`, so it is covered by the same IP filters and login.
 
-- **General** — application name, public URL, time zone, default/offered languages, ticket reopening, captcha, attachment limits (with a warning when they exceed the PHP limits of the server), operator session timeout, rate limits. Saved in the `settings` table, they override `config/config.php`. Database, allowed IPs, trusted proxies, cookie and storage settings stay in `config.php` only and are shown read-only.
+- **General** — application name, public URL, time zone, default/offered languages, ticket reopening, hide operator names from customers (they see "Staff Operator"), captcha, attachment limits (with a warning when they exceed the PHP limits of the server), operator session timeout, rate limits. Saved in the `settings` table, they override `config/config.php`. Database, allowed IPs, trusted proxies, cookie and storage settings stay in `config.php` only and are shown read-only.
 - **Departments** — create, rename, reorder, activate/deactivate. A department used by tickets cannot be deleted (deactivate it: it disappears from the customer form but stays on existing tickets).
 - **Operators** — create, edit name/email/role, reset password, activate/deactivate. Safeguards: you cannot remove your own admin role or disable yourself, and at least one active administrator always remains.
 

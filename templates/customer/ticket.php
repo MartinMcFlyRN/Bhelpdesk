@@ -13,7 +13,7 @@
     <?php if ($m['author_type'] === 'system') continue; ?>
     <article class="msg msg-<?= e($m['author_type']) ?>">
         <header>
-            <strong><?= $m['author_type'] === 'operator' ? e($m['operator_name'] ?? __('ticket.support')) . ' (' . t('ticket.support') . ')' : e($ticket['customer_name']) ?></strong>
+            <strong><?php if ($m['author_type'] !== 'operator'): ?><?= e($ticket['customer_name']) ?><?php elseif (config('hide_operator_name', false) || empty($m['operator_name'])): ?><?= t('ticket.staff_operator') ?><?php else: ?><?= e($m['operator_name']) ?> (<?= t('ticket.support') ?>)<?php endif; ?></strong>
             <span class="muted"><?= fmt_date($m['created_at']) ?></span>
         </header>
         <div class="body"><?= nl2br_e($m['body']) ?></div>

@@ -143,6 +143,14 @@ $r->get('/ticket/{number}', static function (array $p) use ($canSee): void {
         redirect('/customer/status');
     }
     $messages = Tickets::messages((int) $ticket['id'], false);
+    // operator names never reach the customer page when hidden
+    if (config('hide_operator_name', false)) {
+        foreach ($messages as &$m) {
+            $m['operator_name'] = null;
+            $m['operator_id'] = null;
+        }
+        unset($m);
+    }
     View::render('customer', 'ticket', [
         'title'       => __('ticket.title', ['number' => $ticket['number']]),
         'ticket'      => $ticket,
