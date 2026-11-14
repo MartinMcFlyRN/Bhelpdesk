@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Canned, CustomerAuth, Customers, Db, Departments, Html, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, Operators, Router, Session, Settings, Throttle, Tickets, View};
+use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Canned, CustomerAuth, Customers, Db, Departments, EmailTemplates, Html, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, Operators, Router, Session, Settings, Throttle, Tickets, View};
 
 // ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
@@ -465,7 +465,7 @@ $r->get('/profile', static function () use ($profilePage): void {
     $op = Auth::require();
     $me = Operators::find((int) $op['id']);
     $profilePage([
-        'name' => $me['name'], 'email' => $me['email'], 'language' => (string) $me['language'],
+        'name' => $me['name'], 'email' => $me['email'],
         'alert_new' => (bool) $me['alert_new'], 'alert_reply' => (bool) $me['alert_reply'], 'alert_assign' => (bool) $me['alert_assign'],
     ], []);
 });
@@ -862,6 +862,80 @@ $cannedPage = static function (?array $item, array $values, array $errors) use (
         'departments' => Departments::all(),
     ]);
 };
+
+// ---------- Templates of the automatic emails ----------
+$loadTemplate = static function (array $p): string {
+    $code = (string) $p['code'];
+    if (!isset(EmailTemplates::CODES[$code])) {
+        http_response_code(404);
+        View::render('op', 'error', ['title' => __('error.not_found.title'), 'message' => __('error.not_found.message')]);
+        exit;
+    }
+    return $code;
+};
+
+$templatePage = static function (string $code, array $values, array $errors) use ($cfgView): void {
+    $cfgView('template_edit', __('tpl.' . $code), [
+        'code'     => $code,
+        'tpl'      => EmailTemplates::get($code),
+        'values'   => $values,
+        'errors'   => $errors,
+        'vars'     => EmailTemplates::CODES[$code][1],
+        'defaults' => EmailTemplates::defaults($code),
+    ]);
+};
+
+$r->get('/config/templates', static function () use ($cfgView): void {
+    Auth::requireAdmin();
+    $items = [];
+    foreach (EmailTemplates::CODES as $code => [$group]) {
+        $items[$group][$code] = EmailTemplates::get($code);
+    }
+    $cfgView('templates', __('cfg.menu.templates'), ['items' => $items]);
+});
+
+$r->get('/config/templates/{code}', static function (array $p) use ($templatePage, $loadTemplate): void {
+    Auth::requireAdmin();
+    $code = $loadTemplate($p);
+    $t = EmailTemplates::get($code);
+    $templatePage($code, ['subject' => $t['subject'], 'body' => $t['body']], []);
+});
+
+$r->post('/config/templates/{code}', static function (array $p) use ($templatePage, $loadTemplate): void {
+    $op = Auth::requireAdmin();
+    $code = $loadTemplate($p);
+    $res = EmailTemplates::validate($_POST);
+    if ($res['errors']) {
+        http_response_code(422);
+        $templatePage($code, $res['values'], $res['errors']);
+        return;
+    }
+    EmailTemplates::save($code, $res['values'], (int) $op['id']);
+    flash('success', 'tpl.saved');
+    redirect('/op/config/templates/' . $code);
+});
+
+$r->post('/config/templates/{code}/reset', static function (array $p) use ($loadTemplate): void {
+    Auth::requireAdmin();
+    $code = $loadTemplate($p);
+    EmailTemplates::reset($code);
+    flash('success', 'tpl.reset_done');
+    redirect('/op/config/templates/' . $code);
+});
+
+// test: the saved template with example data, sent to the administrator
+$r->post('/config/templates/{code}/test', static function (array $p) use ($loadTemplate): void {
+    $op = Auth::requireAdmin();
+    $code = $loadTemplate($p);
+    $mail = Notifier::defaultLanguage(static fn (): array => EmailTemplates::render($code, EmailTemplates::sample($code, $op)));
+    $ok = Mailer::send((string) $op['email'], '[TEST] ' . $mail['subject'], $mail['text'], null, ['html' => $mail['html']]);
+    if ($ok) {
+        flash('success', 'tpl.test_sent', ['email' => $op['email']]);
+    } else {
+        flash('error', 'mail.not_sent', ['error' => $op['email'] . ': ' . Mailer::lastError()]);
+    }
+    redirect('/op/config/templates/' . $code);
+});
 
 $r->get('/config/canned', static function () use ($cannedPage): void {
     Auth::requireAdmin();

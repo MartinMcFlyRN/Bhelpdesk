@@ -410,3 +410,14 @@ input.tiny { width: 5.5rem !important; display: inline-block !important; margin:
 .mail-error { background: #fee2e2; color: #991b1b; }
 .badge-mail { background: #e0f2fe; color: #075985; }
 .form label.narrow { max-width: 360px; }
+
+/* Templates of the automatic emails */
+.tpl-group { margin-top: 1.5rem; }
+.tpl-layout { display: grid; grid-template-columns: 1fr 300px; gap: 1rem; align-items: start; }
+.tpl-vars ul { list-style: none; padding: 0; margin: 0; }
+.tpl-vars li { margin-bottom: .45rem; }
+.tpl-vars small { display: block; margin-left: .2rem; }
+.chip { border: 1px solid var(--border); background: #f9fafb; border-radius: 6px; padding: .1rem .4rem; cursor: pointer; }
+.chip:hover { background: #ede9fe; border-color: #c4b5fd; }
+.tpl-default { margin-bottom: 1rem; }
+@media (max-width: 1000px) { .tpl-layout { grid-template-columns: 1fr; } }

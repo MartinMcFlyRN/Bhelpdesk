@@ -121,6 +121,7 @@ mariadb bhelpdesk < sql/migrations/011_merge.sql
 mariadb bhelpdesk < sql/migrations/012_mail_identities.sql
 mariadb bhelpdesk < sql/migrations/013_mail_messages.sql
 mariadb bhelpdesk < sql/migrations/014_operator_alerts.sql
+mariadb bhelpdesk < sql/migrations/015_email_templates.sql
 ```
 
 ## Operators area
@@ -175,15 +176,24 @@ Test without POP3: `sudo -u bhelpdesk php8.3 bin/fetch-mail.php --file=/path/mes
 
 Subjects carry `[#number]`; `Message-ID`, `In-Reply-To` and `References` keep the conversation threaded in mail clients and route replies back to the ticket. Send failures are shown to the operator and logged. Messages received by email have an *email* badge in the ticket.
 
+## Email templates (/op/config/templates)
+
+The texts of all automatic emails are edited by administrators, with the same editor as signatures: ticket opened, operator reply, password creation and reset (customers); new ticket, customer reply, assignment, moved ticket (operator alerts). They are **not** in the translation files: every email is sent in a single version whatever the recipient's language, so the template contains all the languages needed (the defaults have Italian and English). Labels filled in by placeholders (status, priority) use the default language.
+
+- Placeholders such as `{customer_name}`, `{ticket_number}`, `{ticket_link}`, `{message}`, `{signature}`; the list for each email is on its page (click to insert at the cursor). Links become clickable; `{message}`, `{signature}`, `{attachments}` and `{excerpt}` are HTML blocks.
+- Keep `[#{ticket_number}]` in the customer subjects and the `##- … -##` line at the top of customer emails: they route and trim the replies by email.
+- *Send me a test* sends the saved template with example data to the administrator; *Restore the default* deletes the customisation. Templates never saved use the built-in defaults (`src/EmailTemplates.php`).
+- Emails are sent as HTML with a plain text version.
+
 ## Email alerts to operators
 
-Each operator chooses in **their profile** which alerts to receive and their language:
+Each operator chooses in **their profile** which alerts to receive (texts: templates above):
 
 - **new tickets** in their departments (administrators: all departments), also tickets **moved** to a department they could not see before;
 - **customer replies** (web or email) on tickets assigned to them, and on unassigned tickets of their departments (when a ticket is assigned only the assignee is alerted);
 - a ticket **assigned** to them.
 
-Nobody is alerted for what they did themselves. Alerts are plain text with the ticket data, an excerpt of the customer's message and the link to `/op/ticket/N`, sent with the department's identity (`Auto-Submitted: auto-generated`). They are sent **after the page has been delivered** (`fastcgi_finish_request`), so operators and customers do not wait for the SMTP server. They can be turned off for everyone in *General → Email*. Emails coming from an operator's address are not turned into tickets: operators answer from the ticket page.
+Nobody is alerted for what they did themselves. Alerts contain the ticket data, an excerpt of the customer's message and the link to `/op/ticket/N`, sent with the department's identity (`Auto-Submitted: auto-generated`). They are sent **after the page has been delivered** (`fastcgi_finish_request`), so operators and customers do not wait for the SMTP server. They can be turned off for everyone in *General → Email*. Emails coming from an operator's address are not turned into tickets: operators answer from the ticket page.
 
 ## Bulk actions in the ticket list
 

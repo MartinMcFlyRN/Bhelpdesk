@@ -12,7 +12,7 @@ namespace Bhelpdesk;
  *  - assignment       -> the operator the ticket was assigned to
  *
  * Each operator chooses the alerts in their profile (alert_new / alert_reply /
- * alert_assign) and the language of the emails. The operator who caused the event
+ * alert_assign); texts are the operator_* templates of /op/config/templates. The operator who caused the event
  * gets nothing. Alerts are queued and sent after the page has been delivered
  * (fastcgi_finish_request), so nobody waits for the SMTP server.
  */
@@ -136,7 +136,7 @@ final class Alerts
     {
         return array_map(
             static fn (array $o): array => ['id' => (int) $o['id']] + $o,
-            Db::all('SELECT id, name, email, language FROM operators WHERE active = 1 AND ' . $where . ' ORDER BY id', $params)
+            Db::all('SELECT id, name, email FROM operators WHERE active = 1 AND ' . $where . ' ORDER BY id', $params)
         );
     }
 
@@ -147,51 +147,40 @@ final class Alerts
 
     private static function send(string $kind, array $ticket, array $op, ?array $msg, array $d): void
     {
-        $lang = (string) ($op['language'] ?: config('default_language', 'en'));
-        Lang::with($lang, static function () use ($kind, $ticket, $op, $msg, $d): void {
-            $base = rtrim((string) config('base_url'), '/');
-            $p = [
-                'name'       => (string) $op['name'],
-                'number'     => (string) $ticket['number'],
-                'subject'    => (string) $ticket['subject'],
-                'customer'   => $ticket['customer_name'] . ' <' . $ticket['customer_email'] . '>',
-                'department' => (string) ($ticket['department_name'] ?? __('log.none')),
-                'priority'   => priority_label((string) $ticket['priority']),
-                'status'     => status_label((string) $ticket['status']),
-                'assignee'   => (string) ($ticket['assignee_name'] ?? __('alert.nobody')),
-                'url'        => $base . '/op/ticket/' . (int) $ticket['id'],
-                'profile'    => $base . '/op/profile',
-                'by'         => (string) ($d['by'] ?? ''),
-                'who'        => (string) ($msg['customer_name'] ?? $ticket['customer_name']),
-                'source'     => match ($d['source'] ?? '') {
-                    'web'   => __('alert.source_web'),
-                    'email' => __('alert.source_email'),
-                    default => __('alert.source_operator', ['by' => (string) ($d['source'] ?? '')]),
-                },
-            ];
-            $excerpt = '';
-            if ($msg) {
-                $text = $msg['body_format'] === 'html' ? Html::toText((string) $msg['body']) : (string) $msg['body'];
-                $excerpt = mb_strlen($text) > self::EXCERPT ? mb_substr($text, 0, self::EXCERPT) . ' […]' : $text;
-                $files = (int) Db::value('SELECT COUNT(*) FROM attachments WHERE message_id = ?', [(int) $msg['id']]);
-                if ($files) {
-                    $excerpt .= "\n\n" . __('alert.attachments', ['n' => $files]);
-                }
-            }
-            $body = __('alert.hello', $p) . "\n\n" . __('alert.' . $kind . '.intro', $p) . "\n\n"
-                . __('alert.details', $p)
-                . ($excerpt !== '' ? "\n\n" . str_repeat('-', 40) . "\n" . $excerpt . "\n" . str_repeat('-', 40) : '')
-                . "\n\n" . __('alert.open', $p) . "\n\n" . __('alert.footer', $p);
-            $identity = MailIdentities::forDepartment($ticket['department_id'] !== null ? (int) $ticket['department_id'] : null);
-            $subject = __('alert.' . $kind . '.subject', $p);
-            $ok = Mailer::send((string) $op['email'], $subject, $body, $identity, [
-                'auto'    => 'auto-generated',
-                'headers' => ['X-Bhelpdesk-Ticket' => (string) $ticket['number'], 'X-Bhelpdesk-Alert' => $kind],
-            ]);
-            Db::exec(
-                "INSERT INTO mail_messages (direction, identity_id, message_id, ticket_id, address, subject, status, note) VALUES ('out', ?, ?, ?, ?, ?, ?, ?)",
-                [$identity['id'] ?? null, Mailer::lastMessageId(), (int) $ticket['id'], mb_substr((string) $op['email'], 0, 190), mb_substr($subject, 0, 255), $ok ? 'alert' : 'error', $ok ? null : mb_substr((string) Mailer::lastError(), 0, 255)]
-            );
-        });
+        $code = ['new' => 'operator_new', 'reply' => 'operator_reply', 'assigned' => 'operator_assigned', 'transfer' => 'operator_transfer'][$kind];
+        $base = rtrim((string) config('base_url'), '/');
+        $excerpt = '';
+        if ($msg) {
+            $text = $msg['body_format'] === 'html' ? Html::toText((string) $msg['body']) : (string) $msg['body'];
+            $text = mb_strlen($text) > self::EXCERPT ? mb_substr($text, 0, self::EXCERPT) . ' […]' : $text;
+            $excerpt = EmailTemplates::excerptHtml($text, (int) Db::value('SELECT COUNT(*) FROM attachments WHERE message_id = ?', [(int) $msg['id']]));
+        }
+        $mail = Notifier::defaultLanguage(static fn (): array => EmailTemplates::render($code, [
+            'operator_name'   => (string) $op['name'],
+            'ticket_number'   => (string) $ticket['number'],
+            'ticket_subject'  => (string) $ticket['subject'],
+            'customer_name'   => (string) ($msg['customer_name'] ?? $ticket['customer_name']),
+            'customer_email'  => (string) $ticket['customer_email'],
+            'department_name' => (string) ($ticket['department_name'] ?? '—'),
+            'priority'        => priority_label((string) $ticket['priority']),
+            'ticket_status'   => status_label((string) $ticket['status']),
+            'assignee'        => (string) ($ticket['assignee_name'] ?? '—'),
+            'by'              => (string) ($d['by'] ?? ''),
+            'source'          => match ($d['source'] ?? '') { 'web' => 'web', 'email' => 'e-mail', default => (string) ($d['source'] ?? '') },
+            'excerpt'         => $excerpt,
+            'ticket_url'      => $base . '/op/ticket/' . (int) $ticket['id'],
+            'profile_url'     => $base . '/op/profile',
+            'app_name'        => (string) config('app_name', 'Bhelpdesk'),
+        ]));
+        $identity = MailIdentities::forDepartment($ticket['department_id'] !== null ? (int) $ticket['department_id'] : null);
+        $ok = Mailer::send((string) $op['email'], $mail['subject'], $mail['text'], $identity, [
+            'html'    => $mail['html'],
+            'auto'    => 'auto-generated',
+            'headers' => ['X-Bhelpdesk-Ticket' => (string) $ticket['number'], 'X-Bhelpdesk-Alert' => $kind],
+        ]);
+        Db::exec(
+            "INSERT INTO mail_messages (direction, identity_id, message_id, ticket_id, address, subject, status, note) VALUES ('out', ?, ?, ?, ?, ?, ?, ?)",
+            [$identity['id'] ?? null, Mailer::lastMessageId(), (int) $ticket['id'], mb_substr((string) $op['email'], 0, 190), mb_substr($mail['subject'], 0, 255), $ok ? 'alert' : 'error', $ok ? null : mb_substr((string) Mailer::lastError(), 0, 255)]
+        );
     }
 }

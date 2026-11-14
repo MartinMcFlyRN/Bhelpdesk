@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace Bhelpdesk;
 
 /**
- * Email notifications to customers, sent with the department's sending identity
- * and in each customer's language:
+ * Email notifications to customers, sent with the department's sending identity.
+ * Texts come from the templates of /op/config/templates (EmailTemplates):
  *  - ticketOpened():  confirmation of a new ticket (web form, email, operator)
  *  - operatorReply(): the operator's reply, with department signature and attachments
  *
@@ -33,12 +33,9 @@ final class Notifier
         }
         $errors = [];
         foreach (self::customers($ticket, $customerIds ?? [(int) $ticket['customer_id']]) as $c) {
-            $err = Lang::with((string) $c['language'], static function () use ($ticket, $c, $inReplyTo): ?string {
-                $url = AccessLinks::issue((int) $ticket['id'], (int) $c['id']);
-                $p = self::params($ticket, $c) + ['url' => $url, 'days' => AccessLinks::days()];
-                $text = __('mail.opened.marker') . "\n\n" . __('mail.opened.body', $p);
-                return self::deliver($ticket, $c, __('mail.subject', $p), $text, '', [], 'auto-replied', $inReplyTo);
-            });
+            $url = AccessLinks::issue((int) $ticket['id'], (int) $c['id']);
+            $mail = self::defaultLanguage(static fn (): array => EmailTemplates::render('customer_opened', self::vars($ticket, $c) + ['ticket_link' => $url]));
+            $err = self::deliver($ticket, $c, $mail, [], 'auto-replied', $inReplyTo);
             if ($err !== null) {
                 $errors[] = $c['email'] . ': ' . $err;
             }
@@ -74,31 +71,32 @@ final class Notifier
             }
         }
 
+        $operatorName = config('hide_operator_name', false) || $op['name'] === ''
+            ? self::defaultLanguage(static fn (): string => __('ticket.staff_operator'))
+            : $op['name'];
         $errors = [];
         foreach (self::customers($ticket, null) as $c) {
-            $err = Lang::with((string) $c['language'], static function () use ($ticket, $c, $op, $bodyHtml, $attach, $listed): ?string {
-                $url = AccessLinks::issue((int) $ticket['id'], (int) $c['id']);
-                $p = self::params($ticket, $c) + ['url' => $url, 'days' => AccessLinks::days(), 'status' => status_label((string) $ticket['status'])];
-                $sig = self::absoluteUrls(Canned::signature($ticket, $op));
-                $html = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#1f2937">'
-                    . '<p style="color:#9ca3af;font-size:12px;margin:0 0 16px">' . e(__('mail.reply.marker')) . '</p>'
-                    . $bodyHtml
-                    . ($sig !== '' ? '<div style="margin-top:16px">' . $sig . '</div>' : '')
-                    . ($listed ? '<p style="font-size:13px;color:#4b5563">' . e(__('mail.reply.files_on_ticket')) . '<br>' . implode('<br>', array_map('e', $listed)) . '</p>' : '')
-                    . '<hr style="border:0;border-top:1px solid #e5e7eb;margin:24px 0 12px">'
-                    . '<p style="font-size:12px;color:#6b7280">' . e(__('mail.reply.footer_html', $p)) . '<br><a href="' . e($url) . '">' . e($url) . '</a></p>'
-                    . '</div>';
-                $text = __('mail.reply.marker') . "\n\n" . Html::toText($bodyHtml)
-                    . ($sig !== '' ? "\n\n-- \n" . Html::toText($sig) : '')
-                    . ($listed ? "\n\n" . __('mail.reply.files_on_ticket') . "\n" . implode("\n", $listed) : '')
-                    . "\n\n" . str_repeat('-', 40) . "\n" . __('mail.reply.footer_text', $p);
-                return self::deliver($ticket, $c, __('mail.subject', $p), $text, $html, $attach, null, null);
-            });
+            $url = AccessLinks::issue((int) $ticket['id'], (int) $c['id']);
+            $mail = self::defaultLanguage(static fn (): array => EmailTemplates::render('customer_reply', self::vars($ticket, $c) + [
+                'ticket_link'   => $url,
+                'ticket_status' => status_label((string) $ticket['status']),
+                'operator_name' => $operatorName,
+                'message'       => $bodyHtml,
+                'signature'     => self::absoluteUrls(Canned::signature($ticket, $op)),
+                'attachments'   => EmailTemplates::attachmentsHtml($listed),
+            ]));
+            $err = self::deliver($ticket, $c, $mail, $attach, null, null);
             if ($err !== null) {
                 $errors[] = $c['email'] . ': ' . $err;
             }
         }
         return $errors;
+    }
+
+    /** Labels (status, "Staff Operator") in the installation's default language */
+    public static function defaultLanguage(callable $fn): mixed
+    {
+        return Lang::with((string) config('default_language', 'en'), $fn);
     }
 
     /** Images and links of the editor are relative (/customer/media/...): mail clients need full URLs */
@@ -126,23 +124,27 @@ final class Notifier
         return $rows;
     }
 
-    private static function params(array $ticket, array $c): array
+    private static function vars(array $ticket, array $c): array
     {
         return [
-            'name'    => (string) $c['name'],
-            'number'  => (string) $ticket['number'],
-            'subject' => (string) $ticket['subject'],
-            'app'     => (string) config('app_name', 'Bhelpdesk'),
+            'customer_name'   => (string) $c['name'],
+            'customer_email'  => (string) $c['email'],
+            'ticket_number'   => (string) $ticket['number'],
+            'ticket_subject'  => (string) $ticket['subject'],
+            'department_name' => (string) ($ticket['department_name'] ?? ''),
+            'link_days'       => (string) AccessLinks::days(),
+            'app_name'        => (string) config('app_name', 'Bhelpdesk'),
         ];
     }
 
     /** Send one message and record it; returns an error message or null */
-    private static function deliver(array $ticket, array $c, string $subject, string $text, string $html, array $attachments, ?string $auto, ?string $inReplyTo): ?string
+    private static function deliver(array $ticket, array $c, array $mail, array $attachments, ?string $auto, ?string $inReplyTo): ?string
     {
+        $subject = $mail['subject'];
         $identity = MailIdentities::forDepartment($ticket['department_id'] !== null ? (int) $ticket['department_id'] : null);
         [$irt, $refs] = self::thread((int) $ticket['id'], $inReplyTo);
-        $ok = Mailer::send((string) $c['email'], $subject, $text, $identity, [
-            'html'        => $html,
+        $ok = Mailer::send((string) $c['email'], $subject, $mail['text'], $identity, [
+            'html'        => $mail['html'],
             'attachments' => $attachments,
             'auto'        => $auto,
             'headers'     => [

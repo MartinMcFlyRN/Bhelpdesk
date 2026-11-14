@@ -130,14 +130,11 @@ final class Operators
             'new_password'     => (string) ($in['new_password'] ?? ''),
             'confirm_password' => (string) ($in['confirm_password'] ?? ''),
             'current_password' => (string) ($in['current_password'] ?? ''),
-            'language'         => (string) ($in['language'] ?? ''),
             'alert_new'        => !empty($in['alert_new']),
             'alert_reply'      => !empty($in['alert_reply']),
             'alert_assign'     => !empty($in['alert_assign']),
         ];
-        if (!isset(Lang::available()[$v['language']])) {
-            $v['language'] = '';
-        }
+
         $errors = [];
         if ($v['name'] === '' || mb_strlen($v['name']) > 100) {
             $errors[] = __('val.ops_name_required');
@@ -172,8 +169,8 @@ final class Operators
     public static function updateProfile(int $id, array $v): void
     {
         Db::exec(
-            'UPDATE operators SET name = ?, email = ?, language = ?, alert_new = ?, alert_reply = ?, alert_assign = ? WHERE id = ?',
-            [$v['name'], $v['email'], $v['language'] !== '' ? $v['language'] : null, (int) $v['alert_new'], (int) $v['alert_reply'], (int) $v['alert_assign'], $id]
+            'UPDATE operators SET name = ?, email = ?, alert_new = ?, alert_reply = ?, alert_assign = ? WHERE id = ?',
+            [$v['name'], $v['email'], (int) $v['alert_new'], (int) $v['alert_reply'], (int) $v['alert_assign'], $id]
         );
         if ($v['new_password'] !== '') {
             Db::exec('UPDATE operators SET password_hash = ? WHERE id = ?', [password_hash($v['new_password'], PASSWORD_DEFAULT), $id]);

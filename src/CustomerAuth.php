@@ -109,19 +109,14 @@ final class CustomerAuth
         $url = rtrim((string) config('base_url'), '/') . '/customer/password/' . $token;
         $first = empty($c['password_hash']);
 
-        return Lang::with((string) ($c['language'] ?? Lang::BASE), static function () use ($c, $url, $first): bool {
-            $params = [
-                'name'    => $c['name'],
-                'app'     => (string) config('app_name', 'Bhelpdesk'),
-                'url'     => $url,
-                'minutes' => self::PASSWORD_LINK_MINUTES,
-            ];
-            return Mailer::send(
-                (string) $c['email'],
-                __($first ? 'mail.pw_setup.subject' : 'mail.pw_reset.subject', $params),
-                __($first ? 'mail.pw_setup.body' : 'mail.pw_reset.body', $params)
-            );
-        });
+        $mail = EmailTemplates::render($first ? 'customer_password_setup' : 'customer_password_reset', [
+            'customer_name'  => (string) $c['name'],
+            'customer_email' => (string) $c['email'],
+            'password_link'  => $url,
+            'link_minutes'   => (string) self::PASSWORD_LINK_MINUTES,
+            'app_name'       => (string) config('app_name', 'Bhelpdesk'),
+        ]);
+        return Mailer::send((string) $c['email'], $mail['subject'], $mail['text'], null, ['html' => $mail['html']]);
     }
 
     /** Customer owning a valid (unused, not expired) password token */

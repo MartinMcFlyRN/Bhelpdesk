@@ -117,3 +117,42 @@
         }
     });
 })();
+
+// Placeholders of the email templates: click = insert at the cursor of the
+// last focused field (subject or body editor)
+(function () {
+    'use strict';
+    var last = null;
+    document.addEventListener('focusin', function (e) {
+        if (e.target.id === 'tpl-subject') {
+            last = 'subject';
+        } else if (e.target.closest && e.target.closest('.ql-editor')) {
+            last = 'body';
+        }
+    });
+    document.querySelectorAll('[data-insert-var]').forEach(function (btn) {
+        btn.addEventListener('mousedown', function (e) {
+            e.preventDefault(); // keep the selection of the editor
+        });
+        btn.addEventListener('click', function () {
+            var text = btn.getAttribute('data-insert-var');
+            if (last === 'subject') {
+                var input = document.getElementById(btn.getAttribute('data-subject'));
+                var s = input.selectionStart || input.value.length;
+                input.value = input.value.slice(0, s) + text + input.value.slice(input.selectionEnd || s);
+                input.focus();
+                input.setSelectionRange(s + text.length, s + text.length);
+                return;
+            }
+            var area = document.getElementById(btn.getAttribute('data-target'));
+            var quill = area && area._quill;
+            if (!quill) {
+                return;
+            }
+            var range = quill.getSelection(true);
+            var at = range ? range.index : quill.getLength() - 1;
+            quill.insertText(at, text, 'user');
+            quill.setSelection(at + text.length, 0, 'user'); // keep typing after the placeholder
+        });
+    });
+})();
