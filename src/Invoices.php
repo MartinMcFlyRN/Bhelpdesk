@@ -18,15 +18,22 @@ final class Invoices
 
     private const SELECT = '
         SELECT i.*, c.name AS customer_name, c.company AS customer_company, c.email AS customer_email,
-               o.name AS issued_by_name, cb.name AS created_by_name
+               o.name AS issued_by_name, cb.name AS created_by_name,
+               t.number AS ticket_number, t.subject AS ticket_subject
           FROM invoices i
           JOIN customers c      ON c.id = i.customer_id
+          LEFT JOIN tickets t   ON t.id = i.ticket_id
           LEFT JOIN operators o ON o.id = i.issued_by
           LEFT JOIN operators cb ON cb.id = i.created_by';
 
     public static function find(int $id): ?array
     {
         return Db::one(self::SELECT . ' WHERE i.id = ?', [$id]);
+    }
+
+    public static function forTicket(int $ticketId): array
+    {
+        return Db::all(self::SELECT . ' WHERE i.ticket_id = ? ORDER BY i.id', [$ticketId]);
     }
 
     public static function forCustomer(int $customerId): array
@@ -53,11 +60,11 @@ final class Invoices
         }
         if (($f['q'] ?? '') !== '') {
             $like = '%' . addcslashes((string) $f['q'], '%_\\') . '%';
-            $where[] = '(c.name LIKE ? OR c.company LIKE ? OR c.email LIKE ? OR i.description LIKE ? OR i.id = ?)';
-            array_push($params, $like, $like, $like, $like, (int) ltrim((string) $f['q'], '#'));
+            $where[] = '(c.name LIKE ? OR c.company LIKE ? OR c.email LIKE ? OR i.description LIKE ? OR i.id = ? OR i.ticket_id = (SELECT id FROM tickets WHERE number = ?))';
+            array_push($params, $like, $like, $like, $like, (int) ltrim((string) $f['q'], '#'), ltrim((string) $f['q'], '#'));
         }
         $sqlWhere = implode(' AND ', $where);
-        $agg = Db::one('SELECT COUNT(*) AS n, COALESCE(SUM(i.amount), 0) AS s FROM invoices i JOIN customers c ON c.id = i.customer_id WHERE ' . $sqlWhere, $params);
+        $agg = Db::one('SELECT COUNT(*) AS n, COALESCE(SUM(i.amount), 0) AS s FROM invoices i JOIN customers c ON c.id = i.customer_id LEFT JOIN tickets t ON t.id = i.ticket_id WHERE ' . $sqlWhere, $params);
         $rows = Db::all(self::SELECT . ' WHERE ' . $sqlWhere . ' ORDER BY i.issued, i.start_date, i.id LIMIT ' . $perPage . ' OFFSET ' . (max(0, $page - 1) * $perPage), $params);
         return ['rows' => $rows, 'total' => (int) $agg['n'], 'sum' => (float) $agg['s']];
     }
@@ -123,12 +130,19 @@ final class Invoices
         return $n >= 0 && $n < 10000000000 ? $n : null;
     }
 
-    public static function create(array $v, int $operatorId): int
+    /** $ticket: the ticket the invoice is created from (its history records it) */
+    public static function create(array $v, array $op, ?array $ticket = null): int
     {
-        return Db::insert(
-            'INSERT INTO invoices (customer_id, description, amount, start_date, recurrence, issued, issued_at, issued_by, created_by) VALUES (?, ?, ?, ?, ?, ?, ' . ($v['issued'] ? 'NOW()' : 'NULL') . ', ?, ?)',
-            [$v['customer_id'], $v['description'], $v['amount'], $v['start_date'], $v['recurrence'], (int) $v['issued'], $v['issued'] ? $operatorId : null, $operatorId]
+        $id = Db::insert(
+            'INSERT INTO invoices (customer_id, ticket_id, description, amount, start_date, recurrence, issued, issued_at, issued_by, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ' . ($v['issued'] ? 'NOW()' : 'NULL') . ', ?, ?)',
+            [$v['customer_id'], $ticket ? (int) $ticket['id'] : null, $v['description'], $v['amount'], $v['start_date'], $v['recurrence'], (int) $v['issued'], $v['issued'] ? (int) $op['id'] : null, (int) $op['id']]
         );
+        if ($ticket) {
+            Tickets::addMessage((int) $ticket['id'], 'system', (int) $op['id'], json_encode([
+                'event' => 'invoice_added', 'by' => $op['name'], 'id' => $id, 'amount' => (float) $v['amount'], 'recurrence' => $v['recurrence'],
+            ], JSON_UNESCAPED_UNICODE), true, null);
+        }
+        return $id;
     }
 
     public static function update(array $invoice, array $v, int $operatorId): void

@@ -308,6 +308,7 @@ $r->get('/ticket/{id}', static function (array $p) use ($loadTicket): void {
         'attachments'  => Attachments::forMessages(array_column($messages, 'id')),
         'participants' => Tickets::participants((int) $t['id']),
         'tasks'        => Tasks::forTicket((int) $t['id']),
+        'invoices'     => Invoices::forTicket((int) $t['id']),
         // messages received by email whose source can be opened
         'sources'      => array_flip(array_map('intval', Db::column(
             'SELECT mm.ticket_message_id FROM mail_messages mm JOIN ticket_messages tm ON tm.id = mm.ticket_message_id WHERE tm.ticket_id = ? AND mm.raw_path IS NOT NULL',
@@ -700,8 +701,15 @@ $loadInvoice = static function (array $p): array {
     return $i;
 };
 
-$invoiceForm = static function (?array $invoice, array $values, array $errors): void {
+// ticket an invoice is created from (?ticket=ID / hidden field), only if the operator can see it
+$invoiceTicket = static function (array $op, mixed $id): ?array {
+    $t = (int) $id > 0 ? Tickets::find((int) $id) : null;
+    return $t && Tickets::canSee($t, $op) ? $t : null;
+};
+
+$invoiceForm = static function (?array $invoice, array $values, array $errors, ?array $ticket = null): void {
     View::render('op', 'billing/invoice_form', [
+        'ticket'  => $ticket,
         'title'   => $invoice ? __('inv.edit_title', ['id' => $invoice['id']]) : __('inv.new_title'),
         'op'      => Auth::user(),
         'invoice' => $invoice,
@@ -733,26 +741,31 @@ $r->get('/billing/invoices', static function (): void {
     ]);
 });
 
-$r->get('/billing/invoices/new', static function () use ($invoiceForm): void {
-    Auth::require();
-    $c = isset($_GET['customer']) ? Customers::find((int) $_GET['customer']) : null;
+$r->get('/billing/invoices/new', static function () use ($invoiceForm, $invoiceTicket): void {
+    $op = Auth::require();
+    // from a ticket: its main customer and a text with the ticket reference
+    $ticket = $invoiceTicket($op, $_GET['ticket'] ?? 0);
+    $c = $ticket ? Customers::find((int) $ticket['customer_id']) : (isset($_GET['customer']) ? Customers::find((int) $_GET['customer']) : null);
     $invoiceForm(null, [
-        'customer_email' => $c['email'] ?? '', 'customer_name' => $c['name'] ?? '', 'description' => '',
+        'customer_email' => $c['email'] ?? '', 'customer_name' => $c['name'] ?? '',
+        'description' => $ticket ? __('inv.text_from_ticket', ['number' => $ticket['number'], 'subject' => $ticket['subject']]) : '',
         'amount_input' => '', 'start_date' => date('Y-m-d'), 'recurrence' => 'once', 'issued' => false,
-    ], []);
+    ], [], $ticket);
 });
 
-$r->post('/billing/invoices', static function () use ($invoiceForm): void {
+$r->post('/billing/invoices', static function () use ($invoiceForm, $invoiceTicket): void {
     $op = Auth::require();
+    $ticket = $invoiceTicket($op, $_POST['ticket_id'] ?? 0);
     $res = Invoices::validate($_POST);
     if ($res['errors']) {
         http_response_code(422);
-        $invoiceForm(null, $res['values'], $res['errors']);
+        $invoiceForm(null, $res['values'], $res['errors'], $ticket);
         return;
     }
-    $id = Invoices::create($res['values'], (int) $op['id']);
+    $id = Invoices::create($res['values'], $op, $ticket);
     flash('success', 'inv.created', ['id' => $id]);
-    redirect('/op/billing/invoices');
+    // created from a ticket: back to the ticket
+    redirect($ticket ? '/op/ticket/' . (int) $ticket['id'] : '/op/billing/invoices');
 });
 
 $r->get('/billing/invoices/{id}', static function (array $p) use ($invoiceForm, $loadInvoice): void {

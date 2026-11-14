@@ -94,6 +94,26 @@
 
     <aside class="side-stack">
         <?php require BHD_ROOT . '/templates/op/ticket_customers.php'; ?>
+        <div class="card ticket-tasks ticket-invoices">
+            <div class="row-between">
+                <h2><?= t('inv.title') ?><?php if ($invoices): ?> <span class="count"><?= count($invoices) ?></span><?php endif; ?></h2>
+                <a class="btn btn-small" href="/op/billing/invoices/new?ticket=<?= (int) $ticket['id'] ?>">+ <?= t('inv.new') ?></a>
+            </div>
+            <?php if (!$invoices): ?>
+                <p class="muted hint"><?= t('inv.ticket_none') ?></p>
+            <?php else: ?>
+                <ul class="ticket-task-list">
+                    <?php foreach ($invoices as $inv): ?>
+                        <li>
+                            <a href="/op/billing/invoices/<?= (int) $inv['id'] ?>"><?= t('inv.edit_title', ['id' => $inv['id']]) ?></a>
+                            <strong><?= e(\Bhelpdesk\Invoices::money((float) $inv['amount'])) ?></strong>
+                            <span class="inv-toggle small <?= $inv['issued'] ? 'on' : '' ?>"><?= $inv['issued'] ? t('inv.state_issued') : t('inv.state_todo') ?></span>
+                            <small class="muted"><?= t('inv.rec_' . $inv['recurrence']) ?> · <?= e(mb_strimwidth(preg_replace('/\s+/', ' ', (string) $inv['description']), 0, 60, '…')) ?></small>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+        </div>
         <div class="card ticket-tasks">
             <div class="row-between">
                 <h2><?= t('tasks.ticket_box') ?><?php if ($tasks): ?> <span class="count"><?= count($tasks) ?></span><?php endif; ?></h2>

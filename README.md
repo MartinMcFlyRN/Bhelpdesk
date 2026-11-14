@@ -126,6 +126,7 @@ mariadb bhelpdesk < sql/migrations/016_mail_source.sql
 mariadb bhelpdesk < sql/migrations/017_tasks.sql
 mariadb bhelpdesk < sql/migrations/018_task_ticket.sql
 mariadb bhelpdesk < sql/migrations/019_invoices.sql
+mariadb bhelpdesk < sql/migrations/020_invoice_ticket.sql
 ```
 
 ## Operators area
@@ -221,6 +222,8 @@ Nobody is alerted for what they did themselves. Alerts contain the ticket data, 
 - **Invoice issued** switches it from *to issue* to *issued* (who and when are recorded); in the list the state is a button that switches it in one click.
 - The list has *To issue / Issued / All*, filter by type, search by customer, text or ID, the count and the total amount. For recurring invoices it shows the **next billing date** computed from the start date (end of month handled: 31 January monthly -> 28/29 February); invoices to issue whose date has come are highlighted.
 - The customer page lists the customer's invoices with *+ New invoice*.
+- **Invoices of a ticket**: the *Invoices* box in the ticket sidebar lists the linked invoices; *+ New invoice* opens the form with the ticket's main customer and the text `Ticket #number - subject`, linked to the ticket (back to the ticket after saving). The invoice shows the ticket in the form and in the list (searchable by ticket number); the ticket history records the new invoice. Merging tickets moves their invoices.
+- Switching an invoice between *to issue* and *issued* (list button or checkbox of an existing invoice) asks for confirmation.
 - Every operator can use Billing; the creator and the administrators delete invoices.
 
 ## Bulk actions in the ticket list

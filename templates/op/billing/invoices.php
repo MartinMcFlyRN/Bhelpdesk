@@ -41,7 +41,8 @@ $here = $qs([]);
         <tr class="<?= $i['issued'] ? 'inv-issued' : ($due ? 'inv-due' : '') ?>">
             <td class="num"><a href="/op/billing/invoices/<?= (int) $i['id'] ?>"><strong><?= (int) $i['id'] ?></strong></a></td>
             <td><a href="/op/customers/<?= (int) $i['customer_id'] ?>"><?= e($i['customer_name']) ?></a><?= $i['customer_company'] ? '<br><small class="muted">' . e($i['customer_company']) . '</small>' : '' ?></td>
-            <td><a href="/op/billing/invoices/<?= (int) $i['id'] ?>" class="inv-text"><?= e(mb_strimwidth(preg_replace('/\s+/', ' ', (string) $i['description']), 0, 90, '…')) ?></a></td>
+            <td><a href="/op/billing/invoices/<?= (int) $i['id'] ?>" class="inv-text"><?= e(mb_strimwidth(preg_replace('/\s+/', ' ', (string) $i['description']), 0, 90, '…')) ?></a>
+                <?php if (!empty($i['ticket_number'])): ?><br><small>🎫 <a href="/op/ticket/<?= (int) $i['ticket_id'] ?>">#<?= e($i['ticket_number']) ?></a></small><?php endif; ?></td>
             <td class="num nowrap"><strong><?= e(Invoices::money((float) $i['amount'])) ?></strong></td>
             <td><span class="badge inv-rec-<?= e($i['recurrence']) ?>"><?= t('inv.rec_' . $i['recurrence']) ?></span></td>
             <td class="nowrap"><?= e(Invoices::day((string) $i['start_date'])) ?></td>
@@ -51,7 +52,8 @@ $here = $qs([]);
                     <?= \Bhelpdesk\Csrf::field() ?>
                     <input type="hidden" name="back" value="<?= e($here) ?>">
                     <input type="hidden" name="issued" value="<?= $i['issued'] ? '' : '1' ?>">
-                    <button type="submit" class="inv-toggle <?= $i['issued'] ? 'on' : '' ?>" title="<?= t($i['issued'] ? 'inv.click_todo' : 'inv.click_issued') ?>">
+                    <button type="submit" class="inv-toggle <?= $i['issued'] ? 'on' : '' ?>" title="<?= t($i['issued'] ? 'inv.click_todo' : 'inv.click_issued') ?>"
+                            data-confirm="<?= t($i['issued'] ? 'inv.confirm_todo' : 'inv.confirm_issued', ['id' => $i['id']]) ?>">
                         <?= $i['issued'] ? '☑ ' . t('inv.state_issued') : '☐ ' . t('inv.state_todo') ?>
                     </button>
                 </form>

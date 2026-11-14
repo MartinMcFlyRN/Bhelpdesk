@@ -280,3 +280,13 @@ document.querySelectorAll('[data-autosubmit]').forEach(function (el) {
         }
     });
 });
+
+// Checkbox with confirmation: data-confirm-on (when checking) / data-confirm-off (when unchecking)
+document.querySelectorAll('input[type=checkbox][data-confirm-on]').forEach(function (box) {
+    box.addEventListener('change', function () {
+        var msg = box.checked ? box.getAttribute('data-confirm-on') : box.getAttribute('data-confirm-off');
+        if (msg && !window.confirm(msg)) {
+            box.checked = !box.checked;
+        }
+    });
+});

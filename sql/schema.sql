@@ -308,6 +308,7 @@ CREATE TABLE IF NOT EXISTS tasks (
 CREATE TABLE IF NOT EXISTS invoices (
     id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     customer_id  INT UNSIGNED NOT NULL,
+    ticket_id    INT UNSIGNED NULL,                            -- invoice created from a ticket
     description  TEXT          NOT NULL,
     amount       DECIMAL(12,2) NOT NULL,
     start_date   DATE          NOT NULL,                       -- billing starts on this day
@@ -320,6 +321,8 @@ CREATE TABLE IF NOT EXISTS invoices (
     updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     KEY ix_invoices_customer (customer_id),
     KEY ix_invoices_issued (issued, start_date),
+    KEY ix_invoices_ticket (ticket_id),
+    CONSTRAINT fk_invoices_ticket     FOREIGN KEY (ticket_id)   REFERENCES tickets(id)   ON DELETE SET NULL,
     CONSTRAINT fk_invoices_customer   FOREIGN KEY (customer_id) REFERENCES customers(id),
     CONSTRAINT fk_invoices_issued_by  FOREIGN KEY (issued_by)   REFERENCES operators(id) ON DELETE SET NULL,
     CONSTRAINT fk_invoices_created_by FOREIGN KEY (created_by)  REFERENCES operators(id) ON DELETE SET NULL

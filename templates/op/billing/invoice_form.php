@@ -1,5 +1,5 @@
-<?php use Bhelpdesk\Invoices; $isNew = $invoice === null; ?>
-<p><a href="/op/billing/invoices">← <?= t('inv.back') ?></a></p>
+<?php use Bhelpdesk\Invoices; $isNew = $invoice === null; $ticket = $ticket ?? null; ?>
+<p><a href="<?= $ticket ? '/op/ticket/' . (int) $ticket['id'] : '/op/billing/invoices' ?>">← <?= t($ticket ? 'tasks.back_ticket' : 'inv.back') ?></a></p>
 <div class="page-head">
     <h1><?= $isNew ? t('inv.new_title') : t('inv.edit_title', ['id' => $invoice['id']]) ?></h1>
     <?php if (!$isNew): ?><span class="inv-toggle <?= $invoice['issued'] ? 'on' : '' ?>"><?= $invoice['issued'] ? '☑ ' . t('inv.state_issued') : '☐ ' . t('inv.state_todo') ?></span><?php endif; ?>
@@ -12,6 +12,12 @@
 <div class="layout-side">
     <form method="post" action="<?= $isNew ? '/op/billing/invoices' : '/op/billing/invoices/' . (int) $invoice['id'] ?>" class="form card">
         <?= \Bhelpdesk\Csrf::field() ?>
+        <?php if ($ticket): ?>
+            <input type="hidden" name="ticket_id" value="<?= (int) $ticket['id'] ?>">
+            <p class="task-ticket-ref">🎫 <?= t('inv.linked_ticket') ?> <a href="/op/ticket/<?= (int) $ticket['id'] ?>">#<?= e($ticket['number']) ?> · <?= e($ticket['subject']) ?></a></p>
+        <?php elseif (!$isNew && !empty($invoice['ticket_number'])): ?>
+            <p class="task-ticket-ref">🎫 <?= t('inv.linked_ticket') ?> <a href="/op/ticket/<?= (int) $invoice['ticket_id'] ?>">#<?= e($invoice['ticket_number']) ?> · <?= e((string) $invoice['ticket_subject']) ?></a></p>
+        <?php endif; ?>
         <div class="row-2">
             <label><?= t('inv.f_customer') ?>
                 <input type="email" name="customer_email" required maxlength="190" value="<?= e($values['customer_email']) ?>"
@@ -41,7 +47,8 @@
                 </select>
             </label>
         </div>
-        <label class="check inv-issued-check"><input type="checkbox" name="issued" value="1" <?= $values['issued'] ? 'checked' : '' ?>> <strong><?= t('inv.f_issued') ?></strong> <span class="muted">— <?= t('inv.f_issued_hint') ?></span></label>
+        <label class="check inv-issued-check"><input type="checkbox" name="issued" value="1" <?= $values['issued'] ? 'checked' : '' ?>
+            <?php if (!$isNew): ?>data-confirm-on="<?= t('inv.confirm_issued', ['id' => $invoice['id']]) ?>" data-confirm-off="<?= t('inv.confirm_todo', ['id' => $invoice['id']]) ?>"<?php endif; ?>> <strong><?= t('inv.f_issued') ?></strong> <span class="muted">— <?= t('inv.f_issued_hint') ?></span></label>
         <div class="form-actions">
             <button class="btn btn-primary" type="submit"><?= t($isNew ? 'inv.create' : 'cfg.save_short') ?></button>
         </div>
@@ -51,6 +58,7 @@
     <aside class="card">
         <dl class="meta">
             <dt>ID</dt><dd><?= (int) $invoice['id'] ?></dd>
+            <?php if (!empty($invoice['ticket_number'])): ?><dt><?= t('tasks.col_ticket') ?></dt><dd><a href="/op/ticket/<?= (int) $invoice['ticket_id'] ?>">#<?= e($invoice['ticket_number']) ?></a></dd><?php endif; ?>
             <dt><?= t('inv.col_next') ?></dt><dd><?= e(Invoices::day(Invoices::nextDate($invoice))) ?></dd>
             <dt><?= t('inv.created_by') ?></dt><dd><?= e((string) ($invoice['created_by_name'] ?? '—')) ?> · <?= e(fmt_date((string) $invoice['created_at'])) ?></dd>
             <?php if ($invoice['issued']): ?><dt><?= t('inv.state_issued') ?></dt><dd><?= e((string) ($invoice['issued_by_name'] ?? '—')) ?> · <?= e(fmt_date((string) $invoice['issued_at'])) ?></dd><?php endif; ?>
