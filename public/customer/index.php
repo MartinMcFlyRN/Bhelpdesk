@@ -31,6 +31,7 @@ $r->post('/new', static function (): void {
     $in = [
         'name'       => trim((string) ($_POST['name'] ?? '')),
         'email'      => mb_strtolower(trim((string) ($_POST['email'] ?? ''))),
+        'phone'      => trim((string) preg_replace('/\s+/', ' ', (string) ($_POST['phone'] ?? ''))),
         'department' => (int) ($_POST['department'] ?? 0),
         'subject'    => trim((string) ($_POST['subject'] ?? '')),
         'message'    => trim((string) ($_POST['message'] ?? '')),
@@ -46,6 +47,10 @@ $r->post('/new', static function (): void {
     }
     if (!filter_var($in['email'], FILTER_VALIDATE_EMAIL) || strlen($in['email']) > 190) {
         $errors[] = __('val.email_invalid');
+    }
+    // phone is optional: digits, spaces and + ( ) - . / only, at least 6 digits
+    if ($in['phone'] !== '' && (!preg_match('#^\+?[0-9 ()./-]{6,30}$#', $in['phone']) || preg_match_all('/\d/', $in['phone']) < 6)) {
+        $errors[] = __('val.phone_invalid');
     }
     if ($in['subject'] === '' || mb_strlen($in['subject']) > 255) {
         $errors[] = __('val.subject_required');
@@ -78,7 +83,7 @@ $r->post('/new', static function (): void {
     }
 
     Throttle::hit('ticket_create', $ip);
-    $t = Tickets::create($in['name'], $in['email'], $depId, $in['subject'], $in['message'], $ip, Lang::current(), $upload['files']);
+    $t = Tickets::create($in['name'], $in['email'], $depId, $in['subject'], $in['message'], $ip, Lang::current(), $upload['files'], $in['phone'] !== '' ? $in['phone'] : null);
     $_SESSION['tickets'][$t['number']] = true;
     $_SESSION['just_created'] = $t;
     redirect('/customer/created');

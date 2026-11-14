@@ -29,23 +29,23 @@ final class Tickets
     }
 
     /** @return array{number: string, token: string} */
-    public static function create(string $name, string $email, ?int $departmentId, string $subject, string $body, string $ip, string $language = 'en', array $files = []): array
+    public static function create(string $name, string $email, ?int $departmentId, string $subject, string $body, string $ip, string $language = 'en', array $files = [], ?string $phone = null): array
     {
         $pdo = Db::pdo();
         $pdo->beginTransaction();
         try {
             $customerId = (int) Db::value('SELECT id FROM customers WHERE email = ?', [$email]);
             if ($customerId) {
-                Db::exec('UPDATE customers SET name = ?, language = ? WHERE id = ?', [$name, $language, $customerId]);
+                Db::exec('UPDATE customers SET name = ?, language = ?, phone = COALESCE(?, phone) WHERE id = ?', [$name, $language, $phone, $customerId]);
             } else {
-                $customerId = Db::insert('INSERT INTO customers (name, email, language) VALUES (?, ?, ?)', [$name, $email, $language]);
+                $customerId = Db::insert('INSERT INTO customers (name, email, phone, language) VALUES (?, ?, ?, ?)', [$name, $email, $phone, $language]);
             }
 
             $number = self::newNumber();
             $token  = bin2hex(random_bytes(32));
             $ticketId = Db::insert(
-                'INSERT INTO tickets (number, access_token, customer_id, department_id, subject, created_ip) VALUES (?, ?, ?, ?, ?, ?)',
-                [$number, $token, $customerId, $departmentId, $subject, $ip]
+                'INSERT INTO tickets (number, access_token, customer_id, department_id, subject, phone, created_ip) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [$number, $token, $customerId, $departmentId, $subject, $phone, $ip]
             );
             $messageId = self::addMessage($ticketId, 'customer', null, $body, false, $ip);
             if ($files) {
@@ -216,9 +216,9 @@ final class Tickets
             $p[] = (int) $f['department'];
         }
         if (!empty($f['q'])) {
-            $where[] = '(t.number = ? OR t.subject LIKE ? OR c.email LIKE ? OR c.name LIKE ?)';
+            $where[] = '(t.number = ? OR t.subject LIKE ? OR c.email LIKE ? OR c.name LIKE ? OR t.phone LIKE ?)';
             $like = '%' . addcslashes((string) $f['q'], '%_\\') . '%';
-            array_push($p, $f['q'], $like, $like, $like);
+            array_push($p, $f['q'], $like, $like, $like, $like);
         }
 
         $sqlWhere = $where ? ' WHERE ' . implode(' AND ', $where) : '';

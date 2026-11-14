@@ -13,6 +13,11 @@
     <?php if ($m['author_type'] === 'system') continue; ?>
     <article class="msg msg-<?= e($m['author_type']) ?>">
         <header>
+            <?php if ($m['author_type'] === 'operator'): ?>
+                <span class="msg-role msg-role-support"><?= t('ticket.badge_support') ?></span>
+            <?php else: ?>
+                <span class="msg-role msg-role-you"><?= t('ticket.badge_you') ?></span>
+            <?php endif; ?>
             <strong><?php if ($m['author_type'] !== 'operator'): ?><?= e($ticket['customer_name']) ?><?php elseif (config('hide_operator_name', false) || empty($m['operator_name'])): ?><?= t('ticket.staff_operator') ?><?php else: ?><?= e($m['operator_name']) ?> (<?= t('ticket.support') ?>)<?php endif; ?></strong>
             <span class="muted"><?= fmt_date($m['created_at']) ?></span>
         </header>

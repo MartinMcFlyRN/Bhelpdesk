@@ -103,6 +103,7 @@ Apply any new file in `sql/migrations/` after pulling (they are idempotent):
 mariadb bhelpdesk < sql/migrations/001_customer_language.sql
 mariadb bhelpdesk < sql/migrations/002_attachments.sql
 mariadb bhelpdesk < sql/migrations/003_settings.sql
+mariadb bhelpdesk < sql/migrations/004_phone.sql
 ```
 
 ## Configuration area (/op/config)
@@ -177,7 +178,8 @@ Not translated by design: data entered by users, such as department names, ticke
 Statuses: **Open** → (operator reply) **Answered** → (customer reply) **Open** … → **Closed**. There is also **On hold**.
 
 - The customer opens a ticket and gets a 6-digit number plus an access link with a token.
-- To see it again: number + email, or the link.
+- Optional phone number on the form (shown to operators with a `tel:` link, searchable from the dashboard).
+- To see it again: number + email, or the link. In the conversation support replies are highlighted and aligned left, the customer's messages on the right.
 - A customer reply on a closed ticket reopens it (`allow_reopen`).
 - Operators also see internal notes and the system history.
 - On the first public reply an unassigned ticket is assigned to the replying operator.

@@ -2,7 +2,8 @@
 <div class="ticket-head">
     <div>
         <h1>#<?= e($ticket['number']) ?> · <?= e($ticket['subject']) ?></h1>
-        <p class="muted"><?= e($ticket['customer_name']) ?> &lt;<?= e($ticket['customer_email']) ?>&gt;
+        <p class="muted"><?= e($ticket['customer_name']) ?> &lt;<a href="mailto:<?= e($ticket['customer_email']) ?>"><?= e($ticket['customer_email']) ?></a>&gt;
+            <?php if (!empty($ticket['phone'])): ?> · <?= t('opticket.phone') ?> <a href="tel:<?= e(preg_replace('/[^0-9+]/', '', $ticket['phone'])) ?>"><?= e($ticket['phone']) ?></a><?php endif; ?>
             · <?= t('opticket.opened', ['date' => fmt_date($ticket['created_at']), 'ip' => $ticket['created_ip'] ?? '?']) ?></p>
     </div>
     <div>

@@ -15,15 +15,20 @@
                 <input type="email" name="email" required maxlength="190" value="<?= e(old('email')) ?>">
             </label>
         </div>
-        <?php if ($departments): ?>
-        <label><?= t('new.department') ?>
-            <select name="department">
-                <?php foreach ($departments as $d): ?>
-                    <option value="<?= (int) $d['id'] ?>" <?= old('department') == $d['id'] ? 'selected' : '' ?>><?= e($d['name']) ?></option>
-                <?php endforeach; ?>
-            </select>
-        </label>
-        <?php endif; ?>
+        <div class="row-2">
+            <label><?= t('new.phone') ?> <span class="optional"><?= t('new.optional') ?></span>
+                <input type="tel" name="phone" maxlength="30" autocomplete="tel" inputmode="tel" pattern="\+?[0-9 ()./\-]{6,30}" value="<?= e(old('phone')) ?>" placeholder="<?= t('new.phone_placeholder') ?>">
+            </label>
+            <?php if ($departments): ?>
+            <label><?= t('new.department') ?>
+                <select name="department">
+                    <?php foreach ($departments as $d): ?>
+                        <option value="<?= (int) $d['id'] ?>" <?= old('department') == $d['id'] ? 'selected' : '' ?>><?= e($d['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </label>
+            <?php endif; ?>
+        </div>
         <label><?= t('new.subject') ?>
             <input type="text" name="subject" required maxlength="255" value="<?= e(old('subject')) ?>">
         </label>

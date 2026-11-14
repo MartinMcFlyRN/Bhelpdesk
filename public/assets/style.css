@@ -43,6 +43,7 @@ main.wrap { padding-top: 1.5rem; padding-bottom: 3rem; }
 
 .form label { display: block; margin-bottom: .9rem; font-weight: 500; font-size: .9rem; }
 .form input[type=text], .form input[type=email], .form input[type=password], .form input[type=search],
+.form input[type=tel], .form input[type=number], .form input[type=url],
 .form select, .form textarea, .filters input, .filters select {
     display: block; width: 100%; margin-top: .3rem; padding: .55rem .7rem;
     border: 1px solid var(--border); border-radius: 6px; font: inherit; background: #fff;
@@ -182,3 +183,25 @@ fieldset.card legend { font-weight: 700; padding: 0 .4rem; }
 .mono-list { font-family: ui-monospace, monospace; font-size: .85rem; overflow-wrap: anywhere; }
 .readonly .meta { grid-template-columns: 200px 1fr; font-size: .9rem; }
 @media (max-width: 800px) { .cfg-layout { grid-template-columns: 1fr; } .cfg-menu { position: static; } }
+
+/* optional field marker */
+.optional { font-weight: 400; color: var(--muted); font-size: .85em; }
+
+/* customer view: conversation with clearly highlighted support replies */
+.area-customer .thread { display: flex; flex-direction: column; gap: .9rem; }
+.area-customer .msg { margin: 0; max-width: 88%; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+.area-customer .msg-customer { align-self: flex-end; background: #fff; border-left: 1px solid var(--border); border-right: 4px solid #94a3b8; }
+.area-customer .msg-operator {
+    align-self: flex-start;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-left: 5px solid #4f46e5;
+    box-shadow: 0 2px 6px rgba(79, 70, 229, .12);
+}
+.area-customer .msg-operator .body { font-size: 1.02rem; color: #1e1b4b; }
+.area-customer .msg-operator header strong { color: #3730a3; }
+.msg-role { display: inline-block; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: .12rem .5rem; border-radius: 999px; }
+.msg-role-support { background: #4f46e5; color: #fff; }
+.msg-role-you { background: #e2e8f0; color: #475569; }
+@media (max-width: 800px) { .area-customer .msg { max-width: 100%; } }
+.captcha input::placeholder { text-transform: none; letter-spacing: normal; }
