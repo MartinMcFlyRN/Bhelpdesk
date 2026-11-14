@@ -60,10 +60,9 @@ return [
     // driver 'log'  = do not send, append messages to storage/mail.log (default, for testing)
     // driver 'mail' = PHP mail() through the server's sendmail/postfix
     // (SMTP will come with the email notifications)
+    // The sender ("Default from" address and name) is set in /op/config/general.
     'mail' => [
-        'driver'    => 'log',
-        'from'      => 'helpdesk@example.com',
-        'from_name' => 'Helpdesk',
+        'driver' => 'log',
     ],
 
     // Customers may reply to a closed ticket (it gets reopened)

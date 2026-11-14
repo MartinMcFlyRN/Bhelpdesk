@@ -15,12 +15,14 @@ final class Settings
 {
     /**
      * key => definition. Sections group the fields on the page.
-     * Types: string, url, timezone, language, languages, bool, int, pair (max attempts + window seconds)
+     * Types: string, email, url, timezone, language, languages, bool, int, pair (max attempts + window seconds)
      */
     public const FIELDS = [
         'app_name'                 => ['section' => 'general',     'type' => 'string', 'max' => 100],
         'base_url'                 => ['section' => 'general',     'type' => 'url'],
         'timezone'                 => ['section' => 'general',     'type' => 'timezone'],
+        'mail.from'                => ['section' => 'mail',        'type' => 'email'],
+        'mail.from_name'           => ['section' => 'mail',        'type' => 'string', 'max' => 100],
         'default_language'         => ['section' => 'languages',   'type' => 'language'],
         'enabled_languages'        => ['section' => 'languages',   'type' => 'languages'],
         'allow_reopen'             => ['section' => 'tickets',     'type' => 'bool'],
@@ -43,6 +45,8 @@ final class Settings
         'app_name'                 => 'Bhelpdesk',
         'base_url'                 => '',
         'timezone'                 => 'Europe/Rome',
+        'mail.from'                => 'helpdesk@localhost',
+        'mail.from_name'           => 'Helpdesk',
         'default_language'         => 'en',
         'enabled_languages'        => [],
         'allow_reopen'             => true,
@@ -119,6 +123,12 @@ final class Settings
                     $v = trim((string) $raw);
                     if ($v === '' || mb_strlen($v) > ($def['max'] ?? 255)) {
                         $errors[] = __('val.set_required', ['field' => $label]);
+                    }
+                    break;
+                case 'email':
+                    $v = mb_strtolower(trim((string) $raw));
+                    if (!filter_var($v, FILTER_VALIDATE_EMAIL) || strlen($v) > 190) {
+                        $errors[] = __('val.set_email', ['field' => $label]);
                     }
                     break;
                 case 'url':

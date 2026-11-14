@@ -100,7 +100,7 @@ $fileVal = static function (array $file, string $key) {
 
                         default: ?>
                         <label><?= t('set.' . $key) ?>
-                            <input type="<?= $def['type'] === 'url' ? 'url' : 'text' ?>" name="<?= e($name($key)) ?>" value="<?= e($v) ?>" required maxlength="<?= (int) ($def['max'] ?? 255) ?>">
+                            <input type="<?= in_array($def['type'], ['url', 'email'], true) ? $def['type'] : 'text' ?>" name="<?= e($name($key)) ?>" value="<?= e($v) ?>" required maxlength="<?= (int) ($def['max'] ?? 255) ?>">
                         </label>
                     <?php endswitch; ?>
                     <?php if ($hasHelp): ?><small class="muted hint field-help"><?= t($help) ?></small><?php endif; ?>
@@ -131,6 +131,8 @@ $fileVal = static function (array $file, string $key) {
                 <dd class="mono-list"><?= ($l = (array) $fileVal($file, 'trusted_proxies')) ? e(implode(', ', $l)) : t('set.readonly.none') ?></dd>
                 <dt><?= t('set.readonly.cookie_secure') ?></dt>
                 <dd><?= $fileVal($file, 'cookie_secure') === false ? t('set.readonly.no') : t('set.readonly.yes') ?></dd>
+                <dt><?= t('set.readonly.mail_driver') ?></dt>
+                <dd class="mono-list"><?= e((string) config('mail.driver', 'log')) ?><?= config('mail.driver', 'log') === 'log' ? ' — ' . t('set.readonly.mail_log') : '' ?></dd>
                 <dt><?= t('set.readonly.storage') ?></dt>
                 <dd class="mono-list"><?= e(\Bhelpdesk\Attachments::storageDir()) ?></dd>
                 <dt><?= t('set.readonly.db') ?></dt>

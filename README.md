@@ -128,7 +128,7 @@ mariadb bhelpdesk < sql/migrations/007_customer_access.sql
 
 **Direct links.** When a ticket is opened a unique link `/customer/t/<token>` is generated (shown on the confirmation page; it will be sent by email with the notifications). It opens that ticket without signing in and expires **`customer_link_days` days (default 30, editable in /op/config/general) after the last reply** visible to the customer — every new reply extends it; internal notes do not. After that the page says *Link expired* and invites to sign in. Tokens are stored as SHA-256 hashes only. Removing a customer from a ticket revokes their links. Operators can create a new link for any customer of the ticket (🔗 in the Customers card) to send it by hand. Old `/customer/ticket/N?t=…` links keep working (migration 007 converts them).
 
-**Email (preview).** `Mailer` sends plain-text UTF-8 messages. With `mail.driver = 'log'` (default) nothing is sent: messages are appended to `storage/mail.log`, handy for testing. With `'mail'` the server's sendmail/postfix is used. SMTP and ticket notifications come next.
+**Email (preview).** `Mailer` sends plain-text UTF-8 messages. With `mail.driver = 'log'` (default) nothing is sent: messages are appended to `storage/mail.log`, handy for testing. With `'mail'` the server's sendmail/postfix is used. The sender (**Default from** address and name) is set in */op/config/general → Email*. SMTP and ticket notifications come next.
 
 ## Customers on a ticket
 
@@ -144,7 +144,7 @@ Every customer on the ticket sees it after signing in with **their own** account
 
 Reserved to operators with the **Administrator** role (others get 403; the link is not shown to them). It lives under `/op`, so it is covered by the same IP filters and login.
 
-- **General** — application name, public URL, time zone, default/offered languages, ticket reopening, hide operator names from customers (they see "Staff Operator"), captcha, attachment limits (with a warning when they exceed the PHP limits of the server), operator session timeout, rate limits. Saved in the `settings` table, they override `config/config.php`. Database, allowed IPs, trusted proxies, cookie and storage settings stay in `config.php` only and are shown read-only.
+- **General** — application name, public URL, time zone, default from address/name for emails, default/offered languages, ticket reopening, hide operator names from customers (they see "Staff Operator"), captcha, attachment limits (with a warning when they exceed the PHP limits of the server), operator session timeout, rate limits. Saved in the `settings` table, they override `config/config.php`. Database, allowed IPs, trusted proxies, cookie and storage settings stay in `config.php` only and are shown read-only.
 - **Departments** — create, rename, reorder, activate/deactivate. A department used by tickets cannot be deleted (deactivate it: it disappears from the customer form but stays on existing tickets).
 - **Operators** — create, edit name/email/role, reset password, activate/deactivate. Safeguards: you cannot remove your own admin role or disable yourself, and at least one active administrator always remains.
 
