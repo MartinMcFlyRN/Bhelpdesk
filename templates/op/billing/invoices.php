@@ -2,6 +2,8 @@
 use Bhelpdesk\Invoices;
 $qs = static fn (array $over): string => '/op/billing/invoices?' . http_build_query(array_filter(array_merge($filters, $over), static fn ($v) => $v !== '' && $v !== null));
 $here = $qs([]);
+$isBilling = $op['role'] === 'billing';
+$canIssue = \Bhelpdesk\Auth::canIssueInvoices($op);
 ?>
 <div class="page-head">
     <h1><?= t('inv.title') ?></h1>
@@ -40,14 +42,15 @@ $here = $qs([]);
     <?php foreach ($rows as $i): $next = Invoices::nextDate($i); $due = !$i['issued'] && $next <= date('Y-m-d'); ?>
         <tr class="<?= $i['issued'] ? 'inv-issued' : ($due ? 'inv-due' : '') ?>">
             <td class="num"><a href="/op/billing/invoices/<?= (int) $i['id'] ?>"><strong><?= (int) $i['id'] ?></strong></a></td>
-            <td><a href="/op/customers/<?= (int) $i['customer_id'] ?>"><?= e($i['customer_name']) ?></a><?= $i['customer_company'] ? '<br><small class="muted">' . e($i['customer_company']) . '</small>' : '' ?></td>
+            <td><?= $isBilling ? '<strong>' . e($i['customer_name']) . '</strong>' : '<a href="/op/customers/' . (int) $i['customer_id'] . '">' . e($i['customer_name']) . '</a>' ?><?= $i['customer_company'] ? '<br><small class="muted">' . e($i['customer_company']) . '</small>' : '' ?></td>
             <td><a href="/op/billing/invoices/<?= (int) $i['id'] ?>" class="inv-text"><?= e(mb_strimwidth(preg_replace('/\s+/', ' ', (string) $i['description']), 0, 90, '…')) ?></a>
-                <?php if (!empty($i['ticket_number'])): ?><br><small>🎫 <a href="/op/ticket/<?= (int) $i['ticket_id'] ?>">#<?= e($i['ticket_number']) ?></a></small><?php endif; ?></td>
+                <?php if (!empty($i['ticket_number'])): ?><br><small>🎫 <?= $isBilling ? '#' . e($i['ticket_number']) : '<a href="/op/ticket/' . (int) $i['ticket_id'] . '">#' . e($i['ticket_number']) . '</a>' ?></small><?php endif; ?></td>
             <td class="num nowrap"><strong><?= e(Invoices::money((float) $i['amount'])) ?></strong></td>
             <td><span class="badge inv-rec-<?= e($i['recurrence']) ?>"><?= t('inv.rec_' . $i['recurrence']) ?></span></td>
             <td class="nowrap"><?= e(Invoices::day((string) $i['start_date'])) ?></td>
             <td class="nowrap"><?= e(Invoices::day($next)) ?><?= $due ? ' <span class="inv-due-tag">' . t('inv.due') . '</span>' : '' ?></td>
             <td>
+                <?php if ($canIssue): ?>
                 <form method="post" action="/op/billing/invoices/<?= (int) $i['id'] ?>/issued" class="inline inv-issued-form">
                     <?= \Bhelpdesk\Csrf::field() ?>
                     <input type="hidden" name="back" value="<?= e($here) ?>">
@@ -57,6 +60,9 @@ $here = $qs([]);
                         <?= $i['issued'] ? '☑ ' . t('inv.state_issued') : '☐ ' . t('inv.state_todo') ?>
                     </button>
                 </form>
+                <?php else: ?>
+                    <span class="inv-toggle <?= $i['issued'] ? 'on' : '' ?>" title="<?= t('inv.only_billing') ?>"><?= $i['issued'] ? '☑ ' . t('inv.state_issued') : '☐ ' . t('inv.state_todo') ?></span>
+                <?php endif; ?>
                 <?php if ($i['issued']): ?><br><small class="muted"><?= e((string) ($i['issued_by_name'] ?? '')) ?> · <?= e(fmt_date((string) $i['issued_at'])) ?></small><?php endif; ?>
             </td>
         </tr>

@@ -21,6 +21,7 @@
                     <select name="role">
                         <option value="agent" <?= $target['role'] === 'agent' ? 'selected' : '' ?>><?= t('role.agent') ?></option>
                         <option value="admin" <?= $target['role'] === 'admin' ? 'selected' : '' ?>><?= t('role.admin') ?></option>
+                        <option value="billing" <?= $target['role'] === 'billing' ? 'selected' : '' ?>><?= t('role.billing') ?></option>
                     </select>
                 </label>
                 <?php $role = $target['role']; require BHD_ROOT . '/templates/op/config/_departments_pick.php'; ?>

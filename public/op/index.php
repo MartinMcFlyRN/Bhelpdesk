@@ -48,6 +48,9 @@ $r->post('/logout', static function (): void {
 
 // ---------- Dashboard ----------
 $r->get('/', static function (): void {
+    if ((Auth::user()['role'] ?? '') === 'billing') {
+        redirect('/op/billing/invoices');
+    }
     $op = Auth::require();
     $filters = [
         'status'     => (string) ($_GET['status'] ?? ''),
@@ -567,7 +570,7 @@ $taskForm = static function (array $op, ?array $task, array $values, array $erro
         'values'      => $values,
         'errors'      => $errors,
         'departments' => Tickets::departments(true),
-        'operators'   => Db::all('SELECT id, name FROM operators WHERE active = 1 ORDER BY name'),
+        'operators'   => Db::all("SELECT id, name FROM operators WHERE active = 1 AND role <> 'billing' ORDER BY name"),
     ]);
 };
 
@@ -788,7 +791,7 @@ $r->post('/billing/invoices/{id}', static function (array $p) use ($invoiceForm,
         $invoiceForm($i, $res['values'], $res['errors']);
         return;
     }
-    Invoices::update($i, $res['values'], (int) $op['id']);
+    Invoices::update($i, $res['values'], $op);
     flash('success', 'inv.saved', ['id' => $i['id']]);
     redirect('/op/billing/invoices');
 });
@@ -797,6 +800,11 @@ $r->post('/billing/invoices/{id}', static function (array $p) use ($invoiceForm,
 $r->post('/billing/invoices/{id}/issued', static function (array $p) use ($loadInvoice): void {
     $op = Auth::require();
     $i = $loadInvoice($p);
+    if (!Auth::canIssueInvoices($op)) {
+        http_response_code(403);
+        View::render('op', 'error', ['title' => __('error.forbidden.title'), 'message' => __('inv.only_billing')]);
+        return;
+    }
     $issued = !empty($_POST['issued']);
     Invoices::setIssued($i, $issued, (int) $op['id']);
     flash('success', $issued ? 'inv.marked_issued' : 'inv.marked_todo', ['id' => $i['id']]);
@@ -807,7 +815,7 @@ $r->post('/billing/invoices/{id}/issued', static function (array $p) use ($loadI
 $r->post('/billing/invoices/{id}/delete', static function (array $p) use ($loadInvoice): void {
     $op = Auth::require();
     $i = $loadInvoice($p);
-    if ($op['role'] === 'admin' || (int) $i['created_by'] === (int) $op['id']) {
+    if (in_array($op['role'], ['admin', 'billing'], true) || (int) $i['created_by'] === (int) $op['id']) {
         Invoices::delete((int) $i['id']);
         flash('success', 'inv.deleted', ['id' => $i['id']]);
     }
@@ -904,7 +912,7 @@ $r->post('/billing/quotes/{id}', static function (array $p) use ($quoteForm, $lo
 $r->post('/billing/quotes/{id}/delete', static function (array $p) use ($loadQuote): void {
     $op = Auth::require();
     $q = $loadQuote($p);
-    if ($op['role'] === 'admin' || (int) $q['created_by'] === (int) $op['id']) {
+    if (in_array($op['role'], ['admin', 'billing'], true) || (int) $q['created_by'] === (int) $op['id']) {
         Quotes::delete((int) $q['id']);
         flash('success', 'quote.deleted', ['id' => $q['id']]);
     }

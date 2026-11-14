@@ -2,7 +2,8 @@
 $uri = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
 $navActive = static fn (string $prefix): string => str_starts_with($uri, $prefix) ? ' class="active"' : '';
 // tasks to do now for this operator: counter in the menu and box under the menu
-$todoTasks = !empty($op) ? \Bhelpdesk\Tasks::activeFor($op) : [];
+$isBilling = ($op['role'] ?? '') === 'billing';   // billing operators: only the Billing section
+$todoTasks = !empty($op) && !$isBilling ? \Bhelpdesk\Tasks::activeFor($op) : [];
 ?>
 <!doctype html>
 <html lang="<?= e(\Bhelpdesk\Lang::current()) ?>">
@@ -22,9 +23,10 @@ $todoTasks = !empty($op) ? \Bhelpdesk\Tasks::activeFor($op) : [];
 <header class="topbar">
     <div class="wrap wide">
         <div class="topbar-left">
-            <a class="brand" href="/op/"><?= e(config('app_name', 'Bhelpdesk')) ?> <small><?= e(mb_strtolower(__('app.operators_area'))) ?></small></a>
+            <a class="brand" href="<?= $isBilling ? '/op/billing/invoices' : '/op/' ?>"><?= e(config('app_name', 'Bhelpdesk')) ?> <small><?= e(mb_strtolower(__('app.operators_area'))) ?></small></a>
             <?php if (!empty($op)): ?>
             <nav class="main-nav">
+                <?php if (!$isBilling): ?>
                 <a href="/op/"<?= ($uri === '/op/' || str_starts_with($uri, '/op/ticket')) && ($_GET['assigned'] ?? '') !== 'me' ? ' class="active"' : '' ?>><?= t('nav.tickets') ?></a>
                 <a href="/op/?assigned=me"<?= $uri === '/op/' && ($_GET['assigned'] ?? '') === 'me' ? ' class="active"' : '' ?>><?= t('nav.my_tickets') ?></a>
                 <details class="nav-menu<?= str_starts_with($uri, '/op/tasks') ? ' active' : '' ?>">
@@ -36,6 +38,7 @@ $todoTasks = !empty($op) ? \Bhelpdesk\Tasks::activeFor($op) : [];
                     </div>
                 </details>
                 <a href="/op/customers"<?= $navActive('/op/customers') ?>><?= t('nav.customers') ?></a>
+                <?php endif; ?>
                 <details class="nav-menu<?= str_starts_with($uri, '/op/billing') ? ' active' : '' ?>">
                     <summary><?= t('nav.billing') ?> <span class="caret" aria-hidden="true">▾</span></summary>
                     <div class="menu" role="menu">

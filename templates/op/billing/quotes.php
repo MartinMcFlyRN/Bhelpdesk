@@ -29,9 +29,9 @@ $qs = static fn (array $over): string => '/op/billing/quotes?' . http_build_quer
     <?php foreach ($rows as $q): ?>
         <tr>
             <td class="num"><a href="/op/billing/quotes/<?= (int) $q['id'] ?>"><strong><?= (int) $q['id'] ?></strong></a></td>
-            <td><a href="/op/customers/<?= (int) $q['customer_id'] ?>"><?= e($q['customer_name']) ?></a><?= $q['customer_company'] ? '<br><small class="muted">' . e($q['customer_company']) . '</small>' : '' ?></td>
+            <td><?= $op['role'] === 'billing' ? '<strong>' . e($q['customer_name']) . '</strong>' : '<a href="/op/customers/' . (int) $q['customer_id'] . '">' . e($q['customer_name']) . '</a>' ?><?= $q['customer_company'] ? '<br><small class="muted">' . e($q['customer_company']) . '</small>' : '' ?></td>
             <td><a href="/op/billing/quotes/<?= (int) $q['id'] ?>" class="inv-text"><?= e(mb_strimwidth(preg_replace('/\s+/', ' ', (string) $q['description']), 0, 90, '…')) ?></a>
-                <?php if (!empty($q['ticket_number'])): ?><br><small>🎫 <a href="/op/ticket/<?= (int) $q['ticket_id'] ?>">#<?= e($q['ticket_number']) ?></a></small><?php endif; ?></td>
+                <?php if (!empty($q['ticket_number'])): ?><br><small>🎫 <?= $op['role'] === 'billing' ? '#' . e($q['ticket_number']) : '<a href="/op/ticket/' . (int) $q['ticket_id'] . '">#' . e($q['ticket_number']) . '</a>' ?></small><?php endif; ?></td>
             <td class="num nowrap"><strong><?= e(Invoices::money((float) $q['amount'])) ?></strong></td>
             <td class="nowrap"><?= e(fmt_date((string) $q['created_at'])) ?><br><small class="muted"><?= e((string) ($q['created_by_name'] ?? '—')) ?></small></td>
         </tr>

@@ -133,6 +133,9 @@ final class Invoices
     /** $ticket: the ticket the invoice is created from (its history records it) */
     public static function create(array $v, array $op, ?array $ticket = null): int
     {
+        if (!Auth::canIssueInvoices($op)) {
+            $v['issued'] = false;
+        }
         $id = Db::insert(
             'INSERT INTO invoices (customer_id, ticket_id, description, amount, start_date, recurrence, issued, issued_at, issued_by, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ' . ($v['issued'] ? 'NOW()' : 'NULL') . ', ?, ?)',
             [$v['customer_id'], $ticket ? (int) $ticket['id'] : null, $v['description'], $v['amount'], $v['start_date'], $v['recurrence'], (int) $v['issued'], $v['issued'] ? (int) $op['id'] : null, (int) $op['id']]
@@ -145,13 +148,16 @@ final class Invoices
         return $id;
     }
 
-    public static function update(array $invoice, array $v, int $operatorId): void
+    public static function update(array $invoice, array $v, array $op): void
     {
+        $operatorId = (int) $op['id'];
         Db::exec(
             'UPDATE invoices SET customer_id = ?, description = ?, amount = ?, start_date = ?, recurrence = ? WHERE id = ?',
             [$v['customer_id'], $v['description'], $v['amount'], $v['start_date'], $v['recurrence'], (int) $invoice['id']]
         );
-        self::setIssued($invoice, $v['issued'], $operatorId);
+        if (Auth::canIssueInvoices($op)) {
+            self::setIssued($invoice, $v['issued'], $operatorId);
+        }
     }
 
     /** Issued / to issue; records who and when */

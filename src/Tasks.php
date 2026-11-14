@@ -159,7 +159,7 @@ final class Tasks
         if (preg_match('/^d:(\d+)$/', $v['assign'], $m) && Db::value('SELECT 1 FROM departments WHERE id = ?', [(int) $m[1]])) {
             $v['target'] = 'department';
             $v['department_id'] = (int) $m[1];
-        } elseif (preg_match('/^o:(\d+)$/', $v['assign'], $m) && Db::value('SELECT 1 FROM operators WHERE id = ? AND active = 1', [(int) $m[1]])) {
+        } elseif (preg_match('/^o:(\d+)$/', $v['assign'], $m) && Db::value("SELECT 1 FROM operators WHERE id = ? AND active = 1 AND role <> 'billing'", [(int) $m[1]])) {
             $v['target'] = 'operator';
             $v['operator_id'] = (int) $m[1];
         } elseif ($v['assign'] !== 'all') {

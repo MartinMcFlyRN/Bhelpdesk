@@ -13,7 +13,7 @@
             <input type="hidden" name="ticket_id" value="<?= (int) $ticket['id'] ?>">
             <p class="task-ticket-ref">🎫 <?= t('quote.linked_ticket') ?> <a href="/op/ticket/<?= (int) $ticket['id'] ?>">#<?= e($ticket['number']) ?> · <?= e($ticket['subject']) ?></a></p>
         <?php elseif (!$isNew && !empty($quote['ticket_number'])): ?>
-            <p class="task-ticket-ref">🎫 <?= t('quote.linked_ticket') ?> <a href="/op/ticket/<?= (int) $quote['ticket_id'] ?>">#<?= e($quote['ticket_number']) ?> · <?= e((string) $quote['ticket_subject']) ?></a></p>
+            <p class="task-ticket-ref">🎫 <?= t('quote.linked_ticket') ?> <?= $op['role'] === 'billing' ? '#' . e($quote['ticket_number']) . ' · ' . e((string) $quote['ticket_subject']) : '<a href="/op/ticket/' . (int) $quote['ticket_id'] . '">#' . e($quote['ticket_number']) . ' · ' . e((string) $quote['ticket_subject']) . '</a>' ?></p>
         <?php endif; ?>
         <div class="row-2">
             <label><?= t('inv.f_customer') ?>
@@ -43,10 +43,10 @@
     <aside class="card">
         <dl class="meta">
             <dt>ID</dt><dd><?= (int) $quote['id'] ?></dd>
-            <?php if (!empty($quote['ticket_number'])): ?><dt><?= t('tasks.col_ticket') ?></dt><dd><a href="/op/ticket/<?= (int) $quote['ticket_id'] ?>">#<?= e($quote['ticket_number']) ?></a></dd><?php endif; ?>
+            <?php if (!empty($quote['ticket_number'])): ?><dt><?= t('tasks.col_ticket') ?></dt><dd><?= $op['role'] === 'billing' ? '#' . e($quote['ticket_number']) : '<a href="/op/ticket/' . (int) $quote['ticket_id'] . '">#' . e($quote['ticket_number']) . '</a>' ?></dd><?php endif; ?>
             <dt><?= t('inv.created_by') ?></dt><dd><?= e((string) ($quote['created_by_name'] ?? '—')) ?> · <?= e(fmt_date((string) $quote['created_at'])) ?></dd>
         </dl>
-        <?php if ($op['role'] === 'admin' || (int) $quote['created_by'] === (int) $op['id']): ?>
+        <?php if (in_array($op['role'], ['admin', 'billing'], true) || (int) $quote['created_by'] === (int) $op['id']): ?>
         <form method="post" action="/op/billing/quotes/<?= (int) $quote['id'] ?>/delete" class="inline">
             <?= \Bhelpdesk\Csrf::field() ?>
             <button class="btn btn-small btn-danger" type="submit" data-confirm="<?= t('quote.confirm_delete', ['id' => $quote['id']]) ?>"><?= t('quote.delete') ?></button>

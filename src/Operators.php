@@ -64,7 +64,7 @@ final class Operators
             'username' => $existing ? $existing['username'] : trim((string) ($in['username'] ?? '')),
             'name'     => trim((string) ($in['name'] ?? '')),
             'email'    => mb_strtolower(trim((string) ($in['email'] ?? ''))),
-            'role'     => ($in['role'] ?? '') === 'admin' ? 'admin' : 'agent',
+            'role'     => in_array($in['role'] ?? '', ['admin', 'billing'], true) ? (string) $in['role'] : 'agent',
             'active'   => $existing ? (!empty($in['active']) ? 1 : 0) : 1,
             'password' => (string) ($in['password'] ?? ''),
             'departments' => array_values(array_unique(array_filter(array_map('intval', (array) ($in['departments'] ?? []))))),

@@ -54,13 +54,35 @@ final class Auth
         return self::$user = $op;
     }
 
+    /** Paths a "billing" operator may open (everything else sends them to Billing) */
+    private const BILLING_PATHS = ['/op/billing', '/op/profile', '/op/logout', '/op/customers/lookup'];
+
     public static function require(): array
     {
         $u = self::user();
         if (!$u) {
             redirect('/op/login');
         }
+        if ($u['role'] === 'billing') {
+            $path = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH);
+            $ok = false;
+            foreach (self::BILLING_PATHS as $p) {
+                if ($path === $p || str_starts_with($path, $p . '/')) {
+                    $ok = true;
+                    break;
+                }
+            }
+            if (!$ok) {
+                redirect('/op/billing/invoices');
+            }
+        }
         return $u;
+    }
+
+    /** Only "billing" operators mark invoices issued / to issue */
+    public static function canIssueInvoices(array $op): bool
+    {
+        return ($op['role'] ?? '') === 'billing';
     }
 
     public static function requireAdmin(): array

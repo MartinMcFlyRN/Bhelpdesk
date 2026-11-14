@@ -18,6 +18,8 @@
                     <td class="dep-list">
                         <?php if ($o['role'] === 'admin'): ?>
                             <span class="muted"><?= t('ops.all_departments') ?></span>
+                        <?php elseif ($o['role'] === 'billing'): ?>
+                            <span class="muted"><?= t('ops.billing_only') ?></span>
                         <?php elseif (!empty($depNames[(int) $o['id']])): ?>
                             <?= e(implode(', ', $depNames[(int) $o['id']])) ?>
                         <?php else: ?>
@@ -58,6 +60,7 @@
                         <select name="role">
                             <option value="agent"><?= t('role.agent') ?></option>
                             <option value="admin" <?= old('role') === 'admin' ? 'selected' : '' ?>><?= t('role.admin') ?></option>
+                            <option value="billing" <?= old('role') === 'billing' ? 'selected' : '' ?>><?= t('role.billing') ?></option>
                         </select>
                     </label>
                 </div>

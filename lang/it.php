@@ -191,6 +191,9 @@ return [
     'ops.state_updated'  => 'Stato operatore aggiornato.',
     'role.admin'         => 'Amministratore',
     'role.agent'         => 'Operatore',
+    'role.billing'       => 'Billing (fatturazione)',
+    'ops.billing_only'   => 'Solo sezione Billing',
+    'inv.only_billing'   => 'Solo gli operatori Billing possono cambiare lo stato di emissione delle fatture.',
 
     'val.username'          => 'Username: 3-50 caratteri tra lettere, numeri, . _ -',
     'val.ops_name_required' => 'Nome obbligatorio.',

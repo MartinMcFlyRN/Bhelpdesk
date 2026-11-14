@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS operators (
     email          VARCHAR(190) NOT NULL,
     language       VARCHAR(10)  NULL,                -- language of the alert emails (NULL = default)
     password_hash  VARCHAR(255) NOT NULL,
-    role           ENUM('admin','agent') NOT NULL DEFAULT 'agent',
+    role           ENUM('admin','agent','billing') NOT NULL DEFAULT 'agent',  -- billing: only the Billing section
     active         TINYINT(1) NOT NULL DEFAULT 1,
     alert_new      TINYINT(1) NOT NULL DEFAULT 1,    -- email: new tickets in my departments
     alert_reply    TINYINT(1) NOT NULL DEFAULT 1,    -- email: customer replies (my tickets / unassigned of my departments)

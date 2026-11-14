@@ -196,6 +196,9 @@ return [
     'ops.state_updated'  => 'Operator status updated.',
     'role.admin'         => 'Administrator',
     'role.agent'         => 'Agent',
+    'role.billing'       => 'Billing',
+    'ops.billing_only'   => 'Billing section only',
+    'inv.only_billing'   => 'Only billing operators can change whether an invoice is issued.',
 
     'val.username'          => 'Username: 3-50 characters, letters, numbers, . _ -',
     'val.ops_name_required' => 'Name is required.',

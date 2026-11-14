@@ -128,6 +128,7 @@ mariadb bhelpdesk < sql/migrations/018_task_ticket.sql
 mariadb bhelpdesk < sql/migrations/019_invoices.sql
 mariadb bhelpdesk < sql/migrations/020_invoice_ticket.sql
 mariadb bhelpdesk < sql/migrations/021_quotes.sql
+mariadb bhelpdesk < sql/migrations/022_billing_role.sql
 ```
 
 ## Operators area
@@ -220,13 +221,14 @@ Nobody is alerted for what they did themselves. Alerts contain the ticket data, 
 *Billing* in the top menu (after Customers) has **Invoice** and **Quote**.
 
 - An invoice has an automatic numeric **ID**, a **customer** chosen from the registry (search by name, company or email), a **text**, the **amount** (`120,50`, `1.234,56` and `1,234.56` are all accepted), the **day billing starts** and the **type**: one-off, monthly, every two months, yearly.
-- **Invoice issued** switches it from *to issue* to *issued* (who and when are recorded); in the list the state is a button that switches it in one click.
+- **Invoice issued** switches it from *to issue* to *issued* (who and when are recorded); in the list the state is a button that switches it in one click. **Only operators with the *Billing* role** can change it: the others (administrators included) see the state read-only and the server refuses the change.
 - The list has *To issue / Issued / All*, filter by type, search by customer, text or ID, the count and the total amount. For recurring invoices it shows the **next billing date** computed from the start date (end of month handled: 31 January monthly -> 28/29 February); invoices to issue whose date has come are highlighted.
 - The customer page lists the customer's invoices with *+ New invoice*.
 - **Invoices of a ticket**: the *Invoices* box in the ticket sidebar lists the linked invoices; *+ New invoice* opens the form with the ticket's main customer and the text `Ticket #number - subject`, linked to the ticket (back to the ticket after saving). The invoice shows the ticket in the form and in the list (searchable by ticket number); the ticket history records the new invoice. Merging tickets moves their invoices.
 - Switching an invoice between *to issue* and *issued* (list button or checkbox of an existing invoice) asks for confirmation.
 - **Quotes** work like invoices (automatic ID, customer from the registry, text, amount, list with search and total, creation from a ticket with the reference, *Quotes* box in the ticket and in the customer page, history event, merge, delete by creator/admins) without issued state, billing date and type.
-- Every operator can use Billing; the creator and the administrators delete invoices.
+- Every operator can use Billing; the creator, the administrators and the billing operators delete invoices and quotes.
+- **Billing role** (*Configuration -> Operators*, role *Billing*): these operators reach **only** the Billing section (and their profile): the top menu shows only Billing, any other page sends them to the invoices, customers and tickets are shown without links, and they get no tasks or alerts. They are the only ones who mark invoices issued / to issue.
 
 ## Bulk actions in the ticket list
 
