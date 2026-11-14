@@ -47,7 +47,7 @@ foreach (['status.open', 'status.answered', 'status.on_hold', 'status.closed',
 
 // keys built from a prefix at runtime (settings labels/help, config menu)
 foreach (array_keys($base) as $k) {
-    if (str_starts_with($k, 'set.') || str_starts_with($k, 'cfg.menu.')) {
+    if (str_starts_with($k, 'set.') || str_starts_with($k, 'cfg.menu.') || str_starts_with($k, 'ph.')) {
         $used[$k][] = '(dynamic)';
     }
 }

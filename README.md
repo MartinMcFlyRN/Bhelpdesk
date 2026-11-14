@@ -109,6 +109,7 @@ mariadb bhelpdesk < sql/migrations/004_phone.sql
 mariadb bhelpdesk < sql/migrations/005_customers.sql
 mariadb bhelpdesk < sql/migrations/006_ticket_customers.sql
 mariadb bhelpdesk < sql/migrations/007_customer_access.sql
+mariadb bhelpdesk < sql/migrations/008_canned_signatures.sql
 ```
 
 ## Operators area
@@ -145,8 +146,11 @@ Every customer on the ticket sees it after signing in with **their own** account
 Reserved to operators with the **Administrator** role (others get 403; the link is not shown to them). It lives under `/op`, so it is covered by the same IP filters and login.
 
 - **General** — application name, public URL, time zone, default from address/name for emails, default/offered languages, ticket reopening, hide operator names from customers (they see "Staff Operator"), captcha, attachment limits (with a warning when they exceed the PHP limits of the server), operator session timeout, rate limits. Saved in the `settings` table, they override `config/config.php`. Database, allowed IPs, trusted proxies, cookie and storage settings stay in `config.php` only and are shown read-only.
-- **Departments** — create, rename, reorder, activate/deactivate. A department used by tickets cannot be deleted (deactivate it: it disappears from the customer form but stays on existing tickets).
+- **Departments** — create, rename, reorder, activate/deactivate, **email signature** (added at the end of reply emails for tickets of that department; operators see a preview under the reply form). A department used by tickets cannot be deleted (deactivate it: it disappears from the customer form but stays on existing tickets).
+- **Canned responses** — ready-made texts, for all departments or one; operators insert them from the *Insert canned response* menu of the reply form (at the cursor position). Deactivated responses are hidden.
 - **Operators** — create, edit name/email/role, reset password, activate/deactivate. Safeguards: you cannot remove your own admin role or disable yourself, and at least one active administrator always remains.
+
+Canned responses and signatures support placeholders replaced with the ticket and operator data: `{customer_name}`, `{customer_email}`, `{ticket_number}`, `{ticket_subject}`, `{department_name}`, `{operator_name}`, `{operator_email}`, `{app_name}`.
 
 If the `settings` table does not exist yet (migration 003 not applied) the app keeps working with `config.php` values only.
 

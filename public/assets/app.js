@@ -102,3 +102,30 @@ document.querySelectorAll('input[data-customer-lookup]').forEach(function (input
         }, 200);
     });
 });
+
+// Canned responses: <select data-canned-target="textarea-id"> with <option data-body="...">.
+// Inserts the text at the cursor (or appends it), then resets the select.
+document.querySelectorAll('select[data-canned-target]').forEach(function (sel) {
+    var area = document.getElementById(sel.getAttribute('data-canned-target'));
+    if (!area) {
+        return;
+    }
+    sel.hidden = false;
+    sel.addEventListener('change', function () {
+        var opt = sel.options[sel.selectedIndex];
+        var text = opt ? opt.getAttribute('data-body') : null;
+        if (text) {
+            var start = area.selectionStart != null ? area.selectionStart : area.value.length;
+            var end = area.selectionEnd != null ? area.selectionEnd : area.value.length;
+            var before = area.value.slice(0, start);
+            var after = area.value.slice(end);
+            var sep = before && !/\n$/.test(before) ? '\n' : '';
+            area.value = before + sep + text + after;
+            var pos = (before + sep + text).length;
+            area.focus();
+            area.setSelectionRange(pos, pos);
+            area.dispatchEvent(new Event('input'));
+        }
+        sel.selectedIndex = 0;
+    });
+});

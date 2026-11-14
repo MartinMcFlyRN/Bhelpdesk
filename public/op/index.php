@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{AccessLinks, Attachments, Auth, CustomerAuth, Customers, Departments, IpGuard, Lang, Operators, Router, Session, Settings, Throttle, Tickets, View};
+use Bhelpdesk\{AccessLinks, Attachments, Auth, Canned, CustomerAuth, Customers, Departments, IpGuard, Lang, Operators, Router, Session, Settings, Throttle, Tickets, View};
 
 // ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
@@ -92,6 +92,11 @@ $r->get('/ticket/{id}', static function (array $p) use ($loadTicket): void {
         'messages'     => $messages,
         'attachments'  => Attachments::forMessages(array_column($messages, 'id')),
         'participants' => Tickets::participants((int) $t['id']),
+        'canned'       => array_map(
+            static fn (array $c): array => $c + ['rendered' => Canned::render($c['body'], Canned::context($t, $op))],
+            Canned::forTicket($t)
+        ),
+        'signature'    => Canned::signature($t, $op),
         'departments' => Tickets::departments(false),
         'operators'   => Tickets::operators(),
     ]);
@@ -425,6 +430,73 @@ $r->post('/config/departments/{id}/delete', static function (array $p) use ($loa
     }
     flash('error', 'dep.in_use');
     redirect('/op/config/departments/' . $d['id']);
+});
+
+// ---------- Canned responses ----------
+$cannedPage = static function (?array $item, array $values, array $errors) use ($cfgView): void {
+    $cfgView($item === null && !isset($values['_edit']) ? 'canned' : 'canned_edit', __('cfg.menu.canned'), [
+        'items'       => Canned::all(),
+        'item'        => $item,
+        'values'      => $values,
+        'errors'      => $errors,
+        'departments' => Departments::all(),
+    ]);
+};
+
+$r->get('/config/canned', static function () use ($cannedPage): void {
+    Auth::requireAdmin();
+    $cannedPage(null, ['title' => '', 'body' => '', 'department_id' => null, 'active' => 1], []);
+});
+
+$r->post('/config/canned', static function () use ($cannedPage): void {
+    $op = Auth::requireAdmin();
+    $res = Canned::validate($_POST + ['active' => 1]);
+    if ($res['errors']) {
+        http_response_code(422);
+        $cannedPage(null, $res['values'], $res['errors']);
+        return;
+    }
+    Canned::create($res['values'], (int) $op['id']);
+    flash('success', 'canned.created');
+    redirect('/op/config/canned');
+});
+
+$loadCanned = static function (array $p): array {
+    $c = Canned::find((int) $p['id']);
+    if (!$c) {
+        http_response_code(404);
+        View::render('op', 'error', ['title' => __('error.not_found.title'), 'message' => __('error.not_found.message')]);
+        exit;
+    }
+    return $c;
+};
+
+$r->get('/config/canned/{id}', static function (array $p) use ($cannedPage, $loadCanned): void {
+    Auth::requireAdmin();
+    $c = $loadCanned($p);
+    $cannedPage($c, $c, []);
+});
+
+$r->post('/config/canned/{id}', static function (array $p) use ($cannedPage, $loadCanned): void {
+    $op = Auth::requireAdmin();
+    $c = $loadCanned($p);
+    $res = Canned::validate($_POST, (int) $c['id']);
+    if ($res['errors']) {
+        http_response_code(422);
+        $cannedPage($c, $res['values'], $res['errors']);
+        return;
+    }
+    Canned::update((int) $c['id'], $res['values'], (int) $op['id']);
+    flash('success', 'canned.saved');
+    redirect('/op/config/canned');
+});
+
+$r->post('/config/canned/{id}/delete', static function (array $p) use ($loadCanned): void {
+    Auth::requireAdmin();
+    $c = $loadCanned($p);
+    Canned::delete((int) $c['id']);
+    flash('success', 'canned.deleted');
+    redirect('/op/config/canned');
 });
 
 // ---------- Operators ----------

@@ -32,6 +32,7 @@ final class Departments
             'name'       => trim((string) ($in['name'] ?? '')),
             'sort_order' => (int) ($in['sort_order'] ?? 0),
             'active'     => !empty($in['active']) ? 1 : 0,
+            'signature'  => trim(str_replace("\r\n", "\n", (string) ($in['signature'] ?? ''))),
         ];
         $errors = [];
         if ($v['name'] === '' || mb_strlen($v['name']) > 100) {
@@ -39,18 +40,21 @@ final class Departments
         } elseif (Db::value('SELECT 1 FROM departments WHERE name = ? AND id <> ?', [$v['name'], (int) $id])) {
             $errors[] = __('val.dep_duplicate');
         }
+        if (mb_strlen($v['signature']) > 2000) {
+            $errors[] = __('val.dep_signature');
+        }
         $v['sort_order'] = max(-999, min(999, $v['sort_order']));
         return ['values' => $v, 'errors' => $errors];
     }
 
     public static function create(array $v): int
     {
-        return Db::insert('INSERT INTO departments (name, sort_order, active) VALUES (?, ?, ?)', [$v['name'], $v['sort_order'], $v['active']]);
+        return Db::insert('INSERT INTO departments (name, sort_order, active, signature) VALUES (?, ?, ?, ?)', [$v['name'], $v['sort_order'], $v['active'], $v['signature'] ?: null]);
     }
 
     public static function update(int $id, array $v): void
     {
-        Db::exec('UPDATE departments SET name = ?, sort_order = ?, active = ? WHERE id = ?', [$v['name'], $v['sort_order'], $v['active'], $id]);
+        Db::exec('UPDATE departments SET name = ?, sort_order = ?, active = ?, signature = ? WHERE id = ?', [$v['name'], $v['sort_order'], $v['active'], $v['signature'] ?: null, $id]);
     }
 
     /** Only departments never used by a ticket can be deleted */

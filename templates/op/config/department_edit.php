@@ -17,6 +17,11 @@
                 </div>
                 <label class="check"><input type="checkbox" name="active" value="1" <?= $dep['active'] ? 'checked' : '' ?>> <?= t('dep.active_label') ?></label>
                 <small class="muted hint field-help"><?= t('dep.active_help') ?></small>
+                <label><?= t('dep.signature') ?>
+                    <textarea name="signature" rows="6" maxlength="2000" class="mono-area" placeholder="<?= t('dep.signature_placeholder') ?>"><?= e($dep['signature'] ?? '') ?></textarea>
+                    <small class="muted hint"><?= t('dep.signature_help') ?></small>
+                </label>
+                <?php require BHD_ROOT . '/templates/op/config/_placeholders.php'; ?>
                 <button class="btn btn-primary" type="submit"><?= t('cfg.save_short') ?></button>
             </form>
         </div>

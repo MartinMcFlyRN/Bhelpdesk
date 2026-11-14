@@ -37,10 +37,29 @@
         </div>
 
         <div class="card">
-            <h2><?= t('opticket.reply_customer') ?></h2>
+            <div class="reply-head">
+                <h2><?= t('opticket.reply_customer') ?></h2>
+                <?php if (!empty($canned)): ?>
+                <label class="canned-pick">
+                    <span class="sr-only"><?= t('canned.insert') ?></span>
+                    <select data-canned-target="reply-message" hidden>
+                        <option value=""><?= t('canned.insert') ?>…</option>
+                        <?php foreach ($canned as $c): ?>
+                            <option value="<?= (int) $c['id'] ?>" data-body="<?= e($c['rendered']) ?>"><?= e($c['title']) ?><?= $c['department_name'] ? ' · ' . e($c['department_name']) : '' ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <?php endif; ?>
+            </div>
             <form method="post" action="/op/ticket/<?= (int) $ticket['id'] ?>/reply" class="form">
                 <?= \Bhelpdesk\Csrf::field() ?>
-                <textarea name="message" rows="6" required></textarea>
+                <textarea name="message" id="reply-message" rows="7" required></textarea>
+                <?php if ($signature !== ''): ?>
+                <details class="signature-preview">
+                    <summary><?= t('opticket.signature_added', ['department' => $ticket['department_name'] ?? '']) ?></summary>
+                    <pre><?= e($signature) ?></pre>
+                </details>
+                <?php endif; ?>
                 <div class="row-inline">
                     <label><?= t('opticket.status_after') ?>
                         <select name="status">

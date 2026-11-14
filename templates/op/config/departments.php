@@ -6,11 +6,11 @@
 
         <table class="table">
             <thead><tr>
-                <th><?= t('dep.name') ?></th><th><?= t('dep.order') ?></th><th><?= t('dep.state') ?></th><th><?= t('dep.tickets') ?></th><th></th>
+                <th><?= t('dep.name') ?></th><th><?= t('dep.order') ?></th><th><?= t('dep.state') ?></th><th><?= t('dep.tickets') ?></th><th><?= t('dep.signature') ?></th><th></th>
             </tr></thead>
             <tbody>
             <?php if (!$departments): ?>
-                <tr><td colspan="5" class="muted center"><?= t('dep.empty') ?></td></tr>
+                <tr><td colspan="6" class="muted center"><?= t('dep.empty') ?></td></tr>
             <?php endif; ?>
             <?php foreach ($departments as $d): ?>
                 <tr class="<?= $d['active'] ? '' : 'disabled' ?>">
@@ -18,6 +18,7 @@
                     <td><?= (int) $d['sort_order'] ?></td>
                     <td><?= $d['active'] ? t('dep.active') : t('dep.inactive') ?></td>
                     <td><?= (int) $d['ticket_count'] ?></td>
+                    <td><?= trim((string) ($d['signature'] ?? '')) !== '' ? '✓' : '<span class="muted">—</span>' ?></td>
                     <td class="right"><a class="btn btn-small" href="/op/config/departments/<?= (int) $d['id'] ?>"><?= t('cfg.edit') ?></a></td>
                 </tr>
             <?php endforeach; ?>

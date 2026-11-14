@@ -306,3 +306,18 @@ fieldset.card legend { font-weight: 700; padding: 0 .4rem; }
 .btn-icon-link { font-size: .9rem; }
 .btn-icon-link:hover { color: var(--primary); border-color: #bfdbfe; background: #eff6ff; }
 .account-card .meta { margin-top: .5rem; }
+
+/* canned responses and signatures */
+.reply-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: .75rem; }
+.reply-head h2 { margin: 0; }
+.canned-pick select { padding: .4rem .6rem; border: 1px solid var(--border); border-radius: 6px; font: inherit; font-size: .9rem; background: #f9fafb; max-width: 320px; }
+.signature-preview { margin: -.25rem 0 .75rem; font-size: .85rem; }
+.signature-preview summary { cursor: pointer; color: var(--muted); }
+.signature-preview pre { white-space: pre-wrap; font-family: inherit; background: #f9fafb; border: 1px dashed var(--border); border-radius: 6px; padding: .6rem .75rem; margin: .4rem 0 0; color: #374151; }
+.placeholders { margin: -.4rem 0 .9rem; font-size: .85rem; }
+.placeholders summary { cursor: pointer; color: var(--primary); }
+.placeholders ul { list-style: none; padding: 0; margin: .4rem 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: .2rem 1rem; }
+.placeholders code { background: #f3f4f6; padding: .05rem .35rem; border-radius: 4px; }
+.canned-preview { max-width: 380px; }
+.mono-area { font-family: ui-monospace, monospace; font-size: .9rem; }
+.table + .card, .table + form + .card { margin-top: 1rem; }
