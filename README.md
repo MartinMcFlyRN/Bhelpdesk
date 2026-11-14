@@ -9,6 +9,8 @@ One application, two areas:
 | `/`           | —          | redirects to `/customer/`                                    |
 | `/customer/`  | customers  | open tickets, check status (number + email), reply           |
 | `/op/`        | operators  | dashboard, ticket handling, replies, internal notes          |
+| `/op/customers` | operators | customer registry: list, search, create, edit, ticket history |
+| `/op/profile` | operators  | own profile: name, email, password                           |
 | `/op/config/` | admins     | configuration: general settings, departments, operators      |
 
 `/op/` is protected on **three levels**: IP filter in the web server, application IP filter (`op_allowed_ips`), username/password login.
@@ -104,7 +106,14 @@ mariadb bhelpdesk < sql/migrations/001_customer_language.sql
 mariadb bhelpdesk < sql/migrations/002_attachments.sql
 mariadb bhelpdesk < sql/migrations/003_settings.sql
 mariadb bhelpdesk < sql/migrations/004_phone.sql
+mariadb bhelpdesk < sql/migrations/005_customers.sql
 ```
+
+## Operators area
+
+- **Top bar**: Tickets, My tickets, Customers on the left; language switch and the user menu on the right (avatar with initials and name). The menu has *Configuration* (administrators only), *Profile* and *Log out*. It is a native `<details>` element, so it works without JavaScript; with JS it also closes on outside click / Escape.
+- **Profile** (`/op/profile`): every operator can change name, email and password. Changing email or password requires the current password; the session id is regenerated after a password change.
+- **Customers** (`/op/customers`): every customer who opened a ticket is registered automatically (by email). Operators can search (name, company, email, phone), create customers manually and edit name, company, email, phone, language and internal notes. The customer page shows the ticket history; internal notes also appear in the ticket sidebar. When an existing customer opens a new ticket, the registry data curated by operators is not overwritten (only a missing phone is filled in). The email is the key customers use to check their tickets: changing it changes who can look them up.
 
 ## Configuration area (/op/config)
 

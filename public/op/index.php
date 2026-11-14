@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{Attachments, Auth, Departments, IpGuard, Lang, Operators, Router, Session, Settings, Throttle, Tickets, View};
+use Bhelpdesk\{Attachments, Auth, Customers, Departments, IpGuard, Lang, Operators, Router, Session, Settings, Throttle, Tickets, View};
 
 // ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
@@ -137,6 +137,115 @@ $r->get('/file/{id}', static function (array $p): void {
         return;
     }
     Attachments::send($file, isset($_GET['download']));
+});
+
+// =====================================================================
+//  Profile (every operator)
+// =====================================================================
+$profilePage = static function (array $form, array $errors): void {
+    $op = Auth::user();
+    View::render('op', 'profile', [
+        'title'  => __('profile.title'),
+        'op'     => $op,
+        'me'     => Operators::find((int) $op['id']),
+        'form'   => $form,
+        'errors' => $errors,
+    ]);
+};
+
+$r->get('/profile', static function () use ($profilePage): void {
+    $op = Auth::require();
+    $profilePage(['name' => $op['name'], 'email' => $op['email']], []);
+});
+
+$r->post('/profile', static function () use ($profilePage): void {
+    $op = Auth::require();
+    $res = Operators::validateProfile($_POST, $op);
+    if ($res['errors']) {
+        http_response_code(422);
+        $profilePage($res['values'], $res['errors']);
+        return;
+    }
+    Operators::updateProfile((int) $op['id'], $res['values']);
+    if ($res['values']['new_password'] !== '') {
+        Session::regenerate();
+    }
+    flash('success', 'profile.saved');
+    redirect('/op/profile');
+});
+
+// =====================================================================
+//  Customers (every operator)
+// =====================================================================
+$r->get('/customers', static function (): void {
+    $op = Auth::require();
+    $q = trim((string) ($_GET['q'] ?? ''));
+    $page = max(1, (int) ($_GET['page'] ?? 1));
+    $res = Customers::search($q, $page);
+    View::render('op', 'customers/list', [
+        'title' => __('cust.title'), 'op' => $op, 'q' => $q, 'page' => $page,
+        'rows' => $res['rows'], 'total' => $res['total'], 'perPage' => Customers::PER_PAGE,
+    ]);
+});
+
+$customerForm = static function (?array $customer, array $values, array $errors): void {
+    View::render('op', 'customers/edit', [
+        'title'     => $customer ? $customer['name'] : __('cust.new'),
+        'op'        => Auth::user(),
+        'customer'  => $customer,
+        'values'    => $values,
+        'errors'    => $errors,
+        'tickets'   => $customer ? Customers::tickets((int) $customer['id']) : [],
+        'languages' => Lang::available(true),
+    ]);
+};
+
+$r->get('/customers/new', static function () use ($customerForm): void {
+    Auth::require();
+    $customerForm(null, ['name' => '', 'company' => '', 'email' => '', 'phone' => '', 'language' => (string) config('default_language', 'en'), 'notes' => ''], []);
+});
+
+$r->post('/customers', static function () use ($customerForm): void {
+    Auth::require();
+    $res = Customers::validate($_POST);
+    if ($res['errors']) {
+        http_response_code(422);
+        $customerForm(null, $res['values'], $res['errors']);
+        return;
+    }
+    $id = Customers::create($res['values']);
+    flash('success', 'cust.created');
+    redirect('/op/customers/' . $id);
+});
+
+$loadCustomer = static function (array $p): array {
+    $c = Customers::find((int) $p['id']);
+    if (!$c) {
+        http_response_code(404);
+        View::render('op', 'error', ['title' => __('error.not_found.title'), 'message' => __('error.not_found.message')]);
+        exit;
+    }
+    return $c;
+};
+
+$r->get('/customers/{id}', static function (array $p) use ($customerForm, $loadCustomer): void {
+    Auth::require();
+    $c = $loadCustomer($p);
+    $customerForm($c, $c, []);
+});
+
+$r->post('/customers/{id}', static function (array $p) use ($customerForm, $loadCustomer): void {
+    Auth::require();
+    $c = $loadCustomer($p);
+    $res = Customers::validate($_POST, (int) $c['id']);
+    if ($res['errors']) {
+        http_response_code(422);
+        $customerForm($c, $res['values'], $res['errors']);
+        return;
+    }
+    Customers::update((int) $c['id'], $res['values']);
+    flash('success', 'cust.saved');
+    redirect('/op/customers/' . $c['id']);
 });
 
 // =====================================================================

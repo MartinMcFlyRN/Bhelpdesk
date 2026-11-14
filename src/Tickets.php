@@ -11,7 +11,7 @@ final class Tickets
     public const PRIORITIES = ['low', 'normal', 'high', 'urgent'];
 
     private const SELECT = '
-        SELECT t.*, c.name AS customer_name, c.email AS customer_email,
+        SELECT t.*, c.name AS customer_name, c.email AS customer_email, c.company AS customer_company, c.notes AS customer_notes,
                d.name AS department_name, o.name AS assignee_name
           FROM tickets t
           JOIN customers c        ON c.id = t.customer_id
@@ -36,7 +36,9 @@ final class Tickets
         try {
             $customerId = (int) Db::value('SELECT id FROM customers WHERE email = ?', [$email]);
             if ($customerId) {
-                Db::exec('UPDATE customers SET name = ?, language = ?, phone = COALESCE(?, phone) WHERE id = ?', [$name, $language, $phone, $customerId]);
+                // existing customer: keep the registry data curated by operators,
+                // only fill the phone if missing and remember the latest language
+                Db::exec('UPDATE customers SET language = ?, phone = COALESCE(phone, ?) WHERE id = ?', [$language, $phone, $customerId]);
             } else {
                 $customerId = Db::insert('INSERT INTO customers (name, email, phone, language) VALUES (?, ?, ?, ?)', [$name, $email, $phone, $language]);
             }

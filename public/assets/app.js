@@ -50,3 +50,20 @@ document.addEventListener('submit', function (ev) {
         ev.preventDefault();
     }
 });
+
+// User menu (<details>): close on outside click and on Escape
+document.addEventListener('click', function (ev) {
+    document.querySelectorAll('details.user-menu[open]').forEach(function (d) {
+        if (!d.contains(ev.target)) {
+            d.removeAttribute('open');
+        }
+    });
+});
+document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape') {
+        document.querySelectorAll('details.user-menu[open]').forEach(function (d) {
+            d.removeAttribute('open');
+            d.querySelector('summary').focus();
+        });
+    }
+});

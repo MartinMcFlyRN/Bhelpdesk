@@ -49,7 +49,7 @@ $r->post('/new', static function (): void {
         $errors[] = __('val.email_invalid');
     }
     // phone is optional: digits, spaces and + ( ) - . / only, at least 6 digits
-    if ($in['phone'] !== '' && (!preg_match('#^\+?[0-9 ()./-]{6,30}$#', $in['phone']) || preg_match_all('/\d/', $in['phone']) < 6)) {
+    if (!\Bhelpdesk\Customers::phoneOk($in['phone'])) {
         $errors[] = __('val.phone_invalid');
     }
     if ($in['subject'] === '' || mb_strlen($in['subject']) > 255) {

@@ -79,6 +79,58 @@ final class Operators
         }
     }
 
+    /**
+     * Validate the "my profile" form. Changing email or password requires the current password.
+     * @return array{values: array, errors: list<string>}
+     */
+    public static function validateProfile(array $in, array $me): array
+    {
+        $v = [
+            'name'             => trim((string) ($in['name'] ?? '')),
+            'email'            => mb_strtolower(trim((string) ($in['email'] ?? ''))),
+            'new_password'     => (string) ($in['new_password'] ?? ''),
+            'confirm_password' => (string) ($in['confirm_password'] ?? ''),
+            'current_password' => (string) ($in['current_password'] ?? ''),
+        ];
+        $errors = [];
+        if ($v['name'] === '' || mb_strlen($v['name']) > 100) {
+            $errors[] = __('val.ops_name_required');
+        }
+        if (!filter_var($v['email'], FILTER_VALIDATE_EMAIL) || strlen($v['email']) > 190) {
+            $errors[] = __('val.email_invalid');
+        } elseif (Db::value('SELECT 1 FROM operators WHERE email = ? AND id <> ?', [$v['email'], (int) $me['id']])) {
+            $errors[] = __('val.duplicate');
+        }
+        if ($v['new_password'] !== '') {
+            if (strlen($v['new_password']) < self::MIN_PASSWORD) {
+                $errors[] = __('val.password_short');
+            } elseif ($v['new_password'] !== $v['confirm_password']) {
+                $errors[] = __('val.password_mismatch');
+            }
+        }
+        $sensitive = $v['new_password'] !== '' || $v['email'] !== mb_strtolower((string) $me['email']);
+        if ($sensitive) {
+            $hash = (string) Db::value('SELECT password_hash FROM operators WHERE id = ?', [(int) $me['id']]);
+            if ($v['current_password'] === '' || !password_verify($v['current_password'], $hash)) {
+                $errors[] = __('val.current_password');
+            }
+        }
+        // never send passwords back to the form
+        $v['current_password'] = $v['confirm_password'] = '';
+        if ($errors) {
+            $v['new_password'] = '';
+        }
+        return ['values' => $v, 'errors' => $errors];
+    }
+
+    public static function updateProfile(int $id, array $v): void
+    {
+        Db::exec('UPDATE operators SET name = ?, email = ? WHERE id = ?', [$v['name'], $v['email'], $id]);
+        if ($v['new_password'] !== '') {
+            Db::exec('UPDATE operators SET password_hash = ? WHERE id = ?', [password_hash($v['new_password'], PASSWORD_DEFAULT), $id]);
+        }
+    }
+
     /** Active administrators other than $exceptId */
     public static function otherActiveAdmins(int $exceptId): int
     {

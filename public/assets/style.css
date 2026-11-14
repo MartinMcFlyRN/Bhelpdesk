@@ -205,3 +205,55 @@ fieldset.card legend { font-weight: 700; padding: 0 .4rem; }
 .msg-role-you { background: #e2e8f0; color: #475569; }
 @media (max-width: 800px) { .area-customer .msg { max-width: 100%; } }
 .captcha input::placeholder { text-transform: none; letter-spacing: normal; }
+
+/* operators topbar: navigation + user menu */
+.area-op .topbar .wrap { gap: 1.5rem; }
+.topbar-left, .topbar-right { display: flex; align-items: center; gap: 1.25rem; }
+.main-nav { display: flex; gap: .25rem; }
+.main-nav a { color: #ddd6fe; padding: .4rem .75rem; border-radius: 6px; }
+.main-nav a:hover { background: rgba(255,255,255,.08); text-decoration: none; color: #fff; }
+.main-nav a.active { background: rgba(255,255,255,.14); color: #fff; font-weight: 600; }
+.area-op .lang-switch { border-left: 0; padding-left: 0; margin-left: 0; }
+
+.user-menu { position: relative; }
+.user-menu summary { list-style: none; display: flex; align-items: center; gap: .55rem; cursor: pointer; padding: .25rem .5rem .25rem .25rem; border-radius: 999px; color: #fff; user-select: none; }
+.user-menu summary::-webkit-details-marker { display: none; }
+.user-menu summary:hover, .user-menu[open] summary { background: rgba(255,255,255,.12); }
+.user-menu .user-name { font-size: .9rem; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-menu .caret { font-size: .7rem; opacity: .8; }
+.avatar { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #a78bfa, #6d28d9); color: #fff; font-weight: 700; font-size: .8rem; letter-spacing: .02em; border: 2px solid rgba(255,255,255,.6); }
+.avatar-lg { width: 72px; height: 72px; font-size: 1.5rem; border-color: #ede9fe; }
+.user-menu .menu { position: absolute; right: 0; top: calc(100% + 8px); min-width: 230px; background: #fff; color: var(--text); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 30px rgba(17, 24, 39, .18); padding: .4rem; z-index: 50; }
+.user-menu .menu-head { display: flex; flex-direction: column; padding: .6rem .7rem .7rem; border-bottom: 1px solid var(--border); margin-bottom: .3rem; }
+.user-menu .menu-head small { color: var(--muted); }
+.user-menu .menu a, .user-menu .menu-logout { display: block; width: 100%; text-align: left; padding: .55rem .7rem; border-radius: 6px; color: var(--text); background: none; border: 0; font: inherit; cursor: pointer; }
+.user-menu .menu a:hover, .user-menu .menu-logout:hover { background: #f3f4f6; text-decoration: none; }
+.user-menu .menu a.active { color: #5b21b6; font-weight: 600; }
+.user-menu .menu form { margin: .3rem 0 0; padding-top: .3rem; border-top: 1px solid var(--border); }
+.user-menu .menu-logout { color: #b91c1c; }
+
+/* profile */
+.profile-layout { display: grid; grid-template-columns: 260px 1fr; gap: 1rem; align-items: start; }
+.profile-card { display: flex; flex-direction: column; align-items: center; gap: .35rem; text-align: center; }
+.profile-card .meta { text-align: left; width: 100%; }
+.form h2 { margin-top: .5rem; }
+.current-pwd { max-width: 50%; }
+
+/* customers */
+.page-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.page-head h1 { margin: 0; }
+.count-pill { display: inline-block; background: #e5e7eb; color: #374151; border-radius: 999px; padding: 0 .55rem; font-size: .8rem; vertical-align: middle; font-weight: 600; }
+.customer-layout { grid-template-columns: 1fr 380px; }
+.customer-notes { margin-top: 1rem; padding: .75rem; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; font-size: .9rem; }
+.customer-notes p { margin: .3rem 0; }
+.ticket-mini { list-style: none; margin: 0; padding: 0; }
+.ticket-mini li { padding: .6rem 0; border-bottom: 1px solid var(--border); }
+.ticket-mini li:last-child { border-bottom: 0; }
+.ticket-mini li div { margin-top: .25rem; display: flex; gap: .5rem; align-items: center; }
+
+@media (max-width: 900px) {
+    .main-nav a { padding: .4rem .45rem; }
+    .user-menu .user-name { display: none; }
+    .profile-layout, .customer-layout { grid-template-columns: 1fr; }
+    .current-pwd { max-width: none; }
+}

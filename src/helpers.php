@@ -77,6 +77,15 @@ function nl2br_e(string $text): string
     return nl2br(e($text), false);
 }
 
+/** Up to two initials for the avatar, e.g. "Mario Rossi" -> "MR" */
+function initials(string $name): string
+{
+    $parts = preg_split('/\s+/u', trim($name), -1, PREG_SPLIT_NO_EMPTY) ?: ['?'];
+    $first = mb_substr($parts[0], 0, 1);
+    $last = count($parts) > 1 ? mb_substr($parts[count($parts) - 1], 0, 1) : '';
+    return mb_strtoupper($first . $last);
+}
+
 function status_label(string $s): string
 {
     return __('status.' . $s);

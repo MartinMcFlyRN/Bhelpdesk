@@ -29,12 +29,15 @@ CREATE TABLE IF NOT EXISTS operators (
 CREATE TABLE IF NOT EXISTS customers (
     id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name        VARCHAR(100) NOT NULL,
+    company     VARCHAR(150) NULL,
     email       VARCHAR(190) NOT NULL,
     phone       VARCHAR(30)  NULL,
     language    VARCHAR(10)  NOT NULL DEFAULT 'en',
+    notes       TEXT         NULL,
     created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_customers_email (email)
+    UNIQUE KEY uq_customers_email (email),
+    KEY ix_customers_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS tickets (

@@ -47,7 +47,7 @@ $openTotal = $counts['open'] + $counts['answered'] + $counts['on_hold'];
         <tr>
             <td><a href="/op/ticket/<?= (int) $row['id'] ?>">#<?= e($row['number']) ?></a></td>
             <td><a href="/op/ticket/<?= (int) $row['id'] ?>"><?= e($row['subject']) ?></a></td>
-            <td><?= e($row['customer_name']) ?><br><small class="muted"><?= e($row['customer_email']) ?><?= !empty($row['phone']) ? ' · ' . e($row['phone']) : '' ?></small></td>
+            <td><a href="/op/customers/<?= (int) $row['customer_id'] ?>"><?= e($row['customer_name']) ?></a><?= !empty($row['customer_company']) ? ' <small class="muted">· ' . e($row['customer_company']) . '</small>' : '' ?><br><small class="muted"><?= e($row['customer_email']) ?><?= !empty($row['phone']) ? ' · ' . e($row['phone']) : '' ?></small></td>
             <td><?= e($row['department_name'] ?? '—') ?></td>
             <td><span class="badge prio-<?= e($row['priority']) ?>"><?= e(priority_label($row['priority'])) ?></span></td>
             <td><span class="badge status-<?= e($row['status']) ?>"><?= e(status_label($row['status'])) ?></span></td>
