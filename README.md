@@ -138,8 +138,9 @@ mariadb bhelpdesk < sql/migrations/011_merge.sql
 
 ## Bulk actions in the ticket list
 
-Select tickets with the checkboxes (or *select all*): an action bar appears with **Move**, **Merge** and **Delete**, each with a confirmation dialog. Only tickets the operator can see are affected, even with a forged request.
+Select tickets with the checkboxes (or *select all*): an action bar appears with **Change status**, **Move**, **Merge** and **Delete**, each with a confirmation dialog. Only tickets the operator can see are affected, even with a forged request.
 
+- **Change status** — Open, Answered, On hold or Closed for all selected tickets; each change is logged in the ticket history.
 - **Move** — to any department (not only the operator's own). The change is logged in each ticket's history. If an agent moves a ticket out of their departments it leaves their list.
 - **Merge** (2+ tickets) — choose the ticket to keep (the oldest is preselected). Messages, attachments, direct links and all customers (main and additional) of the other tickets move into it, in chronological order, so every customer sees the whole conversation; the history records which tickets were merged. The other tickets are closed, disappear from lists and keep only a redirect: their old numbers and links lead to the kept ticket (operators and customers).
 - **Delete** — permanent, after ticking *Yes, delete them permanently*: messages, attachment files on disk, links and tickets merged into them are removed.

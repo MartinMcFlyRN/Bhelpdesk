@@ -42,6 +42,7 @@ $openTotal = $counts['open'] + $counts['answered'] + $counts['on_hold'];
 
 <div class="bulk-bar" id="bulk-bar" hidden>
     <span class="bulk-count"><strong data-bulk-count>0</strong> <?= t('bulk.selected') ?></span>
+    <button type="button" class="btn btn-small" data-open-dialog="dlg-status"><?= t('bulk.status') ?></button>
     <button type="button" class="btn btn-small" data-open-dialog="dlg-move"><?= t('bulk.move') ?></button>
     <button type="button" class="btn btn-small" data-open-dialog="dlg-merge" data-min="2"><?= t('bulk.merge') ?></button>
     <button type="button" class="btn btn-small btn-danger-outline" data-open-dialog="dlg-delete"><?= t('bulk.delete') ?></button>
@@ -77,6 +78,24 @@ $openTotal = $counts['open'] + $counts['answered'] + $counts['on_hold'];
     <?php endforeach; ?>
     </tbody>
 </table>
+
+<!-- status -->
+<dialog id="dlg-status" class="dialog">
+    <h2><?= t('bulk.status_title') ?></h2>
+    <p class="muted"><?= t('bulk.status_text') ?></p>
+    <label><?= t('col.status') ?>
+        <select name="status">
+            <option value=""><?= t('nt.choose') ?></option>
+            <?php foreach (Tickets::STATUSES as $k): ?>
+                <option value="<?= e($k) ?>"><?= e(status_label($k)) ?></option>
+            <?php endforeach; ?>
+        </select>
+    </label>
+    <div class="dialog-actions">
+        <button type="button" class="btn" data-close-dialog><?= t('bulk.cancel') ?></button>
+        <button type="submit" class="btn btn-primary" name="action" value="status"><?= t('bulk.status_confirm') ?></button>
+    </div>
+</dialog>
 
 <!-- move -->
 <dialog id="dlg-move" class="dialog">

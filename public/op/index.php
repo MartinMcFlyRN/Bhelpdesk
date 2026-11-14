@@ -109,6 +109,16 @@ $r->post('/tickets/bulk', static function (): void {
             flash('success', 'bulk.moved', ['n' => $n, 'department' => $name]);
             break;
 
+        case 'status':
+            $status = (string) ($_POST['status'] ?? '');
+            if (!in_array($status, Tickets::STATUSES, true)) {
+                flash('error', 'bulk.choose_status');
+                break;
+            }
+            $n = Tickets::statusMany($ids, $status, $op);
+            flash('success', 'bulk.status_done', ['n' => $n, 'status' => status_label($status)]);
+            break;
+
         case 'merge':
             $target = (int) ($_POST['target'] ?? 0);
             if (count($ids) < 2) {

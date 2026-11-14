@@ -239,6 +239,26 @@ final class Tickets
     }
 
     /**
+     * Set the same status on several tickets; each change is logged by update().
+     * Returns the number of tickets actually changed.
+     */
+    public static function statusMany(array $ids, string $status, array $op): int
+    {
+        if (!in_array($status, self::STATUSES, true)) {
+            return 0;
+        }
+        $n = 0;
+        foreach ($ids as $id) {
+            $t = self::find((int) $id);
+            if ($t && $t['merged_into'] === null && $t['status'] !== $status) {
+                self::update($t, $op, ['status' => $status]);
+                $n++;
+            }
+        }
+        return $n;
+    }
+
+    /**
      * Merge $sourceIds into $targetId: messages, attachments, direct links and
      * customers (main + additional) move to the target, so everybody involved
      * sees the whole conversation. Sources are closed and keep merged_into as
