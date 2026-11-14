@@ -60,9 +60,9 @@ $saved = static fn (string $field): bool => !$isNew && !empty($item[$field]);
                     <label><?= t('mi.security') ?> <select name="smtp_security" data-port-for="smtp_port" data-ports="465,587,25"><?= $sec('smtp_security', (string) $values['smtp_security']) ?></select></label>
                 </div>
                 <div class="row-2">
-                    <label><?= t('mi.user') ?> <input type="text" name="smtp_user" maxlength="190" value="<?= e($values['smtp_user']) ?>" autocomplete="off"></label>
+                    <label><?= t('mi.user') ?> <input type="text" name="smtp_user" data-lpignore="true" data-1p-ignore data-bwignore maxlength="190" value="<?= e($values['smtp_user']) ?>" autocomplete="off"></label>
                     <label><?= t('mi.password') ?>
-                        <input type="password" name="smtp_pass" autocomplete="new-password" placeholder="<?= $saved('smtp_pass') ? t('mi.pass_saved') : '' ?>">
+                        <input type="password" name="smtp_pass" autocomplete="new-password" data-lpignore="true" data-1p-ignore data-bwignore placeholder="<?= $saved('smtp_pass') ? t('mi.pass_saved') : '' ?>">
                         <?php if ($saved('smtp_pass')): ?><label class="check small"><input type="checkbox" name="smtp_pass_clear" value="1"> <?= t('mi.pass_clear') ?></label><?php endif; ?>
                     </label>
                 </div>
@@ -79,8 +79,8 @@ $saved = static fn (string $field): bool => !$isNew && !empty($item[$field]);
                         <label><?= t('mi.security') ?> <select name="pop_security" data-port-for="pop_port" data-ports="995,110,110"><?= $sec('pop_security', (string) $values['pop_security']) ?></select></label>
                     </div>
                     <div class="row-2">
-                        <label><?= t('mi.user') ?> <input type="text" name="pop_user" maxlength="190" value="<?= e($values['pop_user']) ?>" autocomplete="off"></label>
-                        <label><?= t('mi.password') ?> <input type="password" name="pop_pass" autocomplete="new-password" placeholder="<?= $saved('pop_pass') ? t('mi.pass_saved') : '' ?>"></label>
+                        <label><?= t('mi.user') ?> <input type="text" name="pop_user" data-lpignore="true" data-1p-ignore data-bwignore maxlength="190" value="<?= e($values['pop_user']) ?>" autocomplete="off"></label>
+                        <label><?= t('mi.password') ?> <input type="password" name="pop_pass" autocomplete="new-password" data-lpignore="true" data-1p-ignore data-bwignore placeholder="<?= $saved('pop_pass') ? t('mi.pass_saved') : '' ?>"></label>
                     </div>
                     <div class="field">
                         <span class="label"><?= t('mi.keep') ?></span>

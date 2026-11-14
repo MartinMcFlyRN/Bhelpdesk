@@ -99,11 +99,11 @@ final class Smtp
         }
         if ($this->user !== '') {
             if (preg_match('/^250[ -]AUTH[ =].*\bPLAIN\b/mi', $ehlo)) {
-                $this->cmd('AUTH PLAIN ' . base64_encode("\0" . $this->user . "\0" . $this->pass), [235], 'AUTH PLAIN <credentials>');
+                $this->cmd('AUTH PLAIN ' . base64_encode("\0" . $this->user . "\0" . $this->pass), [235], 'AUTH PLAIN <user ' . $this->user . ', ' . substr(Pop3::fingerprint($this->pass), 1));
             } else {
                 $this->cmd('AUTH LOGIN', [334]);
                 $this->cmd(base64_encode($this->user), [334], '<user>');
-                $this->cmd(base64_encode($this->pass), [235], '<password>');
+                $this->cmd(base64_encode($this->pass), [235], Pop3::fingerprint($this->pass));
             }
         }
     }

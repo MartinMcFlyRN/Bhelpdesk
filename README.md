@@ -147,7 +147,7 @@ An identity is an email address with:
 
 Each **department** chooses its **sending identity** (*Departments → Sending identity*); when left automatic it uses an identity receiving for that department, else the **identity for system emails**. That one (chosen at the bottom of the E-mail page) sends emails not tied to a department, such as password creation/reset; without it the *Default from* of General settings is used.
 
-*Test SMTP* sends a test message and shows the server dialogue (credentials hidden); *Test POP3* signs in and counts the messages without downloading or deleting anything.
+*Test SMTP* sends a test message, *Test POP3* signs in and counts the messages without downloading or deleting anything; both show the server dialogue. The password is never shown: the log gives its length and the first 6 hex chars of its SHA1, the same fingerprint Dovecot writes on *Password mismatch* (`printf '%s' 'the-password' | sha1sum` to compare), and warns when it starts or ends with spaces.
 
 Passwords are encrypted (libsodium secretbox) with a key created automatically in **`storage/app.key`** (mode 0600). **Back it up together with the database**: without it saved passwords cannot be decrypted and must be entered again. The forms never show saved passwords: leave the field empty to keep them.
 

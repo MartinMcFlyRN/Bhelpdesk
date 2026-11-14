@@ -13,6 +13,8 @@ final class Pop3
 {
     /** @var resource|null */
     private $sock = null;
+    /** @var list<string> */
+    private array $log = [];
 
     public function __construct(
         private string $host,
@@ -23,6 +25,26 @@ final class Pop3
         private bool $verifyTls = true,
         private int $timeout = 20,
     ) {
+    }
+
+    /** Last POP3 dialogue (password replaced by its fingerprint), useful to show test results */
+    public function log(): array
+    {
+        return $this->log;
+    }
+
+    /**
+     * Describes a secret without revealing it: length and first 6 hex chars of its SHA1
+     * (the same fingerprint Dovecot logs on "Password mismatch"), plus a warning
+     * when it starts/ends with spaces, a frequent copy & paste mistake.
+     */
+    public static function fingerprint(string $secret): string
+    {
+        $fp = '<password: ' . strlen($secret) . ' bytes, SHA1 ' . substr(sha1($secret), 0, 6) . '...';
+        if ($secret !== trim($secret)) {
+            $fp .= ', WARNING: starts or ends with spaces';
+        }
+        return $fp . '>';
     }
 
     public function connect(): void
@@ -43,7 +65,7 @@ final class Pop3
         }
         stream_set_timeout($sock, $this->timeout);
         $this->sock = $sock;
-        $this->ok($this->line());
+        $this->ok($this->line(true));
         if ($this->security === 'starttls') {
             $this->cmd('STLS');
             if (!@stream_socket_enable_crypto($this->sock, true, STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT)) {
@@ -51,7 +73,7 @@ final class Pop3
             }
         }
         $this->cmd('USER ' . $this->user);
-        $this->cmd('PASS ' . $this->pass, 'PASS');
+        $this->cmd('PASS ' . $this->pass, 'PASS', 'PASS ' . self::fingerprint($this->pass));
     }
 
     /** @return array{count: int, size: int} */
@@ -97,22 +119,27 @@ final class Pop3
         }
     }
 
-    private function cmd(string $line, ?string $logAs = null): string
+    private function cmd(string $line, ?string $logAs = null, ?string $logLine = null): string
     {
+        $this->log[] = 'C: ' . ($logLine ?? $line);
         if (@fwrite($this->sock, $line . "\r\n") === false) {
             throw new RuntimeException('Connection lost while sending ' . ($logAs ?? strtok($line, ' ')));
         }
-        return $this->ok($this->line(), $logAs ?? strtok($line, ' '));
+        return $this->ok($this->line(true), $logAs ?? strtok($line, ' '));
     }
 
-    private function line(): string
+    private function line(bool $log = false): string
     {
         $l = fgets($this->sock, 8192);
         if ($l === false) {
             $meta = stream_get_meta_data($this->sock);
             throw new RuntimeException(!empty($meta['timed_out']) ? 'Timeout waiting for the server' : 'Connection closed by the server');
         }
-        return rtrim($l, "\r\n");
+        $l = rtrim($l, "\r\n");
+        if ($log) {
+            $this->log[] = 'S: ' . $l;
+        }
+        return $l;
     }
 
     private function ok(string $reply, string $what = 'greeting'): string

@@ -795,6 +795,7 @@ $r->post('/config/email/{id}/test', static function (array $p) use ($loadIdentit
                 $st = $pop->stat();
             } finally {
                 $pop->quit();
+                $result['log'] = $pop->log();
             }
             $result['ok'] = true;
             $result['message'] = __('mi.test_pop_ok', ['n' => $st['count'], 'size' => \Bhelpdesk\Attachments::humanSize($st['size'])]);

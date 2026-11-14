@@ -57,13 +57,17 @@ final class Crypto
         }
         $raw = base64_decode(substr($stored, strlen(self::PREFIX)), true);
         if ($raw === false || strlen($raw) <= SODIUM_CRYPTO_SECRETBOX_NONCEBYTES) {
-            return '';
+            throw new RuntimeException('Saved password is corrupted: enter it again');
         }
         $plain = sodium_crypto_secretbox_open(
             substr($raw, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES),
             substr($raw, 0, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES),
             self::key()
         );
-        return $plain === false ? '' : $plain;
+        if ($plain === false) {
+            // storage/app.key differs from the one used to save it (lost, regenerated, other server)
+            throw new RuntimeException('Saved password cannot be decrypted with storage/app.key: enter it again');
+        }
+        return $plain;
     }
 }
