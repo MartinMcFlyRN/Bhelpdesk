@@ -26,7 +26,7 @@
                     <?php if ($m['author_type'] === 'customer'): ?><span class="msg-role msg-role-customer"><?= t('opticket.role_customer') ?></span>
                     <?php elseif (!$m['is_internal']): ?><span class="msg-role msg-role-support"><?= t('opticket.role_staff') ?></span><?php endif; ?>
                     <?php if ($m['is_internal']): ?><span class="badge"><?= t('opticket.internal_badge') ?></span><?php endif; ?>
-                    <?php if (!empty($m['via_email'])): ?><span class="badge badge-mail" title="<?= t('mailin.via_email_title') ?>">✉ <?= t('mailin.via_email') ?></span><?php endif; ?>
+                    <?php if (!empty($m['via_email'])): ?><?php if (isset($sources[(int) $m['id']])): ?><a class="badge badge-mail" href="/op/ticket/<?= (int) $ticket['id'] ?>/email/<?= (int) $m['id'] ?>" target="_blank" rel="noopener" title="<?= t('src.open') ?>">✉ <?= t('mailin.via_email') ?> ↗</a><?php else: ?><span class="badge badge-mail" title="<?= t('mailin.via_email_title') ?>">✉ <?= t('mailin.via_email') ?></span><?php endif; ?><?php endif; ?>
                     <span class="muted"><?= fmt_date($m['created_at']) ?><?= $m['ip'] ? ' · ' . e($m['ip']) : '' ?></span>
                 </header>
                 <div class="body"><?= \Bhelpdesk\Html::body($m) ?></div>

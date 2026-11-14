@@ -307,6 +307,11 @@ $r->get('/ticket/{id}', static function (array $p) use ($loadTicket): void {
         'messages'     => $messages,
         'attachments'  => Attachments::forMessages(array_column($messages, 'id')),
         'participants' => Tickets::participants((int) $t['id']),
+        // messages received by email whose source can be opened
+        'sources'      => array_flip(array_map('intval', Db::column(
+            'SELECT mm.ticket_message_id FROM mail_messages mm JOIN ticket_messages tm ON tm.id = mm.ticket_message_id WHERE tm.ticket_id = ? AND mm.raw_path IS NOT NULL',
+            [(int) $t['id']]
+        ))),
         'canned'       => array_map(
             static fn (array $c): array => $c + ['rendered' => Canned::render($c['body'], Canned::context($t, $op))],
             Canned::forTicket($t)
@@ -321,6 +326,46 @@ $r->get('/ticket/{id}', static function (array $p) use ($loadTicket): void {
         'departments' => Tickets::departments(false),
         'operators'   => Tickets::operators($t['department_id'] !== null ? (int) $t['department_id'] : null),
     ]);
+});
+
+// ---------- Source of a received email ----------
+$emailSource = static function (?array $row, string $back): void {
+    $raw = $row ? MailFetcher::readRaw((string) $row['raw_path']) : null;
+    if ($raw === null) {
+        http_response_code(404);
+        View::render('op', 'error', ['title' => __('error.not_found.title'), 'message' => __('src.missing')]);
+        return;
+    }
+    if (isset($_GET['download'])) {
+        header('Content-Type: message/rfc822');
+        header('Content-Disposition: attachment; filename="email-' . (int) $row['id'] . '.eml"');
+        header('Content-Length: ' . strlen($raw));
+        header('X-Content-Type-Options: nosniff');
+        echo $raw;
+        return;
+    }
+    $limit = 524288; // the page shows the first 512 KB (attachments in base64 can be huge)
+    View::render('op', 'email_source', [
+        'title'     => __('src.title'),
+        'op'        => Auth::user(),
+        'row'       => $row,
+        'mime'      => \Bhelpdesk\Mime::parse($raw),
+        'source'    => mb_scrub(\Bhelpdesk\Mime::toUtf8(substr($raw, 0, $limit), ''), 'UTF-8'),
+        'truncated' => strlen($raw) > $limit,
+        'size'      => strlen($raw),
+        'back'      => $back,
+    ]);
+};
+
+$r->get('/ticket/{id}/email/{mid}', static function (array $p) use ($loadTicket, $emailSource): void {
+    Auth::require();
+    $t = $loadTicket($p);
+    $row = Db::one(
+        'SELECT mm.* FROM mail_messages mm JOIN ticket_messages tm ON tm.id = mm.ticket_message_id
+          WHERE mm.ticket_message_id = ? AND tm.ticket_id = ? AND mm.raw_path IS NOT NULL ORDER BY mm.id DESC LIMIT 1',
+        [(int) $p['mid'], (int) $t['id']]
+    );
+    $emailSource($row, '/op/ticket/' . (int) $t['id']);
 });
 
 $r->post('/ticket/{id}/reply', static function (array $p) use ($loadTicket): void {
@@ -778,6 +823,13 @@ $r->post('/config/email/{id}', static function (array $p) use ($identityPage, $l
     MailIdentities::save($res['values'], (int) $i['id']);
     flash('success', 'mi.saved');
     redirect('/op/config/email/' . $i['id']);
+});
+
+// Source of any downloaded message (also ignored ones), from the identity log
+$r->get('/config/email/source/{mid}', static function (array $p) use ($emailSource): void {
+    Auth::requireAdmin();
+    $row = Db::one("SELECT * FROM mail_messages WHERE id = ? AND direction = 'in' AND raw_path IS NOT NULL", [(int) $p['mid']]);
+    $emailSource($row, $row && $row['identity_id'] ? '/op/config/email/' . (int) $row['identity_id'] . '#log' : '/op/config/email');
 });
 
 // Download the mailbox now (same as the cron job)

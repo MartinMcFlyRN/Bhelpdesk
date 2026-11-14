@@ -122,6 +122,7 @@ mariadb bhelpdesk < sql/migrations/012_mail_identities.sql
 mariadb bhelpdesk < sql/migrations/013_mail_messages.sql
 mariadb bhelpdesk < sql/migrations/014_operator_alerts.sql
 mariadb bhelpdesk < sql/migrations/015_email_templates.sql
+mariadb bhelpdesk < sql/migrations/016_mail_source.sql
 ```
 
 ## Operators area
@@ -166,6 +167,8 @@ Passwords are encrypted (libsodium secretbox) with a key created automatically i
 - **Body**: the text part, or the HTML converted to text. **Attachments** pass the same checks as operator uploads (types, signature, size limits); small images embedded in the HTML (signature logos) are skipped; refused files are listed in the ticket history.
 - **Ignored**: our own addresses (loop protection), `Auto-Submitted`, `Precedence: bulk/list/junk`, auto-reply headers, mailing lists (`List-Id`), bounces and delivery reports, no-reply senders, duplicates (same Message-ID), more than *N* new tickets per hour from one sender (setting, default 10), messages over 30 MB (`mail.max_message_mb`, left on the server).
 - **Retention on the server**: delete after download, keep the last N days (messages older than N days since download are deleted), or never delete. Messages that failed with an error are left on the server.
+
+**Source of the emails.** The original message of every downloaded email is saved compressed in `storage/mail/YYYY/MM/` (random name, `.eml.gz`). In the ticket the *✉ email* badge of a message received by email opens its source (headers and raw message, with *Download .eml*); operators see it only for tickets they can see. In the identity log administrators open the source of every downloaded message, ignored ones included. Sources of messages that did not become tickets or replies are deleted after 30 days; the others are deleted with their ticket. Messages downloaded before this feature have no source.
 
 Test without POP3: `sudo -u bhelpdesk php8.3 bin/fetch-mail.php --file=/path/message.eml --identity=ID` (without a valid identity the command lists the existing ones). Use the same PHP version as PHP-FPM and the `bhelpdesk` user, so stored attachments get the right owner.
 

@@ -137,7 +137,7 @@ $saved = static fn (string $field): bool => !$isNew && !empty($item[$field]);
                             <td class="nowrap"><?= e(fmt_date((string) $row['created_at'])) ?></td>
                             <td title="<?= t($row['direction'] === 'in' ? 'mailin.dir_in' : 'mailin.dir_out') ?>"><?= $row['direction'] === 'in' ? '↓' : '↑' ?></td>
                             <td><?= e((string) $row['address']) ?></td>
-                            <td><?= e((string) $row['subject']) ?></td>
+                            <td><?php if (!empty($row['raw_path'])): ?><a href="/op/config/email/source/<?= (int) $row['id'] ?>" target="_blank" rel="noopener" title="<?= t('src.open') ?>"><?= e((string) $row['subject']) ?> ↗</a><?php else: ?><?= e((string) $row['subject']) ?><?php endif; ?></td>
                             <td>
                                 <span class="mail-status mail-<?= e($row['status']) ?>"><?= t('mailin.st_' . $row['status']) ?></span>
                                 <?php if ($row['number']): ?> <a href="/op/ticket/<?= (int) $row['ticket_id'] ?>">#<?= e($row['number']) ?></a><?php endif; ?>

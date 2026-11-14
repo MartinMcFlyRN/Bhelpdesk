@@ -328,7 +328,9 @@ final class Tickets
         }
         $in = implode(',', array_fill(0, count($ids), '?'));
         $files = array_column(Db::all('SELECT stored_name FROM attachments WHERE ticket_id IN (' . $in . ')', $ids), 'stored_name');
+        $sources = array_column(Db::all('SELECT raw_path FROM mail_messages WHERE raw_path IS NOT NULL AND ticket_id IN (' . $in . ')', $ids), 'raw_path');
         $n = Db::exec('DELETE FROM tickets WHERE id IN (' . $in . ')', $ids);
+        MailFetcher::deleteRaw($sources);
         foreach ($files as $f) {
             @unlink(Attachments::storageDir() . '/' . $f);
         }

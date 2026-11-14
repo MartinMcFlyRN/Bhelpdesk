@@ -666,6 +666,14 @@ return [
     'tpl.err_subject'       => 'The subject is required (max 255 characters).',
     'tpl.err_body'          => 'The text is required.',
 
+    'src.title'     => 'Email source',
+    'src.back'      => 'Back',
+    'src.download'  => 'Download .eml',
+    'src.open'      => 'Open the source of the received email',
+    'src.received'  => 'Downloaded',
+    'src.missing'   => 'The source of this email is not available (emails downloaded before the update are not saved, sources of ignored messages are kept 30 days).',
+    'src.truncated' => 'The message is large: only the first 512 KB are shown. Download the .eml to see it all.',
+
     // ---- Configuration (/op/config) ----
     'cfg.title'             => 'Configuration',
     'cfg.menu.general'      => 'General',

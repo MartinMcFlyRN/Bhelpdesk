@@ -22,7 +22,65 @@ use RuntimeException;
 final class MailFetcher
 {
     public const MAX_PER_RUN = 50;          // messages downloaded per identity per run
+    public const RAW_KEEP_DAYS = 30;        // source of ignored / failed messages kept this long
     private const SMALL_INLINE = 15360;     // inline images below 15 KB (logos in signatures) are skipped
+
+    /** Source file of the message being processed (set by process(), written by record()) */
+    private static ?string $rawPath = null;
+
+    // ---------- source of the received emails (storage/mail/YYYY/MM/<random>.eml.gz) ----------
+
+    public static function rawDir(): string
+    {
+        return rtrim((string) (config('storage_path') ?: BHD_ROOT . '/storage'), '/') . '/mail';
+    }
+
+    /** Save the source of a message; returns its relative path (null if it cannot be written) */
+    public static function storeRaw(string $raw): ?string
+    {
+        $rel = date('Y/m') . '/' . bin2hex(random_bytes(16)) . '.eml.gz';
+        $abs = self::rawDir() . '/' . $rel;
+        $dir = dirname($abs);
+        if ((!is_dir($dir) && !@mkdir($dir, 0750, true) && !is_dir($dir)) || @file_put_contents($abs, gzencode($raw, 6)) === false) {
+            error_log('Bhelpdesk: cannot save email source in ' . $dir);
+            return null;
+        }
+        @chmod($abs, 0640);
+        return $rel;
+    }
+
+    public static function readRaw(string $rel): ?string
+    {
+        if (!preg_match('#^\d{4}/\d{2}/[a-f0-9]{32}\.eml\.gz$#', $rel)) {
+            return null;
+        }
+        $data = @file_get_contents(self::rawDir() . '/' . $rel);
+        if ($data === false) {
+            return null;
+        }
+        $raw = @gzdecode($data);
+        return $raw === false ? null : $raw;
+    }
+
+    /** Delete the source files of the given mail_messages rows */
+    public static function deleteRaw(array $paths): void
+    {
+        foreach ($paths as $rel) {
+            if (is_string($rel) && preg_match('#^\d{4}/\d{2}/[a-f0-9]{32}\.eml\.gz$#', $rel)) {
+                @unlink(self::rawDir() . '/' . $rel);
+            }
+        }
+    }
+
+    /** Sources of messages that did not become tickets are kept RAW_KEEP_DAYS days */
+    private static function cleanRaw(): void
+    {
+        $rows = Db::all("SELECT id, raw_path FROM mail_messages WHERE raw_path IS NOT NULL AND status NOT IN ('ticket','reply') AND created_at < NOW() - INTERVAL " . self::RAW_KEEP_DAYS . ' DAY LIMIT 500');
+        if ($rows) {
+            self::deleteRaw(array_column($rows, 'raw_path'));
+            Db::exec('UPDATE mail_messages SET raw_path = NULL WHERE id IN (' . implode(',', array_map('intval', array_column($rows, 'id'))) . ')');
+        }
+    }
 
     /** Exclusive run lock (two crons, cron + button): null when another run is in progress */
     public static function lock()
@@ -43,6 +101,7 @@ final class MailFetcher
     {
         $sql = 'SELECT * FROM mail_identities WHERE active = 1 AND pop_enabled = 1 AND pop_host <> \'\'';
         $rows = $identityId ? Db::all($sql . ' AND id = ?', [$identityId]) : Db::all($sql . ' ORDER BY id');
+        self::cleanRaw();
         $out = [];
         foreach ($rows as $i) {
             try {
@@ -93,6 +152,7 @@ final class MailFetcher
                     continue;
                 }
                 $stats['downloaded']++;
+                self::$rawPath = null;
                 if (($sizes[$n] ?? 0) > $maxBytes) {
                     self::record($i, $uid, null, null, null, null, 'big', __('mailin.too_big', ['size' => Attachments::humanSize($sizes[$n])]));
                     $stats['ignored']++;
@@ -137,6 +197,7 @@ final class MailFetcher
      */
     public static function process(array $identity, string $raw, ?string $uid = null): array
     {
+        self::$rawPath = self::storeRaw($raw);
         $m = Mime::parse($raw);
         $subject = trim((string) preg_replace('/\s+/u', ' ', $m->header('subject')));
         $subject = mb_substr($subject !== '' ? $subject : __('mailin.no_subject'), 0, 255);
@@ -435,10 +496,10 @@ final class MailFetcher
     private static function record(array $identity, ?string $uid, ?string $msgId, ?string $address, ?string $subject, ?int $ticketId, string $status, ?string $note, ?int $ticketMessageId = null): void
     {
         Db::exec(
-            "INSERT INTO mail_messages (direction, identity_id, pop_uid, message_id, ticket_id, ticket_message_id, address, subject, status, note)
-             VALUES ('in', ?, ?, ?, ?, ?, ?, ?, ?, ?)
-             ON DUPLICATE KEY UPDATE status = VALUES(status), note = VALUES(note), ticket_id = VALUES(ticket_id), ticket_message_id = VALUES(ticket_message_id)",
-            [(int) $identity['id'], $uid, $msgId !== null ? mb_substr($msgId, 0, 255) : null, $ticketId, $ticketMessageId, $address !== null ? mb_substr($address, 0, 190) : null, $subject !== null ? mb_substr($subject, 0, 255) : null, $status, $note !== null ? mb_substr($note, 0, 255) : null]
+            "INSERT INTO mail_messages (direction, identity_id, pop_uid, message_id, ticket_id, ticket_message_id, address, subject, status, note, raw_path)
+             VALUES ('in', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE status = VALUES(status), note = VALUES(note), ticket_id = VALUES(ticket_id), ticket_message_id = VALUES(ticket_message_id), raw_path = VALUES(raw_path)",
+            [(int) $identity['id'], $uid, $msgId !== null ? mb_substr($msgId, 0, 255) : null, $ticketId, $ticketMessageId, $address !== null ? mb_substr($address, 0, 190) : null, $subject !== null ? mb_substr($subject, 0, 255) : null, $status, $note !== null ? mb_substr($note, 0, 255) : null, self::$rawPath]
         );
     }
 }

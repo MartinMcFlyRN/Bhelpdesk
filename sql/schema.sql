@@ -203,8 +203,10 @@ CREATE TABLE IF NOT EXISTS mail_messages (
     subject            VARCHAR(255) NULL,
     status             VARCHAR(16)  NOT NULL,         -- in: ticket, reply, ignored, error / out: sent, error
     note               VARCHAR(255) NULL,
+    raw_path           VARCHAR(100) NULL,             -- source of the received email (storage/mail, gzip)
     created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY uq_mail_messages_uid (identity_id, pop_uid),
+    KEY ix_mail_messages_tmessage (ticket_message_id),
     KEY ix_mail_messages_msgid (message_id),
     KEY ix_mail_messages_ticket (ticket_id),
     KEY ix_mail_messages_address (address, created_at),

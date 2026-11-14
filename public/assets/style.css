@@ -443,3 +443,11 @@ input.tiny { width: 5.5rem !important; display: inline-block !important; margin:
 .area-op .msg-operator.msg-internal header strong { color: #92400e; }
 .msg-role-customer { background: #e0f2fe; color: #075985; }
 @media (max-width: 800px) { .area-op .thread .msg { max-width: 100%; } }
+
+/* Source of a received email */
+a.badge-mail { text-decoration: none; }
+a.badge-mail:hover { background: #bae6fd; }
+.src-headers { display: grid; grid-template-columns: max-content 1fr; gap: .3rem 1rem; margin: 0; }
+.src-headers dt { font-weight: 600; color: var(--muted); }
+.src-headers dd { margin: 0; overflow-wrap: anywhere; }
+.eml-source { background: #0f172a; color: #e2e8f0; padding: 1rem; border-radius: var(--radius); font-size: .8rem; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 75vh; overflow: auto; }

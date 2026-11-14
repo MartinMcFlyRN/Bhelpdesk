@@ -661,6 +661,14 @@ return [
     'tpl.err_subject'       => 'L\'oggetto è obbligatorio (max 255 caratteri).',
     'tpl.err_body'          => 'Il testo è obbligatorio.',
 
+    'src.title'     => 'Sorgente email',
+    'src.back'      => 'Indietro',
+    'src.download'  => 'Scarica .eml',
+    'src.open'      => 'Apri il sorgente dell\'email ricevuta',
+    'src.received'  => 'Scaricata',
+    'src.missing'   => 'Il sorgente di questa email non è disponibile (le email scaricate prima dell\'aggiornamento non sono salvate, i sorgenti dei messaggi ignorati restano 30 giorni).',
+    'src.truncated' => 'Il messaggio è grande: sono mostrati solo i primi 512 KB. Scarica il file .eml per vederlo tutto.',
+
     // ---- Configuration (/op/config) ----
     'cfg.title'             => 'Configurazione',
     'cfg.menu.general'      => 'Generale',
