@@ -23,7 +23,7 @@ final class Throttle
     public static function hit(string $action, string $ip): void
     {
         Db::exec('INSERT INTO throttle (action, ip) VALUES (?, ?)', [$action, $ip]);
-        // pulizia occasionale
+        // occasional cleanup
         if (random_int(1, 50) === 1) {
             Db::exec('DELETE FROM throttle WHERE created_at < NOW() - INTERVAL 1 DAY');
         }

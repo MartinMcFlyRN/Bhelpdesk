@@ -1,6 +1,6 @@
 # Bhelpdesk - Apache (document root = public/)
-# Richiede: mod_rewrite, AllowOverride All (o almeno FileInfo, Options, AuthConfig, Indexes)
-# Su nginx questo file viene ignorato.
+# Requires: mod_rewrite, AllowOverride All (or at least FileInfo, Options, AuthConfig, Indexes)
+# Ignored by nginx.
 
 Options -Indexes -MultiViews
 DirectoryIndex index.php
@@ -12,19 +12,19 @@ DirectoryIndex index.php
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # niente dotfile (.git, .env, .htaccess...)
+    # no dotfiles (.git, .env, .htaccess...)
     RewriteRule (^|/)\. - [F]
 
-    # / -> area clienti, e slash finale sulle due aree
+    # / -> customers area, trailing slash on both areas
     RewriteRule ^$ /customer/ [R=302,L]
     RewriteRule ^(customer|op)$ /$1/ [R=301,L]
 
-    # eseguibili solo index.php, customer/index.php, op/index.php
+    # only index.php, customer/index.php and op/index.php are executable
     RewriteCond %{REQUEST_FILENAME} \.php$ [NC]
     RewriteCond %{REQUEST_FILENAME} !/public/(customer/|op/)?index\.php$
     RewriteRule ^ - [R=404,L]
 
-    # front controller delle due aree (i file esistenti, es. assets, passano diretti)
+    # front controllers of the two areas (existing files, e.g. assets, are served directly)
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^customer/ customer/index.php [L,QSA]
 

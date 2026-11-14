@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="it">
+<html lang="<?= e(\Bhelpdesk\Lang::current()) ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,8 +11,9 @@
     <div class="wrap">
         <a class="brand" href="/customer/"><?= e(config('app_name', 'Bhelpdesk')) ?></a>
         <nav>
-            <a href="/customer/new">Apri ticket</a>
-            <a href="/customer/status">Verifica stato</a>
+            <a href="/customer/new"><?= t('nav.open_ticket') ?></a>
+            <a href="/customer/status"><?= t('nav.check_status') ?></a>
+            <?php require BHD_ROOT . '/templates/lang_switch.php'; ?>
         </nav>
     </div>
 </header>

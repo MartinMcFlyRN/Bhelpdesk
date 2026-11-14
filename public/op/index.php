@@ -5,11 +5,11 @@ require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
 use Bhelpdesk\{Auth, Db, IpGuard, Router, Session, Throttle, Tickets, View};
 
-// ---------- 2° livello di filtro IP (il primo è in nginx) ----------
+// ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
 if ($allowed && !IpGuard::matchesAny(client_ip(), $allowed)) {
     http_response_code(403);
-    exit('Accesso non consentito.');
+    exit(__('error.ip_denied'));
 }
 
 Session::start('BHD_OP', '/op/');
@@ -22,20 +22,20 @@ $r->get('/login', static function (): void {
     if (Auth::user()) {
         redirect('/op/');
     }
-    View::render('op', 'login', ['title' => 'Accesso operatori', 'error' => null]);
+    View::render('op', 'login', ['title' => __('login.title'), 'error' => null]);
 });
 
 $r->post('/login', static function (): void {
     $ip = client_ip();
     if (Throttle::tooMany('op_login_fail', $ip)) {
         http_response_code(429);
-        View::render('op', 'login', ['title' => 'Accesso operatori', 'error' => 'Troppi tentativi falliti. Riprova più tardi.']);
+        View::render('op', 'login', ['title' => __('login.title'), 'error' => __('login.too_many')]);
         return;
     }
     $ok = Auth::attempt(trim((string) ($_POST['username'] ?? '')), (string) ($_POST['password'] ?? ''), $ip);
     if (!$ok) {
         http_response_code(401);
-        View::render('op', 'login', ['title' => 'Accesso operatori', 'error' => 'Credenziali non valide.']);
+        View::render('op', 'login', ['title' => __('login.title'), 'error' => __('login.invalid')]);
         return;
     }
     redirect('/op/');
@@ -58,7 +58,7 @@ $r->get('/', static function (): void {
     $page = max(1, (int) ($_GET['page'] ?? 1));
     $res = Tickets::search($filters, (int) $op['id'], $page);
     View::render('op', 'dashboard', [
-        'title'       => 'Ticket',
+        'title'       => __('dash.title'),
         'op'          => $op,
         'filters'     => $filters,
         'rows'        => $res['rows'],
@@ -75,7 +75,7 @@ $loadTicket = static function (array $p): array {
     $t = Tickets::find((int) $p['id']);
     if (!$t) {
         http_response_code(404);
-        View::render('op', 'error', ['title' => 'Ticket non trovato', 'message' => 'Il ticket richiesto non esiste.']);
+        View::render('op', 'error', ['title' => __('error.ticket_not_found.title'), 'message' => __('error.ticket_not_found.message')]);
         exit;
     }
     return $t;
@@ -101,13 +101,13 @@ $r->post('/ticket/{id}/reply', static function (array $p) use ($loadTicket): voi
     $internal = !empty($_POST['internal']);
     $default = $internal ? $t['status'] : 'answered';
     if ($body === '') {
-        flash('error', 'Il messaggio è vuoto.');
+        flash('error', 'ticket.empty_message');
     } else {
         Tickets::operatorReply($t, $op, $body, $internal, (string) ($_POST['status'] ?? $default), client_ip());
         if (!$internal && !$t['assigned_to']) {
             Tickets::update(Tickets::find((int) $t['id']), $op, ['assigned_to' => $op['id']]);
         }
-        flash('success', $internal ? 'Nota interna aggiunta.' : 'Risposta inviata.');
+        flash('success', $internal ? 'opticket.note_added' : 'opticket.reply_sent');
     }
     redirect('/op/ticket/' . $t['id']);
 });
@@ -121,22 +121,19 @@ $r->post('/ticket/{id}/update', static function (array $p) use ($loadTicket): vo
         'department_id' => (int) ($_POST['department_id'] ?? 0),
         'assigned_to'   => (int) ($_POST['assigned_to'] ?? 0),
     ]);
-    flash('success', 'Ticket aggiornato.');
+    flash('success', 'opticket.saved');
     redirect('/op/ticket/' . $t['id']);
 });
 
-// ---------- Gestione operatori (solo admin) ----------
-$r->get('/operators', static function (): void {
+// ---------- Operator management (admins only) ----------
+$listOperators = static fn (): array => Db::all('SELECT id, username, name, email, role, active, last_login_at, last_login_ip FROM operators ORDER BY name');
+
+$r->get('/operators', static function () use ($listOperators): void {
     $op = Auth::requireAdmin();
-    View::render('op', 'operators', [
-        'title'     => 'Operatori',
-        'op'        => $op,
-        'operators' => Db::all('SELECT id, username, name, email, role, active, last_login_at, last_login_ip FROM operators ORDER BY name'),
-        'errors'    => [],
-    ]);
+    View::render('op', 'operators', ['title' => __('ops.title'), 'op' => $op, 'operators' => $listOperators(), 'errors' => []]);
 });
 
-$r->post('/operators', static function (): void {
+$r->post('/operators', static function () use ($listOperators): void {
     $op = Auth::requireAdmin();
     $in = [
         'username' => trim((string) ($_POST['username'] ?? '')),
@@ -147,35 +144,30 @@ $r->post('/operators', static function (): void {
     ];
     $errors = [];
     if (!preg_match('/^[a-z0-9._-]{3,50}$/i', $in['username'])) {
-        $errors[] = 'Username: 3-50 caratteri tra lettere, numeri, . _ -';
+        $errors[] = __('val.username');
     }
     if ($in['name'] === '') {
-        $errors[] = 'Nome obbligatorio.';
+        $errors[] = __('val.ops_name_required');
     }
     if (!filter_var($in['email'], FILTER_VALIDATE_EMAIL)) {
-        $errors[] = 'Email non valida.';
+        $errors[] = __('val.email_invalid');
     }
     if (strlen($in['password']) < 12) {
-        $errors[] = 'La password deve avere almeno 12 caratteri.';
+        $errors[] = __('val.password_short');
     }
     if (!$errors && Db::value('SELECT 1 FROM operators WHERE username = ? OR email = ?', [$in['username'], $in['email']])) {
-        $errors[] = 'Username o email già in uso.';
+        $errors[] = __('val.duplicate');
     }
     if ($errors) {
         http_response_code(422);
-        View::render('op', 'operators', [
-            'title'     => 'Operatori',
-            'op'        => $op,
-            'operators' => Db::all('SELECT id, username, name, email, role, active, last_login_at, last_login_ip FROM operators ORDER BY name'),
-            'errors'    => $errors,
-        ]);
+        View::render('op', 'operators', ['title' => __('ops.title'), 'op' => $op, 'operators' => $listOperators(), 'errors' => $errors]);
         return;
     }
     Db::insert(
         'INSERT INTO operators (username, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)',
         [$in['username'], $in['name'], $in['email'], password_hash($in['password'], PASSWORD_DEFAULT), $in['role']]
     );
-    flash('success', 'Operatore creato.');
+    flash('success', 'ops.created');
     redirect('/op/operators');
 });
 
@@ -183,10 +175,10 @@ $r->post('/operators/{id}/toggle', static function (array $p): void {
     $op = Auth::requireAdmin();
     $id = (int) $p['id'];
     if ($id === (int) $op['id']) {
-        flash('error', 'Non puoi disattivare te stesso.');
+        flash('error', 'ops.self_disable');
     } else {
         Db::exec('UPDATE operators SET active = 1 - active WHERE id = ?', [$id]);
-        flash('success', 'Stato operatore aggiornato.');
+        flash('success', 'ops.state_updated');
     }
     redirect('/op/operators');
 });

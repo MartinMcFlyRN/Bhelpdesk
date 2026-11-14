@@ -1,0 +1,201 @@
+<?php
+/*
+ * Bhelpdesk - Italiano
+ * Chiavi identiche a lang/en.php: traduci solo i valori.
+ * Le chiavi mancanti qui vengono mostrate in inglese.
+ */
+
+return [
+    // ---- Language metadata ----
+    'lang.name'        => 'Italiano',
+    'lang.label'       => 'Lingua',
+    'date_format'      => 'd/m/Y H:i',
+
+    // ---- Layout / navigation ----
+    'app.operators_area' => 'Operatori',
+    'nav.open_ticket'    => 'Apri ticket',
+    'nav.check_status'   => 'Verifica stato',
+    'nav.tickets'        => 'Ticket',
+    'nav.my_tickets'     => 'I miei',
+    'nav.operators'      => 'Operatori',
+    'nav.logout'         => 'Esci',
+
+    // ---- Generic errors ----
+    'error.session_expired.title'   => 'Sessione scaduta',
+    'error.session_expired.message' => 'Il modulo è scaduto. Torna indietro, ricarica la pagina e riprova.',
+    'error.not_found.title'         => 'Pagina non trovata',
+    'error.not_found.message'       => 'La pagina richiesta non esiste.',
+    'error.forbidden.title'         => 'Accesso negato',
+    'error.forbidden.message'       => 'Funzione riservata agli amministratori.',
+    'error.ip_denied'               => 'Accesso non consentito.',
+    'error.ticket_not_found.title'  => 'Ticket non trovato',
+    'error.ticket_not_found.message'=> 'Il ticket richiesto non esiste.',
+    'error.back_home'               => "Torna all'inizio",
+
+    // ---- Ticket status / priority ----
+    'status.open'      => 'Aperto',
+    'status.answered'  => 'Risposto',
+    'status.on_hold'   => 'In sospeso',
+    'status.closed'    => 'Chiuso',
+    'priority.low'     => 'Bassa',
+    'priority.normal'  => 'Normale',
+    'priority.high'    => 'Alta',
+    'priority.urgent'  => 'Urgente',
+
+    // ---- Customer: home ----
+    'home.title'        => 'Assistenza',
+    'home.heading'      => 'Centro assistenza',
+    'home.intro'        => 'Apri una richiesta di supporto o controlla lo stato di un ticket esistente.',
+    'home.new.title'    => 'Apri un nuovo ticket',
+    'home.new.text'     => "Descrivi il problema: riceverai un numero di ticket per seguirne l'avanzamento.",
+    'home.status.title' => 'Verifica lo stato',
+    'home.status.text'  => 'Inserisci numero di ticket ed email per vedere risposte e stato.',
+
+    // ---- Customer: new ticket ----
+    'new.title'       => 'Apri un ticket',
+    'new.name'        => 'Nome e cognome',
+    'new.email'       => 'Email',
+    'new.department'  => 'Reparto',
+    'new.subject'     => 'Oggetto',
+    'new.message'     => 'Descrizione del problema',
+    'new.submit'      => 'Invia richiesta',
+    'new.honeypot'    => 'Sito web',
+
+    'val.invalid_request'   => 'Richiesta non valida.',
+    'val.name_required'     => 'Inserisci il tuo nome.',
+    'val.email_invalid'     => 'Indirizzo email non valido.',
+    'val.subject_required'  => 'Inserisci un oggetto (max 255 caratteri).',
+    'val.message_min'       => 'Descrivi il problema (almeno 10 caratteri).',
+    'val.too_many_tickets'  => 'Hai aperto troppi ticket in poco tempo. Riprova più tardi.',
+
+    // ---- Customer: ticket created ----
+    'created.title'  => 'Ticket aperto',
+    'created.intro'  => 'La tua richiesta è stata registrata con il numero:',
+    'created.keep'   => 'Conserva il numero: con la tua email potrai verificare lo stato in qualsiasi momento. In alternativa salva questo link di accesso diretto (non condividerlo):',
+    'created.go'     => 'Vai al ticket',
+
+    // ---- Customer: status lookup ----
+    'lookup.title'        => 'Verifica stato ticket',
+    'lookup.number'       => 'Numero ticket',
+    'lookup.placeholder'  => 'es. 482913',
+    'lookup.email'        => "Email usata all'apertura",
+    'lookup.submit'       => 'Verifica',
+    'lookup.too_many'     => 'Troppi tentativi. Riprova tra qualche minuto.',
+    'lookup.not_found'    => 'Nessun ticket trovato con questi dati.',
+    'lookup.need_login'   => 'Per vedere il ticket inserisci numero ed email.',
+
+    // ---- Customer: ticket view ----
+    'ticket.title'         => 'Ticket #:number',
+    'ticket.opened_on'     => 'Aperto il :date',
+    'ticket.last_update'   => 'Ultimo aggiornamento :date',
+    'ticket.support'       => 'Supporto',
+    'ticket.reply'         => 'Rispondi',
+    'ticket.reply_reopen'  => 'Rispondi (il ticket verrà riaperto)',
+    'ticket.send'          => 'Invia',
+    'ticket.closed_info'   => 'Il ticket è chiuso.',
+    'ticket.closed_new'    => 'Apri un nuovo ticket',
+    'ticket.leave'         => 'Esci da questo ticket',
+    'ticket.closed_no_reply' => 'Il ticket è chiuso: aprine uno nuovo.',
+    'ticket.empty_message' => 'Il messaggio è vuoto.',
+    'ticket.reply_sent'    => 'Risposta inviata.',
+
+    // ---- Operators: login ----
+    'login.title'     => 'Accesso operatori',
+    'login.username'  => 'Username',
+    'login.password'  => 'Password',
+    'login.submit'    => 'Accedi',
+    'login.too_many'  => 'Troppi tentativi falliti. Riprova più tardi.',
+    'login.invalid'   => 'Credenziali non valide.',
+
+    // ---- Operators: dashboard ----
+    'dash.title'           => 'Ticket',
+    'dash.active'          => 'Attivi',
+    'dash.all'             => 'Tutti',
+    'dash.search'          => 'Numero, oggetto, email, nome…',
+    'dash.all_operators'   => 'Tutti gli operatori',
+    'dash.assigned_me'     => 'Assegnati a me',
+    'dash.unassigned'      => 'Non assegnati',
+    'dash.all_departments' => 'Tutti i reparti',
+    'dash.filter'          => 'Filtra',
+    'dash.empty'           => 'Nessun ticket.',
+
+    'col.number'      => 'Numero',
+    'col.subject'     => 'Oggetto',
+    'col.customer'    => 'Cliente',
+    'col.department'  => 'Reparto',
+    'col.priority'    => 'Priorità',
+    'col.status'      => 'Stato',
+    'col.assignee'    => 'Assegnato a',
+    'col.updated'     => 'Aggiornato',
+
+    // ---- Operators: ticket ----
+    'opticket.opened'           => 'aperto il :date da :ip',
+    'opticket.operator'         => 'Operatore',
+    'opticket.internal_badge'   => 'nota interna',
+    'opticket.reply_customer'   => 'Rispondi al cliente',
+    'opticket.status_after'     => "Stato dopo l'invio",
+    'opticket.send_reply'       => 'Invia risposta',
+    'opticket.internal_title'   => 'Nota interna',
+    'opticket.internal_hint'    => 'Visibile solo agli operatori',
+    'opticket.add_note'         => 'Aggiungi nota',
+    'opticket.manage'           => 'Gestione',
+    'opticket.nobody'           => '— nessuno —',
+    'opticket.save'             => 'Salva',
+    'opticket.created'          => 'Creato',
+    'opticket.updated_at'       => 'Aggiornato',
+    'opticket.closed_at'        => 'Chiuso',
+    'opticket.note_added'       => 'Nota interna aggiunta.',
+    'opticket.reply_sent'       => 'Risposta inviata.',
+    'opticket.saved'            => 'Ticket aggiornato.',
+
+    // ---- System log inside tickets ----
+    'log.changed'     => ':who ha modificato :changes',
+    'log.status'      => 'stato: :from → :to',
+    'log.priority'    => 'priorità: :from → :to',
+    'log.department'  => 'reparto: :name',
+    'log.assigned'    => 'assegnato a: :name',
+    'log.none'        => 'nessuno',
+    'log.separator'   => ', ',
+    'log.reopened'    => 'Ticket riaperto dal cliente',
+
+    // ---- Operators: management ----
+    'ops.title'          => 'Operatori',
+    'ops.username'       => 'Username',
+    'ops.name'           => 'Nome',
+    'ops.email'          => 'Email',
+    'ops.role'           => 'Ruolo',
+    'ops.last_login'     => 'Ultimo accesso',
+    'ops.state'          => 'Stato',
+    'ops.active'         => 'Attivo',
+    'ops.disabled'       => 'Disattivato',
+    'ops.disable'        => 'Disattiva',
+    'ops.enable'         => 'Riattiva',
+    'ops.new'            => 'Nuovo operatore',
+    'ops.password'       => 'Password (min. 12 caratteri)',
+    'ops.create'         => 'Crea operatore',
+    'ops.created'        => 'Operatore creato.',
+    'ops.self_disable'   => 'Non puoi disattivare te stesso.',
+    'ops.state_updated'  => 'Stato operatore aggiornato.',
+    'role.admin'         => 'Amministratore',
+    'role.agent'         => 'Operatore',
+
+    'val.username'          => 'Username: 3-50 caratteri tra lettere, numeri, . _ -',
+    'val.ops_name_required' => 'Nome obbligatorio.',
+    'val.password_short'    => 'La password deve avere almeno 12 caratteri.',
+    'val.duplicate'         => 'Username o email già in uso.',
+
+    // ---- Command line (bin/create-operator.php) ----
+    'cli.username'        => 'Username',
+    'cli.name'            => 'Nome completo',
+    'cli.email'           => 'Email',
+    'cli.password'        => 'Password (min 12 caratteri)',
+    'cli.confirm'         => 'Ripeti password',
+    'cli.error'           => 'Errore: :errors',
+    'cli.err_username'    => 'username non valido',
+    'cli.err_name'        => 'nome obbligatorio',
+    'cli.err_email'       => 'email non valida',
+    'cli.err_password'    => 'password troppo corta',
+    'cli.err_mismatch'    => 'le password non coincidono',
+    'cli.db_error'        => 'Errore DB: :error',
+    'cli.created'         => 'Operatore #:id (:role) creato.',
+];

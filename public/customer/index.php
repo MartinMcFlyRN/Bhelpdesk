@@ -3,22 +3,22 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{Router, Session, Throttle, Tickets, View};
+use Bhelpdesk\{Lang, Router, Session, Throttle, Tickets, View};
 
 Session::start('BHD_CUST', '/customer/');
 
 $r = new Router('/customer', 'customer');
 
-/** Il cliente ha diritto a vedere il ticket? (dopo verifica numero+email o link con token) */
+/** May the customer see this ticket? (after number+email check or token link) */
 $canSee = static fn (string $number): bool => !empty($_SESSION['tickets'][$number]);
 
 $r->get('/', static function (): void {
-    View::render('customer', 'home', ['title' => 'Assistenza']);
+    View::render('customer', 'home', ['title' => __('home.title')]);
 });
 
-// ---------- Apertura ticket ----------
+// ---------- Open a ticket ----------
 $r->get('/new', static function (): void {
-    View::render('customer', 'new', ['title' => 'Apri un ticket', 'departments' => Tickets::departments(), 'errors' => []]);
+    View::render('customer', 'new', ['title' => __('new.title'), 'departments' => Tickets::departments(), 'errors' => []]);
 });
 
 $r->post('/new', static function (): void {
@@ -32,37 +32,37 @@ $r->post('/new', static function (): void {
     ];
 
     $errors = [];
-    // honeypot anti-bot: il campo "website" è nascosto, un umano non lo compila
+    // anti-bot honeypot: "website" is hidden, humans leave it empty
     if (!empty($_POST['website'])) {
-        $errors[] = 'Richiesta non valida.';
+        $errors[] = __('val.invalid_request');
     }
     if ($in['name'] === '' || mb_strlen($in['name']) > 100) {
-        $errors[] = 'Inserisci il tuo nome.';
+        $errors[] = __('val.name_required');
     }
     if (!filter_var($in['email'], FILTER_VALIDATE_EMAIL) || strlen($in['email']) > 190) {
-        $errors[] = 'Indirizzo email non valido.';
+        $errors[] = __('val.email_invalid');
     }
     if ($in['subject'] === '' || mb_strlen($in['subject']) > 255) {
-        $errors[] = 'Inserisci un oggetto (max 255 caratteri).';
+        $errors[] = __('val.subject_required');
     }
     if (mb_strlen($in['message']) < 10) {
-        $errors[] = 'Descrivi il problema (almeno 10 caratteri).';
+        $errors[] = __('val.message_min');
     }
-    $deps = array_column(Tickets::departments(), 'id');
-    $depId = in_array($in['department'], array_map('intval', $deps), true) ? $in['department'] : null;
+    $deps = array_map('intval', array_column(Tickets::departments(), 'id'));
+    $depId = in_array($in['department'], $deps, true) ? $in['department'] : null;
 
     if (!$errors && Throttle::tooMany('ticket_create', $ip)) {
-        $errors[] = 'Hai aperto troppi ticket in poco tempo. Riprova più tardi.';
+        $errors[] = __('val.too_many_tickets');
     }
 
     if ($errors) {
         http_response_code(422);
-        View::render('customer', 'new', ['title' => 'Apri un ticket', 'departments' => Tickets::departments(), 'errors' => $errors]);
+        View::render('customer', 'new', ['title' => __('new.title'), 'departments' => Tickets::departments(), 'errors' => $errors]);
         return;
     }
 
     Throttle::hit('ticket_create', $ip);
-    $t = Tickets::create($in['name'], $in['email'], $depId, $in['subject'], $in['message'], $ip);
+    $t = Tickets::create($in['name'], $in['email'], $depId, $in['subject'], $in['message'], $ip, Lang::current());
     $_SESSION['tickets'][$t['number']] = true;
     $_SESSION['just_created'] = $t;
     redirect('/customer/created');
@@ -75,12 +75,12 @@ $r->get('/created', static function (): void {
         redirect('/customer/');
     }
     $link = rtrim((string) config('base_url'), '/') . '/customer/ticket/' . $t['number'] . '?t=' . $t['token'];
-    View::render('customer', 'created', ['title' => 'Ticket aperto', 'number' => $t['number'], 'link' => $link]);
+    View::render('customer', 'created', ['title' => __('created.title'), 'number' => $t['number'], 'link' => $link]);
 });
 
-// ---------- Verifica stato ----------
+// ---------- Status lookup ----------
 $r->get('/status', static function (): void {
-    View::render('customer', 'status', ['title' => 'Verifica stato ticket', 'error' => null]);
+    View::render('customer', 'status', ['title' => __('lookup.title'), 'error' => null]);
 });
 
 $r->post('/status', static function (): void {
@@ -90,7 +90,7 @@ $r->post('/status', static function (): void {
 
     if (Throttle::tooMany('status_lookup', $ip)) {
         http_response_code(429);
-        View::render('customer', 'status', ['title' => 'Verifica stato ticket', 'error' => 'Troppi tentativi. Riprova tra qualche minuto.']);
+        View::render('customer', 'status', ['title' => __('lookup.title'), 'error' => __('lookup.too_many')]);
         return;
     }
 
@@ -98,7 +98,7 @@ $r->post('/status', static function (): void {
     if (!$ticket) {
         Throttle::hit('status_lookup', $ip);
         http_response_code(422);
-        View::render('customer', 'status', ['title' => 'Verifica stato ticket', 'error' => 'Nessun ticket trovato con questi dati.']);
+        View::render('customer', 'status', ['title' => __('lookup.title'), 'error' => __('lookup.not_found')]);
         return;
     }
 
@@ -107,11 +107,11 @@ $r->post('/status', static function (): void {
     redirect('/customer/ticket/' . $ticket['number']);
 });
 
-// ---------- Dettaglio ticket ----------
+// ---------- Ticket view ----------
 $r->get('/ticket/{number}', static function (array $p) use ($canSee): void {
     $number = (string) $p['number'];
 
-    // accesso tramite link con token (ricevuto all'apertura / via email)
+    // access through the token link (shown on creation / sent by email)
     if (isset($_GET['t'])) {
         $ticket = Tickets::findByNumber($number);
         if ($ticket && hash_equals($ticket['access_token'], (string) $_GET['t'])) {
@@ -123,11 +123,11 @@ $r->get('/ticket/{number}', static function (array $p) use ($canSee): void {
 
     $ticket = $canSee($number) ? Tickets::findByNumber($number) : null;
     if (!$ticket) {
-        flash('error', 'Per vedere il ticket inserisci numero ed email.');
+        flash('error', 'lookup.need_login');
         redirect('/customer/status');
     }
     View::render('customer', 'ticket', [
-        'title'    => 'Ticket #' . $ticket['number'],
+        'title'    => __('ticket.title', ['number' => $ticket['number']]),
         'ticket'   => $ticket,
         'messages' => Tickets::messages((int) $ticket['id'], false),
     ]);
@@ -140,15 +140,15 @@ $r->post('/ticket/{number}/reply', static function (array $p) use ($canSee): voi
         redirect('/customer/status');
     }
     if ($ticket['status'] === 'closed' && !config('allow_reopen', true)) {
-        flash('error', 'Il ticket è chiuso: aprine uno nuovo.');
+        flash('error', 'ticket.closed_no_reply');
         redirect('/customer/ticket/' . $number);
     }
     $body = trim((string) ($_POST['message'] ?? ''));
     if ($body === '') {
-        flash('error', 'Il messaggio è vuoto.');
+        flash('error', 'ticket.empty_message');
     } else {
         Tickets::customerReply($ticket, $body, client_ip());
-        flash('success', 'Risposta inviata.');
+        flash('success', 'ticket.reply_sent');
     }
     redirect('/customer/ticket/' . $number);
 });

@@ -6,7 +6,7 @@ define('BHD_ROOT', dirname(__DIR__));
 $configFile = BHD_ROOT . '/config/config.php';
 if (!is_file($configFile)) {
     http_response_code(500);
-    exit('Configurazione mancante: copia config/config.example.php in config/config.php');
+    exit('Missing configuration: copy config/config.example.php to config/config.php');
 }
 $GLOBALS['bhd_config'] = require $configFile;
 
@@ -25,9 +25,12 @@ require __DIR__ . '/helpers.php';
 
 date_default_timezone_set((string) config('timezone', 'Europe/Rome'));
 
+\Bhelpdesk\Lang::init();
+
 if (PHP_SAPI !== 'cli') {
     header('X-Frame-Options: DENY');
     header('X-Content-Type-Options: nosniff');
     header('Referrer-Policy: same-origin');
     header("Content-Security-Policy: default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; form-action 'self'; frame-ancestors 'none'");
+    header('Vary: Cookie, Accept-Language');
 }

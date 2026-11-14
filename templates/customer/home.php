@@ -1,14 +1,14 @@
 <section class="hero">
-    <h1>Centro assistenza</h1>
-    <p>Apri una richiesta di supporto o controlla lo stato di un ticket esistente.</p>
+    <h1><?= t('home.heading') ?></h1>
+    <p><?= t('home.intro') ?></p>
 </section>
 <div class="grid-2">
     <a class="card card-link" href="/customer/new">
-        <h2>Apri un nuovo ticket</h2>
-        <p>Descrivi il problema: riceverai un numero di ticket per seguirne l'avanzamento.</p>
+        <h2><?= t('home.new.title') ?></h2>
+        <p><?= t('home.new.text') ?></p>
     </a>
     <a class="card card-link" href="/customer/status">
-        <h2>Verifica lo stato</h2>
-        <p>Inserisci numero di ticket ed email per vedere risposte e stato.</p>
+        <h2><?= t('home.status.title') ?></h2>
+        <p><?= t('home.status.text') ?></p>
     </a>
 </div>

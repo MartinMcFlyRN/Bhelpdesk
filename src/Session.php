@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace Bhelpdesk;
 
 /**
- * Ogni area ha la propria sessione (nome cookie e path diversi):
- * la sessione cliente non è mai visibile in /op e viceversa.
+ * Each area has its own session (different cookie name and path):
+ * the customer session is never visible in /op and vice versa.
  */
 final class Session
 {

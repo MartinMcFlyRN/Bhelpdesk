@@ -124,3 +124,7 @@ form.inline { display: inline; }
     .filters { flex-wrap: wrap; }
     .table { display: block; overflow-x: auto; }
 }
+
+.lang-switch { display: inline-flex; gap: .4rem; font-size: .8rem; margin-left: .5rem; padding-left: .75rem; border-left: 1px solid rgba(255,255,255,.25); }
+.lang-switch strong { color: #fff; }
+.lang-switch a { color: #c7cbd4; }

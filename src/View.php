@@ -6,8 +6,8 @@ namespace Bhelpdesk;
 final class View
 {
     /**
-     * Renderizza templates/{area}/{template}.php dentro templates/{area}/layout.php
-     * (error.php è condiviso in templates/).
+     * Render templates/{area}/{template}.php inside templates/{area}/layout.php
+     * (shared templates such as error.php live in templates/).
      */
     public static function render(string $area, string $template, array $vars = []): void
     {

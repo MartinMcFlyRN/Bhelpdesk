@@ -1,19 +1,19 @@
-# Bhelpdesk - Apache, SOLO se non puoi impostare la document root su public/
-# (es. hosting condiviso dove la root punta alla cartella del progetto).
-# La soluzione consigliata resta document root = public/: in quel caso
-# questo file non viene mai letto.
+# Bhelpdesk - Apache, ONLY if you cannot set the document root to public/
+# (e.g. shared hosting where the root points to the project folder).
+# Recommended setup is still document root = public/: then this file
+# is never read.
 
 Options -Indexes -MultiViews
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # cartelle e file interni mai raggiungibili
+    # internal folders and files are never reachable
     RewriteRule ^(src|config|sql|templates|bin|deploy)(/|$) - [F,L]
     RewriteRule (^|/)\. - [F,L]
     RewriteRule ^(README\.md|composer\.(json|lock))$ - [F,L]
 
-    # tutto il resto viene servito da public/
+    # everything else is served from public/
     RewriteCond %{REQUEST_URI} !^/public/
     RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>

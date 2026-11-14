@@ -29,16 +29,16 @@ final class Tickets
     }
 
     /** @return array{number: string, token: string} */
-    public static function create(string $name, string $email, ?int $departmentId, string $subject, string $body, string $ip): array
+    public static function create(string $name, string $email, ?int $departmentId, string $subject, string $body, string $ip, string $language = 'en'): array
     {
         $pdo = Db::pdo();
         $pdo->beginTransaction();
         try {
             $customerId = (int) Db::value('SELECT id FROM customers WHERE email = ?', [$email]);
             if ($customerId) {
-                Db::exec('UPDATE customers SET name = ? WHERE id = ?', [$name, $customerId]);
+                Db::exec('UPDATE customers SET name = ?, language = ? WHERE id = ?', [$name, $language, $customerId]);
             } else {
-                $customerId = Db::insert('INSERT INTO customers (name, email) VALUES (?, ?)', [$name, $email]);
+                $customerId = Db::insert('INSERT INTO customers (name, email, language) VALUES (?, ?, ?)', [$name, $email, $language]);
             }
 
             $number = self::newNumber();
@@ -64,7 +64,7 @@ final class Tickets
                 return $n;
             }
         }
-        throw new RuntimeException('Impossibile generare un numero ticket univoco');
+        throw new RuntimeException('Unable to generate a unique ticket number');
     }
 
     public static function find(int $id): ?array
@@ -77,7 +77,7 @@ final class Tickets
         return Db::one(self::SELECT . ' WHERE t.number = ?', [$number]);
     }
 
-    /** Verifica numero + email del cliente (form "verifica stato") */
+    /** Check ticket number + customer email ("check status" form) */
     public static function findForCustomer(string $number, string $email): ?array
     {
         return Db::one(self::SELECT . ' WHERE t.number = ? AND c.email = ?', [$number, $email]);
@@ -110,7 +110,7 @@ final class Tickets
         if ($ticket['status'] !== 'open') {
             self::setStatus((int) $ticket['id'], 'open');
             if ($ticket['status'] === 'closed') {
-                self::addMessage((int) $ticket['id'], 'system', null, 'Ticket riaperto dal cliente', true, null);
+                self::addMessage((int) $ticket['id'], 'system', null, json_encode(['event' => 'reopened']), true, null);
             }
         }
     }
@@ -132,8 +132,8 @@ final class Tickets
     }
 
     /**
-     * Aggiorna stato / priorità / reparto / assegnatario registrando
-     * ogni modifica come nota interna di sistema.
+     * Update status / priority / department / assignee, logging every
+     * change as an internal system event (translated when displayed).
      */
     public static function update(array $ticket, array $op, array $changes): void
     {
@@ -142,11 +142,11 @@ final class Tickets
 
         if (isset($changes['status']) && in_array($changes['status'], self::STATUSES, true) && $changes['status'] !== $ticket['status']) {
             self::setStatus($id, $changes['status']);
-            $log[] = sprintf('stato: %s → %s', status_label($ticket['status']), status_label($changes['status']));
+            $log[] = ['status', $ticket['status'], $changes['status']];
         }
         if (isset($changes['priority']) && in_array($changes['priority'], self::PRIORITIES, true) && $changes['priority'] !== $ticket['priority']) {
             Db::exec('UPDATE tickets SET priority = ? WHERE id = ?', [$changes['priority'], $id]);
-            $log[] = sprintf('priorità: %s → %s', priority_label($ticket['priority']), priority_label($changes['priority']));
+            $log[] = ['priority', $ticket['priority'], $changes['priority']];
         }
         if (array_key_exists('department_id', $changes)) {
             $dep = $changes['department_id'] ?: null;
@@ -155,8 +155,8 @@ final class Tickets
             }
             if ((int) $dep !== (int) $ticket['department_id']) {
                 Db::exec('UPDATE tickets SET department_id = ? WHERE id = ?', [$dep, $id]);
-                $name = $dep ? (string) Db::value('SELECT name FROM departments WHERE id = ?', [$dep]) : 'nessuno';
-                $log[] = 'reparto: ' . $name;
+                $name = $dep ? (string) Db::value('SELECT name FROM departments WHERE id = ?', [$dep]) : null;
+                $log[] = ['department', $name];
             }
         }
         if (array_key_exists('assigned_to', $changes)) {
@@ -166,13 +166,13 @@ final class Tickets
             }
             if ((int) $to !== (int) $ticket['assigned_to']) {
                 Db::exec('UPDATE tickets SET assigned_to = ? WHERE id = ?', [$to, $id]);
-                $name = $to ? (string) Db::value('SELECT name FROM operators WHERE id = ?', [$to]) : 'nessuno';
-                $log[] = 'assegnato a: ' . $name;
+                $name = $to ? (string) Db::value('SELECT name FROM operators WHERE id = ?', [$to]) : null;
+                $log[] = ['assigned', $name];
             }
         }
 
         if ($log) {
-            self::addMessage($id, 'system', (int) $op['id'], $op['name'] . ' ha modificato ' . implode(', ', $log), true, null);
+            self::addMessage($id, 'system', (int) $op['id'], json_encode(['event' => 'changed', 'by' => $op['name'], 'changes' => $log], JSON_UNESCAPED_UNICODE), true, null);
         }
     }
 
@@ -187,7 +187,7 @@ final class Tickets
     }
 
     /**
-     * Ricerca per la dashboard operatori.
+     * Search for the operators dashboard.
      * @return array{rows: array, total: int}
      */
     public static function search(array $f, int $opId, int $page = 1, int $perPage = 25): array

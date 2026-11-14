@@ -33,7 +33,7 @@ final class Router
 
         if ($method === 'POST' && !Csrf::valid()) {
             http_response_code(400);
-            View::render($this->area, 'error', ['title' => 'Sessione scaduta', 'message' => 'Il modulo è scaduto. Torna indietro, ricarica la pagina e riprova.']);
+            View::render($this->area, 'error', ['title' => __('error.session_expired.title'), 'message' => __('error.session_expired.message')]);
             return;
         }
 
@@ -50,6 +50,6 @@ final class Router
         }
 
         http_response_code(404);
-        View::render($this->area, 'error', ['title' => 'Pagina non trovata', 'message' => 'La pagina richiesta non esiste.']);
+        View::render($this->area, 'error', ['title' => __('error.not_found.title'), 'message' => __('error.not_found.message')]);
     }
 }

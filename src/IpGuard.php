@@ -6,8 +6,8 @@ namespace Bhelpdesk;
 final class IpGuard
 {
     /**
-     * IP del client. X-Forwarded-For viene considerato solo se la richiesta
-     * arriva da un proxy fidato, altrimenti sarebbe falsificabile.
+     * Client IP. X-Forwarded-For is only trusted when the request comes
+     * from a trusted proxy, otherwise it could be spoofed.
      */
     public static function clientIp(array $trustedProxies = []): string
     {
@@ -38,7 +38,7 @@ final class IpGuard
         return false;
     }
 
-    /** Confronta un IP con un indirizzo singolo o un CIDR (IPv4/IPv6) */
+    /** Match an IP against a single address or a CIDR (IPv4/IPv6) */
     public static function matches(string $ip, string $cidr): bool
     {
         [$net, $bits] = array_pad(explode('/', trim($cidr), 2), 2, null);

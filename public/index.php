@@ -1,3 +1,3 @@
 <?php
-// Normalmente gestito da nginx (location = / { return 302 /customer/; })
+// Normally handled by the web server (nginx: location = /, Apache: public/.htaccess)
 header('Location: /customer/', true, 302);

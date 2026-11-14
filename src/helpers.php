@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use Bhelpdesk\IpGuard;
+use Bhelpdesk\Lang;
 
 function config(string $key, mixed $default = null): mixed
 {
@@ -13,6 +14,18 @@ function config(string $key, mixed $default = null): mixed
         $value = $value[$part];
     }
     return $value;
+}
+
+/** Translate a key (see lang/en.php). Returns plain text: escape it with e() in HTML. */
+function __(string $key, array $params = []): string
+{
+    return Lang::get($key, $params);
+}
+
+/** Translate and HTML-escape in one go (shortcut for templates). */
+function t(string $key, array $params = []): string
+{
+    return e(Lang::get($key, $params));
 }
 
 function e(mixed $value): string
@@ -31,9 +44,10 @@ function client_ip(): string
     return IpGuard::clientIp((array) config('trusted_proxies', []));
 }
 
-function flash(string $type, string $message): void
+/** Flash messages hold a translation key, translated when displayed. */
+function flash(string $type, string $key, array $params = []): void
 {
-    $_SESSION['_flash'][] = ['type' => $type, 'message' => $message];
+    $_SESSION['_flash'][] = ['type' => $type, 'key' => $key, 'params' => $params];
 }
 
 function take_flashes(): array
@@ -43,7 +57,7 @@ function take_flashes(): array
     return $f;
 }
 
-/** Valore di un campo inviato in precedenza (per ripopolare i form) */
+/** Previously submitted field value (to refill forms) */
 function old(string $key, string $default = ''): string
 {
     return (string) ($_POST[$key] ?? $default);
@@ -54,35 +68,51 @@ function fmt_date(?string $dt): string
     if (!$dt) {
         return '—';
     }
-    return date('d/m/Y H:i', strtotime($dt));
+    return date(__('date_format'), strtotime($dt));
 }
 
-/** Testo semplice -> HTML sicuro con a capo */
+/** Plain text -> safe HTML with line breaks */
 function nl2br_e(string $text): string
 {
     return nl2br(e($text), false);
 }
 
-const STATUS_LABELS = [
-    'open'     => 'Aperto',
-    'answered' => 'Risposto',
-    'on_hold'  => 'In sospeso',
-    'closed'   => 'Chiuso',
-];
-
-const PRIORITY_LABELS = [
-    'low'    => 'Bassa',
-    'normal' => 'Normale',
-    'high'   => 'Alta',
-    'urgent' => 'Urgente',
-];
-
 function status_label(string $s): string
 {
-    return STATUS_LABELS[$s] ?? $s;
+    return __('status.' . $s);
 }
 
 function priority_label(string $p): string
 {
-    return PRIORITY_LABELS[$p] ?? $p;
+    return __('priority.' . $p);
+}
+
+/**
+ * System messages are stored as JSON events so they can be shown
+ * in the language of whoever is reading them.
+ */
+function system_message(string $body): string
+{
+    $ev = json_decode($body, true);
+    if (!is_array($ev) || !isset($ev['event'])) {
+        return $body; // free text (legacy)
+    }
+    switch ($ev['event']) {
+        case 'reopened':
+            return __('log.reopened');
+        case 'changed':
+            $parts = [];
+            foreach ((array) ($ev['changes'] ?? []) as $c) {
+                $parts[] = match ($c[0] ?? '') {
+                    'status'     => __('log.status', ['from' => status_label((string) $c[1]), 'to' => status_label((string) $c[2])]),
+                    'priority'   => __('log.priority', ['from' => priority_label((string) $c[1]), 'to' => priority_label((string) $c[2])]),
+                    'department' => __('log.department', ['name' => $c[1] ?? __('log.none')]),
+                    'assigned'   => __('log.assigned', ['name' => $c[1] ?? __('log.none')]),
+                    default      => '',
+                };
+            }
+            return __('log.changed', ['who' => (string) ($ev['by'] ?? '?'), 'changes' => implode(__('log.separator'), array_filter($parts))]);
+        default:
+            return $body;
+    }
 }

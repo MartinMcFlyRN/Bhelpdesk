@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Bhelpdesk;
 
-/** Autenticazione operatori (area /op) */
+/** Operator authentication (/op area) */
 final class Auth
 {
     private static ?array $user = null;
@@ -12,7 +12,7 @@ final class Auth
     {
         $op = Db::one('SELECT * FROM operators WHERE username = ? AND active = 1', [$username]);
 
-        // verifica sempre un hash, anche se l'utente non esiste (evita timing leak)
+        // always verify a hash, even for unknown users (avoids a timing leak)
         static $dummy = null;
         $hash = $op['password_hash'] ?? ($dummy ??= password_hash(bin2hex(random_bytes(8)), PASSWORD_DEFAULT));
         if (!password_verify($password, $hash) || !$op) {
@@ -68,7 +68,7 @@ final class Auth
         $u = self::require();
         if ($u['role'] !== 'admin') {
             http_response_code(403);
-            View::render('op', 'error', ['title' => 'Accesso negato', 'message' => 'Funzione riservata agli amministratori.']);
+            View::render('op', 'error', ['title' => __('error.forbidden.title'), 'message' => __('error.forbidden.message')]);
             exit;
         }
         return $u;

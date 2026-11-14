@@ -1,4 +1,4 @@
--- Bhelpdesk - schema MariaDB (>= 10.5)
+-- Bhelpdesk - MariaDB schema (>= 10.5)
 -- mysql -u root -p bhelpdesk < sql/schema.sql
 
 SET NAMES utf8mb4;
@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS customers (
     id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name        VARCHAR(100) NOT NULL,
     email       VARCHAR(190) NOT NULL,
+    language    VARCHAR(10)  NOT NULL DEFAULT 'en',
     created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_customers_email (email)
@@ -72,7 +73,7 @@ CREATE TABLE IF NOT EXISTS ticket_messages (
     CONSTRAINT fk_messages_operator FOREIGN KEY (operator_id) REFERENCES operators(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Rate limiting generico (login operatori, apertura ticket, verifica stato)
+-- Generic rate limiting (operator login, ticket creation, status lookup)
 CREATE TABLE IF NOT EXISTS throttle (
     id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     action      VARCHAR(32) NOT NULL,
@@ -82,5 +83,5 @@ CREATE TABLE IF NOT EXISTS throttle (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO departments (name, sort_order)
-SELECT * FROM (SELECT 'Assistenza tecnica', 1 UNION ALL SELECT 'Amministrazione', 2 UNION ALL SELECT 'Commerciale', 3) AS d
+SELECT * FROM (SELECT 'Technical support', 1 UNION ALL SELECT 'Billing', 2 UNION ALL SELECT 'Sales', 3) AS d
 WHERE NOT EXISTS (SELECT 1 FROM departments);
