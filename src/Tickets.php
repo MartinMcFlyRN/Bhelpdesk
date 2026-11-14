@@ -28,7 +28,7 @@ final class Tickets
         return Db::all('SELECT id, name FROM operators WHERE active = 1 ORDER BY name');
     }
 
-    /** @return array{number: string, token: string} */
+    /** @return array{number: string, link: string, customer_id: int} */
     public static function create(string $name, string $email, ?int $departmentId, string $subject, string $body, string $ip, string $language = 'en', array $files = [], ?string $phone = null): array
     {
         $pdo = Db::pdo();
@@ -44,21 +44,21 @@ final class Tickets
             }
 
             $number = self::newNumber();
-            $token  = bin2hex(random_bytes(32));
             $ticketId = Db::insert(
-                'INSERT INTO tickets (number, access_token, customer_id, department_id, subject, phone, created_ip) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [$number, $token, $customerId, $departmentId, $subject, $phone, $ip]
+                'INSERT INTO tickets (number, customer_id, department_id, subject, phone, created_ip) VALUES (?, ?, ?, ?, ?, ?)',
+                [$number, $customerId, $departmentId, $subject, $phone, $ip]
             );
             $messageId = self::addMessage($ticketId, 'customer', null, $body, false, $ip, $customerId);
             if ($files) {
                 Attachments::store($ticketId, $messageId, $files);
             }
+            $link = AccessLinks::issue($ticketId, $customerId);
             $pdo->commit();
         } catch (\Throwable $ex) {
             $pdo->rollBack();
             throw $ex;
         }
-        return ['number' => $number, 'token' => $token];
+        return ['number' => $number, 'link' => $link, 'customer_id' => $customerId];
     }
 
     private static function newNumber(): string
@@ -80,26 +80,6 @@ final class Tickets
     public static function findByNumber(string $number): ?array
     {
         return Db::one(self::SELECT . ' WHERE t.number = ?', [$number]);
-    }
-
-    /**
-     * Check ticket number + email ("check status" form).
-     * Matches the main customer and any additional customer of the ticket;
-     * the returned row has viewer_id = id of the customer who matched.
-     */
-    public static function findForCustomer(string $number, string $email): ?array
-    {
-        $ticket = Db::one(self::SELECT . ' WHERE t.number = ?', [$number]);
-        if (!$ticket) {
-            return null;
-        }
-        $viewer = Db::value(
-            'SELECT cu.id FROM customers cu
-              WHERE cu.email = ?
-                AND (cu.id = ? OR EXISTS (SELECT 1 FROM ticket_customers tc WHERE tc.ticket_id = ? AND tc.customer_id = cu.id))',
-            [$email, (int) $ticket['customer_id'], (int) $ticket['id']]
-        );
-        return $viewer ? $ticket + ['viewer_id' => (int) $viewer] : null;
     }
 
     /** May this customer still access the ticket? (main or additional customer) */
@@ -136,6 +116,7 @@ final class Tickets
     {
         $n = Db::exec('DELETE FROM ticket_customers WHERE ticket_id = ? AND customer_id = ?', [(int) $ticket['id'], $customerId]);
         if ($n) {
+            AccessLinks::revoke((int) $ticket['id'], $customerId);
             self::logEvent((int) $ticket['id'], $op, ['event' => 'customer_removed', 'name' => self::customerLabel($customerId)]);
         }
         return $n > 0;
@@ -153,12 +134,14 @@ final class Tickets
         $pdo = Db::pdo();
         $pdo->beginTransaction();
         try {
-            // new access token: the old link was issued to the previous main customer
-            Db::exec('UPDATE tickets SET customer_id = ?, access_token = ?, updated_at = NOW() WHERE id = ?', [$newCustomerId, bin2hex(random_bytes(32)), (int) $ticket['id']]);
+            Db::exec('UPDATE tickets SET customer_id = ?, updated_at = NOW() WHERE id = ?', [$newCustomerId, (int) $ticket['id']]);
             // the new main customer is no longer an "additional" one
             Db::exec('DELETE FROM ticket_customers WHERE ticket_id = ? AND customer_id = ?', [(int) $ticket['id'], $newCustomerId]);
             if ($keepPrevious) {
                 Db::exec('INSERT IGNORE INTO ticket_customers (ticket_id, customer_id, added_by) VALUES (?, ?, ?)', [(int) $ticket['id'], $old, (int) $op['id']]);
+            } else {
+                // the previous main customer leaves the ticket: their links stop working
+                AccessLinks::revoke((int) $ticket['id'], $old);
             }
             self::logEvent((int) $ticket['id'], $op, [
                 'event' => 'customer_changed',

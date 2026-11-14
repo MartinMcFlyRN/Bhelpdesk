@@ -57,6 +57,18 @@ final class Lang
         self::$current = in_array($pick, $available, true) ? $pick : self::BASE;
     }
 
+    /** Run $fn with another language active (e.g. emails in the recipient's language) */
+    public static function with(string $code, callable $fn): mixed
+    {
+        $prev = self::$current;
+        self::$current = is_file(BHD_ROOT . '/lang/' . basename($code) . '.php') ? $code : self::BASE;
+        try {
+            return $fn();
+        } finally {
+            self::$current = $prev;
+        }
+    }
+
     public static function current(): string
     {
         return self::$current;

@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{Attachments, Auth, Customers, Departments, IpGuard, Lang, Operators, Router, Session, Settings, Throttle, Tickets, View};
+use Bhelpdesk\{AccessLinks, Attachments, Auth, CustomerAuth, Customers, Departments, IpGuard, Lang, Operators, Router, Session, Settings, Throttle, Tickets, View};
 
 // ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
@@ -152,6 +152,19 @@ $r->post('/ticket/{id}/customers/{cid}/remove', static function (array $p) use (
     redirect('/op/ticket/' . $t['id']);
 });
 
+// New direct link for a customer of the ticket (to send by hand until email notifications exist)
+$r->post('/ticket/{id}/customers/{cid}/link', static function (array $p) use ($loadTicket): void {
+    Auth::require();
+    $t = $loadTicket($p);
+    $cid = (int) $p['cid'];
+    if (!Tickets::customerHasAccess($t, $cid)) {
+        flash('error', 'error.not_found.message');
+    } else {
+        flash('link', 'tc.link_created', ['url' => AccessLinks::issue((int) $t['id'], $cid), 'days' => AccessLinks::days()]);
+    }
+    redirect('/op/ticket/' . $t['id']);
+});
+
 $r->post('/ticket/{id}/customer', static function (array $p) use ($loadTicket): void {
     $op = Auth::require();
     $t = $loadTicket($p);
@@ -278,6 +291,15 @@ $r->get('/customers/{id}', static function (array $p) use ($customerForm, $loadC
     Auth::require();
     $c = $loadCustomer($p);
     $customerForm($c, $c, []);
+});
+
+// Email the customer a link to create (first access) or reset the password
+$r->post('/customers/{id}/password-link', static function (array $p) use ($loadCustomer): void {
+    Auth::require();
+    $c = $loadCustomer($p);
+    $ok = CustomerAuth::sendPasswordLink($c);
+    flash($ok ? 'success' : 'error', $ok ? 'cust.pw_link_sent' : 'cust.pw_link_failed', ['email' => $c['email']]);
+    redirect('/op/customers/' . $c['id']);
 });
 
 $r->post('/customers/{id}', static function (array $p) use ($customerForm, $loadCustomer): void {

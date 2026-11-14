@@ -51,7 +51,11 @@
     <p class="muted"><?= t('ticket.closed_info') ?> <a href="/customer/new"><?= t('ticket.closed_new') ?></a></p>
 <?php endif; ?>
 
-<form method="post" action="/customer/logout" class="inline">
-    <?= \Bhelpdesk\Csrf::field() ?>
-    <button class="btn btn-link" type="submit"><?= t('ticket.leave') ?></button>
-</form>
+<p class="ticket-foot">
+<?php if (!empty($me)): ?>
+    <a href="/customer/tickets">← <?= t('ticket.back_mine') ?></a>
+<?php else: ?>
+    <span class="muted"><?= t('ticket.via_link', ['days' => \Bhelpdesk\AccessLinks::days()]) ?></span>
+    <a href="/customer/login"><?= t('ticket.login_all') ?></a>
+<?php endif; ?>
+</p>

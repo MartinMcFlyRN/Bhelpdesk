@@ -32,6 +32,11 @@ foreach ($it as $f) {
     foreach (array_merge($m[1], $m2[1], array_filter($m2[2])) as $k) {
         $used[$k][] = substr($p, strlen($root) + 1);
     }
+    // keys picked in expressions, e.g. __($first ? 'a.b' : 'a.c'): any string literal equal to a key
+    preg_match_all("/'([a-z0-9_]+\\.[a-z0-9_.]*[a-z0-9_])'/", $src, $m3);
+    foreach (array_intersect($m3[1], array_keys($base)) as $k) {
+        $used[$k][] = substr($p, strlen($root) + 1);
+    }
 }
 // keys built dynamically in the code
 foreach (['status.open', 'status.answered', 'status.on_hold', 'status.closed',

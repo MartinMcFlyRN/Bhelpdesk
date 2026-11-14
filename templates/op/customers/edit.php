@@ -37,7 +37,24 @@
     </form>
 
     <?php if (!$isNew): ?>
-    <aside class="card">
+    <aside class="side-stack">
+    <div class="card account-card">
+        <h2><?= t('cust.account') ?></h2>
+        <?php if (!empty($customer['password_hash'])): ?>
+            <p><span class="badge status-answered"><?= t('cust.account_active') ?></span></p>
+            <dl class="meta">
+                <dt><?= t('ops.last_login') ?></dt><dd><?= fmt_date($customer['last_login_at']) ?><?= $customer['last_login_ip'] ? ' · ' . e($customer['last_login_ip']) : '' ?></dd>
+            </dl>
+        <?php else: ?>
+            <p><span class="badge status-on_hold"><?= t('cust.account_none') ?></span></p>
+            <p class="muted hint"><?= t('cust.account_none_hint') ?></p>
+        <?php endif; ?>
+        <form method="post" action="/op/customers/<?= (int) $customer['id'] ?>/password-link">
+            <?= \Bhelpdesk\Csrf::field() ?>
+            <button class="btn btn-small" type="submit"><?= empty($customer['password_hash']) ? t('cust.send_setup') : t('cust.send_reset') ?></button>
+        </form>
+    </div>
+    <div class="card">
         <h2><?= t('cust.ticket_history') ?> <span class="count-pill"><?= count($tickets) ?></span></h2>
         <?php if (!$tickets): ?>
             <p class="muted"><?= t('cust.no_tickets') ?></p>
@@ -55,6 +72,7 @@
             <?php endforeach; ?>
             </ul>
         <?php endif; ?>
+    </div>
     </aside>
     <?php endif; ?>
 </div>

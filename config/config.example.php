@@ -46,9 +46,24 @@ return [
 
     // Anti-abuse limits: [max attempts, window in seconds]
     'throttle' => [
-        'op_login_fail'  => [5, 900],
-        'ticket_create'  => [5, 3600],
-        'status_lookup'  => [10, 900],
+        'op_login_fail'       => [5, 900],
+        'ticket_create'       => [5, 3600],
+        'customer_login_fail' => [10, 900],
+        'password_mail'       => [5, 3600],   // first-access / reset emails per IP
+    ],
+
+    // Direct ticket links for customers expire this many days after the
+    // last reply on the ticket (editable in /op/config/general)
+    'customer_link_days' => 30,
+
+    // ---- Email ----
+    // driver 'log'  = do not send, append messages to storage/mail.log (default, for testing)
+    // driver 'mail' = PHP mail() through the server's sendmail/postfix
+    // (SMTP will come with the email notifications)
+    'mail' => [
+        'driver'    => 'log',
+        'from'      => 'helpdesk@example.com',
+        'from_name' => 'Helpdesk',
     ],
 
     // Customers may reply to a closed ticket (it gets reopened)

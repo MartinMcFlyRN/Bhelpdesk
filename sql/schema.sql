@@ -34,6 +34,10 @@ CREATE TABLE IF NOT EXISTS customers (
     phone       VARCHAR(30)  NULL,
     language    VARCHAR(10)  NOT NULL DEFAULT 'en',
     notes       TEXT         NULL,
+    password_hash     VARCHAR(255) NULL,
+    email_verified_at DATETIME NULL,
+    last_login_at     DATETIME NULL,
+    last_login_ip     VARCHAR(45) NULL,
     created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uq_customers_email (email),
@@ -43,7 +47,6 @@ CREATE TABLE IF NOT EXISTS customers (
 CREATE TABLE IF NOT EXISTS tickets (
     id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     number         VARCHAR(16)  NOT NULL,
-    access_token   CHAR(64)     NOT NULL,
     customer_id    INT UNSIGNED NOT NULL,
     department_id  INT UNSIGNED NULL,
     assigned_to    INT UNSIGNED NULL,
@@ -78,6 +81,30 @@ CREATE TABLE IF NOT EXISTS ticket_messages (
     CONSTRAINT fk_messages_ticket   FOREIGN KEY (ticket_id)   REFERENCES tickets(id)   ON DELETE CASCADE,
     CONSTRAINT fk_messages_operator FOREIGN KEY (operator_id) REFERENCES operators(id) ON DELETE SET NULL,
     CONSTRAINT fk_messages_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Single-use links to create / reset a customer password (hash only)
+CREATE TABLE IF NOT EXISTS customer_tokens (
+    id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    customer_id  INT UNSIGNED NOT NULL,
+    token_hash   CHAR(64)     NOT NULL,
+    expires_at   DATETIME     NOT NULL,
+    created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_customer_tokens_hash (token_hash),
+    KEY ix_customer_tokens_customer (customer_id),
+    CONSTRAINT fk_ctokens_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Direct ticket links (hash only); expiry = last public message + customer_link_days
+CREATE TABLE IF NOT EXISTS ticket_links (
+    token_hash    CHAR(64)     NOT NULL PRIMARY KEY,
+    ticket_id     INT UNSIGNED NOT NULL,
+    customer_id   INT UNSIGNED NOT NULL,
+    created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_used_at  DATETIME     NULL,
+    KEY ix_ticket_links_ticket (ticket_id, customer_id),
+    CONSTRAINT fk_tlinks_ticket   FOREIGN KEY (ticket_id)   REFERENCES tickets(id)   ON DELETE CASCADE,
+    CONSTRAINT fk_tlinks_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Additional customers of a ticket (the main one is tickets.customer_id)

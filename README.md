@@ -7,7 +7,7 @@ One application, two areas:
 | URL           | Who        | What                                                         |
 |---------------|------------|--------------------------------------------------------------|
 | `/`           | —          | redirects to `/customer/`                                    |
-| `/customer/`  | customers  | open tickets, check status (number + email), reply           |
+| `/customer/`  | customers  | open tickets, sign in, my tickets, reply; direct ticket links |
 | `/op/`        | operators  | dashboard, ticket handling, replies, internal notes          |
 | `/op/customers` | operators | customer registry: list, search, create, edit, ticket history |
 | `/op/profile` | operators  | own profile: name, email, password                           |
@@ -108,6 +108,7 @@ mariadb bhelpdesk < sql/migrations/003_settings.sql
 mariadb bhelpdesk < sql/migrations/004_phone.sql
 mariadb bhelpdesk < sql/migrations/005_customers.sql
 mariadb bhelpdesk < sql/migrations/006_ticket_customers.sql
+mariadb bhelpdesk < sql/migrations/007_customer_access.sql
 ```
 
 ## Operators area
@@ -115,6 +116,19 @@ mariadb bhelpdesk < sql/migrations/006_ticket_customers.sql
 - **Top bar**: Tickets, My tickets, Customers on the left; language switch and the user menu on the right (avatar with initials and name). The menu has *Configuration* (administrators only), *Profile* and *Log out*. It is a native `<details>` element, so it works without JavaScript; with JS it also closes on outside click / Escape.
 - **Profile** (`/op/profile`): every operator can change name, email and password. Changing email or password requires the current password; the session id is regenerated after a password change.
 - **Customers** (`/op/customers`): every customer who opened a ticket is registered automatically (by email). Operators can search (name, company, email, phone), create customers manually and edit name, company, email, phone, language and internal notes. The customer page shows the ticket history; internal notes also appear in the ticket sidebar. When an existing customer opens a new ticket, the registry data curated by operators is not overwritten (only a missing phone is filled in). The email is the key customers use to check their tickets: changing it changes who can look them up.
+
+## Customer access: accounts and direct links
+
+**Accounts.** Customers see their tickets after signing in at `/customer/login` (email + password). Accounts are created automatically when a customer opens a ticket (or by operators), without a password:
+
+- the first time they try to sign in they get an email with a link to **create the password** (also from *First access? / Forgot your password?*, `/customer/password`);
+- password links are single-use, valid 120 minutes, stored hashed; requesting a reset gives the same answer whether the email exists or not;
+- *My tickets* (`/customer/tickets`) lists the tickets where the customer is main or additional customer; signed-in customers open new tickets without typing name/email and without captcha;
+- a password change signs out the customer's other sessions. Operators see the account status in the customer page and can send the create/reset email.
+
+**Direct links.** When a ticket is opened a unique link `/customer/t/<token>` is generated (shown on the confirmation page; it will be sent by email with the notifications). It opens that ticket without signing in and expires **`customer_link_days` days (default 30, editable in /op/config/general) after the last reply** visible to the customer — every new reply extends it; internal notes do not. After that the page says *Link expired* and invites to sign in. Tokens are stored as SHA-256 hashes only. Removing a customer from a ticket revokes their links. Operators can create a new link for any customer of the ticket (🔗 in the Customers card) to send it by hand. Old `/customer/ticket/N?t=…` links keep working (migration 007 converts them).
+
+**Email (preview).** `Mailer` sends plain-text UTF-8 messages. With `mail.driver = 'log'` (default) nothing is sent: messages are appended to `storage/mail.log`, handy for testing. With `'mail'` the server's sendmail/postfix is used. SMTP and ticket notifications come next.
 
 ## Customers on a ticket
 
@@ -124,7 +138,7 @@ Each ticket has a **main customer** and any number of **additional customers** (
 - **Remove** an additional customer (they lose access immediately, even with an open session).
 - **Change the main customer**, optionally keeping the previous one as additional customer. The ticket access link (`?t=` token) is regenerated, because the old one was given to the previous main customer.
 
-Every customer on the ticket can open it with the ticket number and **their own** email and can reply; each message records which customer wrote it. Customers see the names (not the emails) of the other customers on the ticket. All changes are logged in the ticket history, and the customer page lists tickets where the customer is main or additional.
+Every customer on the ticket sees it after signing in with **their own** account (or through a direct link created for them) and can reply; each message records which customer wrote it. Customers see the names (not the emails) of the other customers on the ticket. All changes are logged in the ticket history, and the customer page lists tickets where the customer is main or additional.
 
 ## Configuration area (/op/config)
 
@@ -197,9 +211,9 @@ Not translated by design: data entered by users, such as department names, ticke
 
 Statuses: **Open** → (operator reply) **Answered** → (customer reply) **Open** … → **Closed**. There is also **On hold**.
 
-- The customer opens a ticket and gets a 6-digit number plus an access link with a token.
+- The customer opens a ticket and gets a 6-digit number plus a direct link.
 - Optional phone number on the form (shown to operators with a `tel:` link, searchable from the dashboard).
-- To see it again: number + email, or the link. In the conversation support replies are highlighted and aligned left, the customer's messages on the right.
+- To see it again: sign in, or use the direct link (valid until `customer_link_days` after the last reply). In the conversation support replies are highlighted and aligned left, the customer's messages on the right.
 - A customer reply on a closed ticket reopens it (`allow_reopen`).
 - Operators also see internal notes and the system history.
 - On the first public reply an unassigned ticket is assigned to the replying operator.

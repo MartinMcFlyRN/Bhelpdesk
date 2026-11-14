@@ -86,6 +86,7 @@ final class Customers
     }
 
     /** Tickets where the customer is the main customer or an additional one (role = main|cc) */
+    // also used for the customer's own "My tickets" page
     public static function tickets(int $customerId): array
     {
         return Db::all(

@@ -16,6 +16,10 @@ $tid = (int) $ticket['id'];
                 <small class="muted"><?= e($ticket['customer_email']) ?></small>
             </span>
             <span class="badge badge-main"><?= t('tc.main') ?></span>
+            <form method="post" action="/op/ticket/<?= $tid ?>/customers/<?= (int) $ticket['customer_id'] ?>/link" class="inline">
+                <?= \Bhelpdesk\Csrf::field() ?>
+                <button class="btn-icon btn-icon-link" type="submit" title="<?= t('tc.make_link') ?>" aria-label="<?= t('tc.make_link') ?>">🔗</button>
+            </form>
         </li>
         <?php foreach ($participants as $pc): ?>
         <li>
@@ -24,6 +28,10 @@ $tid = (int) $ticket['id'];
                 <a href="/op/customers/<?= (int) $pc['id'] ?>"><strong><?= e($pc['name']) ?></strong></a>
                 <small class="muted"><?= e($pc['email']) ?></small>
             </span>
+            <form method="post" action="/op/ticket/<?= $tid ?>/customers/<?= (int) $pc['id'] ?>/link" class="inline">
+                <?= \Bhelpdesk\Csrf::field() ?>
+                <button class="btn-icon btn-icon-link" type="submit" title="<?= t('tc.make_link') ?>" aria-label="<?= t('tc.make_link') ?>">🔗</button>
+            </form>
             <form method="post" action="/op/ticket/<?= $tid ?>/customers/<?= (int) $pc['id'] ?>/remove" class="inline">
                 <?= \Bhelpdesk\Csrf::field() ?>
                 <button class="btn-icon" type="submit" title="<?= t('tc.remove') ?>" aria-label="<?= t('tc.remove') ?>"
@@ -65,5 +73,5 @@ $tid = (int) $ticket['id'];
             <button class="btn btn-small btn-primary" type="submit"><?= t('tc.change_button') ?></button>
         </form>
     </details>
-    <p class="muted hint"><?= t('tc.access_hint') ?></p>
+    <p class="muted hint"><?= t('tc.access_hint', ['days' => \Bhelpdesk\AccessLinks::days()]) ?></p>
 </div>

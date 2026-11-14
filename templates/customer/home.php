@@ -7,8 +7,15 @@
         <h2><?= t('home.new.title') ?></h2>
         <p><?= t('home.new.text') ?></p>
     </a>
-    <a class="card card-link" href="/customer/status">
-        <h2><?= t('home.status.title') ?></h2>
-        <p><?= t('home.status.text') ?></p>
+    <?php if (!empty($me)): ?>
+    <a class="card card-link" href="/customer/tickets">
+        <h2><?= t('home.mine.title') ?></h2>
+        <p><?= t('home.mine.text_logged', ['name' => $me['name']]) ?></p>
     </a>
+    <?php else: ?>
+    <a class="card card-link" href="/customer/login">
+        <h2><?= t('home.mine.title') ?></h2>
+        <p><?= t('home.mine.text') ?></p>
+    </a>
+    <?php endif; ?>
 </div>

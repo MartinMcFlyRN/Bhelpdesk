@@ -7,6 +7,11 @@
     <form method="post" action="/customer/new" class="form" enctype="multipart/form-data">
         <?= \Bhelpdesk\Csrf::field() ?>
         <div class="hp" aria-hidden="true"><label><?= t('new.honeypot') ?> <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+        <?php if (!empty($me)): ?>
+            <p class="signed-as"><span class="avatar avatar-sm avatar-customer" aria-hidden="true"><?= e(initials($me['name'])) ?></span>
+                <?= t('new.signed_as', ['name' => $me['name'], 'email' => $me['email']]) ?></p>
+        <?php else: ?>
+        <p class="muted hint"><?= t('new.have_account') ?> <a href="/customer/login?next=%2Fcustomer%2Fnew"><?= t('nav.login') ?></a></p>
         <div class="row-2">
             <label><?= t('new.name') ?>
                 <input type="text" name="name" required maxlength="100" value="<?= e(old('name')) ?>">
@@ -15,9 +20,10 @@
                 <input type="email" name="email" required maxlength="190" value="<?= e(old('email')) ?>">
             </label>
         </div>
+        <?php endif; ?>
         <div class="row-2">
             <label><?= t('new.phone') ?> <span class="optional"><?= t('new.optional') ?></span>
-                <input type="tel" name="phone" maxlength="30" autocomplete="tel" inputmode="tel" pattern="\+?[0-9 ()./\-]{6,30}" value="<?= e(old('phone')) ?>" placeholder="<?= t('new.phone_placeholder') ?>">
+                <input type="tel" name="phone" maxlength="30" autocomplete="tel" inputmode="tel" pattern="\+?[0-9 ()./\-]{6,30}" value="<?= e(old('phone', (string) ($me['phone'] ?? ''))) ?>" placeholder="<?= t('new.phone_placeholder') ?>">
             </label>
             <?php if ($departments): ?>
             <label><?= t('new.department') ?>
@@ -50,7 +56,7 @@
         <?php if ($errors): ?><p class="muted hint"><?= t('new.attachments_reselect') ?></p><?php endif; ?>
         <?php endif; ?>
 
-        <?php if (Captcha::enabled()): ?>
+        <?php if (Captcha::enabled() && empty($me)): ?>
         <div class="captcha">
             <span class="label"><?= t('captcha.label') ?></span>
             <div class="captcha-row">

@@ -25,6 +25,7 @@ final class Settings
         'enabled_languages'        => ['section' => 'languages',   'type' => 'languages'],
         'allow_reopen'             => ['section' => 'tickets',     'type' => 'bool'],
         'hide_operator_name'       => ['section' => 'tickets',     'type' => 'bool'],
+        'customer_link_days'       => ['section' => 'tickets',     'type' => 'int', 'min' => 1, 'max' => 365],
         'captcha.enabled'          => ['section' => 'tickets',     'type' => 'bool'],
         'attachments.enabled'      => ['section' => 'attachments', 'type' => 'bool'],
         'attachments.max_files'    => ['section' => 'attachments', 'type' => 'int', 'min' => 1, 'max' => 20],
@@ -33,7 +34,8 @@ final class Settings
         'op_session_idle'          => ['section' => 'security',    'type' => 'int', 'min' => 300, 'max' => 86400],
         'throttle.op_login_fail'   => ['section' => 'security',    'type' => 'pair'],
         'throttle.ticket_create'   => ['section' => 'security',    'type' => 'pair'],
-        'throttle.status_lookup'   => ['section' => 'security',    'type' => 'pair'],
+        'throttle.customer_login_fail' => ['section' => 'security', 'type' => 'pair'],
+        'throttle.password_mail'   => ['section' => 'security',    'type' => 'pair'],
     ];
 
     /** Fallback values when a key is missing from both DB and config.php */
@@ -45,6 +47,7 @@ final class Settings
         'enabled_languages'        => [],
         'allow_reopen'             => true,
         'hide_operator_name'       => false,
+        'customer_link_days'       => 30,
         'captcha.enabled'          => true,
         'attachments.enabled'      => true,
         'attachments.max_files'    => 5,
@@ -53,7 +56,8 @@ final class Settings
         'op_session_idle'          => 1800,
         'throttle.op_login_fail'   => [5, 900],
         'throttle.ticket_create'   => [5, 3600],
-        'throttle.status_lookup'   => [10, 900],
+        'throttle.customer_login_fail' => [10, 900],
+        'throttle.password_mail'   => [5, 3600],
     ];
 
     /**
