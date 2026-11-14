@@ -96,6 +96,18 @@ final class Pop3
         return $out;
     }
 
+    /** @return array<int, int> message number => size in bytes */
+    public function list(): array
+    {
+        $this->cmd('LIST');
+        $out = [];
+        foreach ($this->multiline() as $l) {
+            [$n, $size] = array_pad(explode(' ', trim($l), 2), 2, '0');
+            $out[(int) $n] = (int) $size;
+        }
+        return $out;
+    }
+
     public function retr(int $n): string
     {
         $this->cmd('RETR ' . $n);

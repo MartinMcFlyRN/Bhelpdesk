@@ -163,6 +163,68 @@ final class Attachments
         return ['files' => $errors ? [] : $files, 'errors' => $errors];
     }
 
+    /**
+     * Validate files taken from an email: same checks as uploads (extension,
+     * detected type, signature, size). Accepted files are written to a temporary
+     * file in storage and returned with 'local' => true for store().
+     * @param list<array{name: string, data: string}> $items
+     * @return array{files: list<array>, rejected: list<string>} rejected = "name (reason)"
+     */
+    public static function fromData(array $items, string $profile = 'operator'): array
+    {
+        $files = [];
+        $rejected = [];
+        $maxBytes = self::maxSizeMb($profile) * 1048576;
+        $maxTotal = self::maxTotalMb($profile) * 1048576;
+        $total = 0;
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $tmpDir = self::storageDir() . '/tmp';
+        if (!is_dir($tmpDir) && !@mkdir($tmpDir, 0750, true) && !is_dir($tmpDir)) {
+            throw new RuntimeException('Cannot create ' . $tmpDir);
+        }
+        foreach ($items as $it) {
+            $name = self::cleanName((string) $it['name']);
+            $size = strlen((string) $it['data']);
+            if (count($files) >= self::maxFiles($profile)) {
+                $rejected[] = $name . ' (' . __('mailin.rej_count', ['max' => self::maxFiles($profile)]) . ')';
+                continue;
+            }
+            if ($size === 0 || $size > $maxBytes || $total + $size > $maxTotal) {
+                $rejected[] = $name . ' (' . Attachments::humanSize($size) . ')';
+                continue;
+            }
+            $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+            $rule = in_array($ext, self::PROFILES[$profile], true) ? self::EXT[$ext] : null;
+            $tmp = $tmpDir . '/' . bin2hex(random_bytes(12));
+            file_put_contents($tmp, (string) $it['data']);
+            $detected = (string) $finfo->file($tmp);
+            if (!$rule || !in_array($detected, $rule[0], true) || !self::contentOk($tmp, $rule[2], $rule[1])) {
+                @unlink($tmp);
+                $rejected[] = $name . ' (' . __('mailin.rej_type') . ')';
+                continue;
+            }
+            $total += $size;
+            $files[] = ['tmp' => $tmp, 'name' => $name, 'size' => $size, 'mime' => $rule[1], 'local' => true];
+        }
+        return ['files' => $files, 'rejected' => $rejected];
+    }
+
+    /** Remove temporary files left by fromData() when they are not stored */
+    public static function discard(array $files): void
+    {
+        foreach ($files as $f) {
+            if (!empty($f['local']) && is_file($f['tmp'])) {
+                @unlink($f['tmp']);
+            }
+        }
+    }
+
+    /** Absolute path of a stored attachment */
+    public static function path(array $a): string
+    {
+        return self::storageDir() . '/' . $a['stored_name'];
+    }
+
     /** File signature check for each kind of file */
     private static function contentOk(string $path, string $kind, string $mime): bool
     {
@@ -215,7 +277,7 @@ final class Attachments
                 if (!is_dir($dir) && !mkdir($dir, 0750, true) && !is_dir($dir)) {
                     throw new RuntimeException('Cannot create attachment directory ' . $dir);
                 }
-                if (!move_uploaded_file($f['tmp'], $abs)) {
+                if (!(!empty($f['local']) ? rename($f['tmp'], $abs) : move_uploaded_file($f['tmp'], $abs))) {
                     throw new RuntimeException('Cannot store uploaded file in ' . $dir);
                 }
                 $moved[] = $abs;

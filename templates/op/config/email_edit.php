@@ -116,6 +116,41 @@ $saved = static fn (string $field): bool => !$isNew && !empty($item[$field]);
             </form>
         </div>
 
+        <div class="card" id="log">
+            <div class="row-between">
+                <h2><?= t('mailin.log_title') ?></h2>
+                <form method="post" action="/op/config/email/<?= (int) $item['id'] ?>/fetch" class="inline">
+                    <?= \Bhelpdesk\Csrf::field() ?>
+                    <button class="btn" type="submit" <?= !$item['pop_enabled'] ? 'disabled' : '' ?>><?= t('mailin.fetch_now') ?></button>
+                </form>
+            </div>
+            <p class="muted hint"><?= t('mailin.log_hint') ?></p>
+            <?php if (!$log): ?>
+                <p class="muted"><?= t('mailin.log_empty') ?></p>
+            <?php else: ?>
+            <div class="table-wrap">
+                <table class="table mail-log">
+                    <thead><tr><th><?= t('mailin.col_date') ?></th><th></th><th><?= t('mailin.col_address') ?></th><th><?= t('mailin.col_subject') ?></th><th><?= t('mailin.col_result') ?></th></tr></thead>
+                    <tbody>
+                    <?php foreach ($log as $row): ?>
+                        <tr>
+                            <td class="nowrap"><?= e(fmt_date((string) $row['created_at'])) ?></td>
+                            <td title="<?= t($row['direction'] === 'in' ? 'mailin.dir_in' : 'mailin.dir_out') ?>"><?= $row['direction'] === 'in' ? '↓' : '↑' ?></td>
+                            <td><?= e((string) $row['address']) ?></td>
+                            <td><?= e((string) $row['subject']) ?></td>
+                            <td>
+                                <span class="mail-status mail-<?= e($row['status']) ?>"><?= t('mailin.st_' . $row['status']) ?></span>
+                                <?php if ($row['number']): ?> <a href="/op/ticket/<?= (int) $row['ticket_id'] ?>">#<?= e($row['number']) ?></a><?php endif; ?>
+                                <?php if ($row['note']): ?><br><small class="muted"><?= e($row['note']) ?></small><?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
+        </div>
+
         <div class="card narrow-left danger-zone">
             <h2><?= t('mi.delete') ?></h2>
             <form method="post" action="/op/config/email/<?= (int) $item['id'] ?>/delete" class="inline">

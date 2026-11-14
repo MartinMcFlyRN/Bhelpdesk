@@ -79,7 +79,7 @@ final class Tickets
             || ($departmentId && in_array($departmentId, Operators::departmentIds($operatorId), true));
     }
 
-    /** @return array{number: string, link: string, customer_id: int} */
+    /** @return array{number: string, link: string, customer_id: int, id: int, message_id: int} */
     public static function create(string $name, string $email, ?int $departmentId, string $subject, string $body, string $ip, string $language = 'en', array $files = [], ?string $phone = null): array
     {
         $pdo = Db::pdo();
@@ -109,7 +109,7 @@ final class Tickets
             $pdo->rollBack();
             throw $ex;
         }
-        return ['number' => $number, 'link' => $link, 'customer_id' => $customerId];
+        return ['number' => $number, 'link' => $link, 'customer_id' => $customerId, 'id' => $ticketId, 'message_id' => $messageId];
     }
 
     private static function newNumber(): string
@@ -370,22 +370,53 @@ final class Tickets
         return $id;
     }
 
-    public static function customerReply(array $ticket, string $body, string $ip, ?int $customerId = null): void
+    /**
+     * Customer reply (web or email); reopens the ticket when needed.
+     * $files = validated files (Attachments::fromUpload / fromData). Returns the message id.
+     */
+    public static function customerReply(array $ticket, string $body, string $ip, ?int $customerId = null, array $files = [], bool $viaEmail = false): int
     {
-        self::addMessage((int) $ticket['id'], 'customer', null, $body, false, $ip, $customerId ?: (int) $ticket['customer_id']);
+        $pdo = Db::pdo();
+        $pdo->beginTransaction();
+        try {
+            $messageId = self::addMessage((int) $ticket['id'], 'customer', null, $body, false, $ip !== '' ? $ip : null, $customerId ?: (int) $ticket['customer_id']);
+            if ($viaEmail) {
+                Db::exec('UPDATE ticket_messages SET via_email = 1 WHERE id = ?', [$messageId]);
+            }
+            if ($files) {
+                Attachments::store((int) $ticket['id'], $messageId, $files);
+            }
+            $pdo->commit();
+        } catch (\Throwable $ex) {
+            $pdo->rollBack();
+            throw $ex;
+        }
         if ($ticket['status'] !== 'open') {
             self::setStatus((int) $ticket['id'], 'open');
             if ($ticket['status'] === 'closed') {
                 self::addMessage((int) $ticket['id'], 'system', null, json_encode(['event' => 'reopened']), true, null);
             }
         }
+        return $messageId;
+    }
+
+    /** Add an additional customer without an operator (e.g. people in Cc of an email) */
+    public static function addParticipantSystem(array $ticket, int $customerId, string $by): bool
+    {
+        if ($customerId === (int) $ticket['customer_id']
+            || Db::value('SELECT 1 FROM ticket_customers WHERE ticket_id = ? AND customer_id = ?', [(int) $ticket['id'], $customerId])) {
+            return false;
+        }
+        Db::exec('INSERT INTO ticket_customers (ticket_id, customer_id) VALUES (?, ?)', [(int) $ticket['id'], $customerId]);
+        self::addMessage((int) $ticket['id'], 'system', null, json_encode(['event' => 'customer_added', 'by' => $by, 'name' => self::customerLabel($customerId)], JSON_UNESCAPED_UNICODE), true, null);
+        return true;
     }
 
     /**
      * Operator reply or internal note; $format 'html' for the WYSIWYG editor,
      * $files = validated uploads (Attachments::fromUpload with the 'operator' profile).
      */
-    public static function operatorReply(array $ticket, array $op, string $body, bool $internal, string $newStatus, string $ip, string $format = 'text', array $files = []): void
+    public static function operatorReply(array $ticket, array $op, string $body, bool $internal, string $newStatus, string $ip, string $format = 'text', array $files = []): int
     {
         $pdo = Db::pdo();
         $pdo->beginTransaction();
@@ -402,6 +433,7 @@ final class Tickets
         if (in_array($newStatus, self::STATUSES, true) && $newStatus !== $ticket['status']) {
             self::update($ticket, $op, ['status' => $newStatus]);
         }
+        return $messageId;
     }
 
     private static function setStatus(int $id, string $status): void

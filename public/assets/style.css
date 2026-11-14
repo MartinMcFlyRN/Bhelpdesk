@@ -398,3 +398,14 @@ input.tiny { width: 5.5rem !important; display: inline-block !important; margin:
 .smtp-log { margin-top: .5rem; }
 .smtp-log pre { background: #0f172a; color: #e2e8f0; padding: .6rem .8rem; border-radius: 6px; font-size: .78rem; max-height: 280px; overflow: auto; white-space: pre-wrap; }
 @media (max-width: 800px) { .row-3 { grid-template-columns: 1fr; } }
+
+/* E-mail: log of messages received/sent, "via email" badge */
+.row-between { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.row-between h2 { margin: 0; }
+.table-wrap { overflow-x: auto; }
+.mail-log td { vertical-align: top; font-size: .9rem; }
+.mail-status { display: inline-block; padding: .05rem .5rem; border-radius: 999px; font-size: .78rem; font-weight: 600; background: #e5e7eb; color: #374151; }
+.mail-ticket, .mail-reply, .mail-sent { background: #dcfce7; color: #166534; }
+.mail-ignored, .mail-big { background: #fef3c7; color: #92400e; }
+.mail-error { background: #fee2e2; color: #991b1b; }
+.badge-mail { background: #e0f2fe; color: #075985; }

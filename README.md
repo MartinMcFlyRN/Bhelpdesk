@@ -89,6 +89,9 @@ nginx -t && systemctl reload nginx
 
 # 8. first administrator
 sudo -u bhelpdesk php /var/www/bhelpdesk/bin/create-operator.php --role=admin
+
+# 9. cron: download the POP3 mailboxes of the email identities every minute
+cp /var/www/bhelpdesk/deploy/bhelpdesk.cron /etc/cron.d/bhelpdesk && chmod 644 /etc/cron.d/bhelpdesk
 ```
 
 ### Updating
@@ -116,6 +119,7 @@ mariadb bhelpdesk < sql/migrations/009_operator_departments.sql
 mariadb bhelpdesk < sql/migrations/010_rich_text.sql
 mariadb bhelpdesk < sql/migrations/011_merge.sql
 mariadb bhelpdesk < sql/migrations/012_mail_identities.sql
+mariadb bhelpdesk < sql/migrations/013_mail_messages.sql
 ```
 
 ## Operators area
@@ -151,7 +155,24 @@ Each **department** chooses its **sending identity** (*Departments → Sending i
 
 Passwords are encrypted (libsodium secretbox) with a key created automatically in **`storage/app.key`** (mode 0600). **Back it up together with the database**: without it saved passwords cannot be decrypted and must be entered again. The forms never show saved passwords: leave the field empty to keep them.
 
-Downloading mail and opening tickets from it (POP3 fetcher run by cron), and reply notifications, come next.
+## Tickets from email and notifications
+
+**Download.** `bin/fetch-mail.php` (cron every minute, `deploy/bhelpdesk.cron`, as the PHP-FPM user) downloads the POP3 mailbox of every active identity with POP3 enabled; *Download now* on the identity page does the same. A lock prevents two runs at once; at most 50 new messages per identity per run. Each message is recorded by its POP3 UIDL in `mail_messages`, so it is processed once; the identity page shows the last 30 messages received and sent with the result.
+
+- **New message** → new ticket in the identity's department, customer created from the sender (Reply-To for no-reply senders such as website forms). People in To/Cc become additional customers (setting; not operators, not helpdesk addresses).
+- **Reply** → added to the ticket when `In-Reply-To`/`References` point to a message of the ticket, or when the subject contains `[#123456]` **and** the sender is already a customer of that ticket (a guessed number opens a new ticket instead). Senders matched by Message-ID but not on the ticket are added to it. Replies to closed tickets reopen them (or open a new ticket when reopening is disabled). The quoted conversation is removed (our `##- … -##` marker, "On … wrote:" / "Il … ha scritto:", Outlook headers, `>` lines, Gmail/Outlook HTML quotes).
+- **Body**: the text part, or the HTML converted to text. **Attachments** pass the same checks as operator uploads (types, signature, size limits); small images embedded in the HTML (signature logos) are skipped; refused files are listed in the ticket history.
+- **Ignored**: our own addresses (loop protection), `Auto-Submitted`, `Precedence: bulk/list/junk`, auto-reply headers, mailing lists (`List-Id`), bounces and delivery reports, no-reply senders, duplicates (same Message-ID), more than *N* new tickets per hour from one sender (setting, default 10), messages over 30 MB (`mail.max_message_mb`, left on the server).
+- **Retention on the server**: delete after download, keep the last N days (messages older than N days since download are deleted), or never delete. Messages that failed with an error are left on the server.
+
+Test without POP3: `sudo -u bhelpdesk php bin/fetch-mail.php --file=message.eml --identity=ID`.
+
+**Notifications** (General → Email can turn them off), sent with the department's sending identity in each customer's language, one message per customer with their own direct link:
+
+- confirmation of a new ticket (web form, email, operator without a reply), `Auto-Submitted: auto-replied`;
+- operator replies to all customers of the ticket: HTML + text, department signature, attachments up to 10 MB in total (the others are listed), relative image/link URLs made absolute with `base_url`.
+
+Subjects carry `[#number]`; `Message-ID`, `In-Reply-To` and `References` keep the conversation threaded in mail clients and route replies back to the ticket. Send failures are shown to the operator and logged. Messages received by email have an *email* badge in the ticket.
 
 ## Bulk actions in the ticket list
 
@@ -292,9 +313,9 @@ CSRF on every POST · separate sessions per area (cookie `BHD_CUST` path `/custo
 
 ## Roadmap
 
-1. Tickets from email (POP3 fetcher of the identities) and email notifications (new ticket, replies with department signature), in the customer's language
-2. Attachments on replies (customer and operator)
-3. Reply threading by ticket number / Message-ID
-4. Canned responses, SLA/due dates
+1. Email alerts to operators (new ticket, customer reply, assignment)
+2. Attachments on customer replies from the web
+3. IMAP (folders, IDLE) besides POP3
+4. SLA/due dates
 5. TOTP 2FA for operators
 6. Customer accounts with ticket history

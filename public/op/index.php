@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{AccessLinks, Attachments, Auth, Canned, CustomerAuth, Customers, Db, Departments, Html, IpGuard, Lang, MailIdentities, Mailer, Media, Operators, Router, Session, Settings, Throttle, Tickets, View};
+use Bhelpdesk\{AccessLinks, Attachments, Auth, Canned, CustomerAuth, Customers, Db, Departments, Html, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, Operators, Router, Session, Settings, Throttle, Tickets, View};
 
 // ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
@@ -263,8 +263,15 @@ $r->post('/tickets/new', static function () use ($newTicketPage, $allowedDepartm
     if ($v['assign_me']) {
         Tickets::update(Tickets::find($tid), $op, ['assigned_to' => (int) $op['id']]);
     }
+    // email to the customers: the reply when there is one, otherwise the confirmation
     if ($hasReply || $repFiles['files']) {
-        Tickets::operatorReply(Tickets::find($tid), $op, $hasReply ? $reply : '', false, $v['status'], $ip, $replyFormat, $repFiles['files']);
+        $mid = Tickets::operatorReply(Tickets::find($tid), $op, $hasReply ? $reply : '', false, $v['status'], $ip, $replyFormat, $repFiles['files']);
+        $mailErrors = Notifier::operatorReply($tid, $mid);
+    } else {
+        $mailErrors = Notifier::ticketOpened($tid, array_merge([(int) $ticket['customer_id']], array_map('intval', array_column(Tickets::participants($tid), 'id'))));
+    }
+    foreach ($mailErrors as $err) {
+        flash('error', 'mail.not_sent', ['error' => $err]);
     }
     // direct link for the main customer, to send by hand until email notifications exist
     flash('link', 'nt.created', ['number' => $t['number'], 'url' => $t['link'], 'days' => AccessLinks::days()]);
@@ -335,7 +342,12 @@ $r->post('/ticket/{id}/reply', static function (array $p) use ($loadTicket): voi
         $_SESSION['drafts'][$draftKey] = $format === 'html' ? $body : Html::fromText($body);
         redirect('/op/ticket/' . $t['id'] . ($internal ? '#note' : '#reply'));
     }
-    Tickets::operatorReply($t, $op, $empty ? '' : $body, $internal, (string) ($_POST['status'] ?? $default), client_ip(), $format, $upload['files']);
+    $mid = Tickets::operatorReply($t, $op, $empty ? '' : $body, $internal, (string) ($_POST['status'] ?? $default), client_ip(), $format, $upload['files']);
+    if (!$internal) {
+        foreach (Notifier::operatorReply((int) $t['id'], $mid) as $err) {
+            flash('error', 'mail.not_sent', ['error' => $err]);
+        }
+    }
     if (!$internal && !$t['assigned_to']) {
         Tickets::update(Tickets::find((int) $t['id']), $op, ['assigned_to' => $op['id']]);
     }
@@ -678,6 +690,11 @@ $identityPage = static function (?array $item, array $values, array $errors) use
         'errors'      => $errors,
         'departments' => Departments::all(),
         'test'        => $item ? ($_SESSION['mail_test'][$item['id']] ?? null) : null,
+        // last messages received and sent with this identity
+        'log'         => $item ? Db::all(
+            'SELECT m.*, t.number FROM mail_messages m LEFT JOIN tickets t ON t.id = m.ticket_id WHERE m.identity_id = ? ORDER BY m.id DESC LIMIT 30',
+            [(int) $item['id']]
+        ) : [],
     ]);
     if ($item) {
         unset($_SESSION['mail_test'][$item['id']]);
@@ -751,6 +768,25 @@ $r->post('/config/email/{id}', static function (array $p) use ($identityPage, $l
     MailIdentities::save($res['values'], (int) $i['id']);
     flash('success', 'mi.saved');
     redirect('/op/config/email/' . $i['id']);
+});
+
+// Download the mailbox now (same as the cron job)
+$r->post('/config/email/{id}/fetch', static function (array $p) use ($loadIdentity): void {
+    Auth::requireAdmin();
+    $i = $loadIdentity($p);
+    $lock = MailFetcher::lock();
+    if (!$lock) {
+        flash('error', 'mailin.busy');
+    } else {
+        @set_time_limit(300);
+        $r = MailFetcher::run((int) $i['id'])[0] ?? null;
+        if (!$r) {
+            flash('error', 'mi.no_pop');
+        } else {
+            flash($r['ok'] ? 'success' : 'error', 'mailin.result', ['result' => $r['message']]);
+        }
+    }
+    redirect('/op/config/email/' . $i['id'] . '#log');
 });
 
 $r->post('/config/email/{id}/delete', static function (array $p) use ($loadIdentity): void {

@@ -111,6 +111,8 @@ function system_message(string $body): string
             return __('log.reopened');
         case 'merged':
             return __('log.merged', ['who' => (string) ($ev['by'] ?? '?'), 'tickets' => implode(', ', (array) ($ev['tickets'] ?? []))]);
+        case 'email_files_skipped':
+            return __('log.email_files_skipped', ['files' => implode(', ', (array) ($ev['files'] ?? []))]);
         case 'opened_by_operator':
             return __('log.opened_by_operator', ['who' => (string) ($ev['by'] ?? '?')]);
         case 'customer_added':

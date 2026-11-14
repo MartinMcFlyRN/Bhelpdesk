@@ -50,6 +50,14 @@ final class Db
         return $st->fetchAll();
     }
 
+    /** @return list<mixed> first column of every row */
+    public static function column(string $sql, array $params = []): array
+    {
+        $st = self::pdo()->prepare($sql);
+        $st->execute($params);
+        return $st->fetchAll(PDO::FETCH_COLUMN, 0);
+    }
+
     public static function value(string $sql, array $params = []): mixed
     {
         $st = self::pdo()->prepare($sql);

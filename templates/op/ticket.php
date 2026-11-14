@@ -4,7 +4,7 @@
         <h1>#<?= e($ticket['number']) ?> · <?= e($ticket['subject']) ?></h1>
         <p class="muted"><a href="/op/customers/<?= (int) $ticket['customer_id'] ?>"><strong><?= e($ticket['customer_name']) ?></strong></a><?= !empty($ticket['customer_company']) ? ' · ' . e($ticket['customer_company']) : '' ?> &lt;<a href="mailto:<?= e($ticket['customer_email']) ?>"><?= e($ticket['customer_email']) ?></a>&gt;
             <?php if (!empty($ticket['phone'])): ?> · <?= t('opticket.phone') ?> <a href="tel:<?= e(preg_replace('/[^0-9+]/', '', $ticket['phone'])) ?>"><?= e($ticket['phone']) ?></a><?php endif; ?>
-            · <?= t('opticket.opened', ['date' => fmt_date($ticket['created_at']), 'ip' => $ticket['created_ip'] ?? '?']) ?></p>
+            · <?= !empty($ticket['created_ip']) ? t('opticket.opened', ['date' => fmt_date($ticket['created_at']), 'ip' => $ticket['created_ip']]) : t('opticket.opened_noip', ['date' => fmt_date($ticket['created_at'])]) ?></p>
     </div>
     <div>
         <span class="badge prio-<?= e($ticket['priority']) ?>"><?= e(priority_label($ticket['priority'])) ?></span>
@@ -24,6 +24,7 @@
                 <header>
                     <strong><?= $m['author_type'] === 'operator' ? e($m['operator_name'] ?? __('opticket.operator')) : e($m['customer_name'] ?? $ticket['customer_name']) ?></strong>
                     <?php if ($m['is_internal']): ?><span class="badge"><?= t('opticket.internal_badge') ?></span><?php endif; ?>
+                    <?php if (!empty($m['via_email'])): ?><span class="badge badge-mail" title="<?= t('mailin.via_email_title') ?>">✉ <?= t('mailin.via_email') ?></span><?php endif; ?>
                     <span class="muted"><?= fmt_date($m['created_at']) ?><?= $m['ip'] ? ' · ' . e($m['ip']) : '' ?></span>
                 </header>
                 <div class="body"><?= \Bhelpdesk\Html::body($m) ?></div>

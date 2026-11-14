@@ -1,0 +1,3 @@
+# /etc/cron.d/bhelpdesk - download the POP3 mailboxes of the email identities every minute
+# (runs as the PHP-FPM pool user, so files and storage/app.key keep the right owner)
+* * * * * bhelpdesk /usr/bin/php /var/www/bhelpdesk/bin/fetch-mail.php --quiet
