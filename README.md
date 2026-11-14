@@ -135,6 +135,16 @@ mariadb bhelpdesk < sql/migrations/010_rich_text.sql
 
 **Email (preview).** `Mailer` sends plain-text UTF-8 messages. With `mail.driver = 'log'` (default) nothing is sent: messages are appended to `storage/mail.log`, handy for testing. With `'mail'` the server's sendmail/postfix is used. The sender (**Default from** address and name) is set in */op/config/general → Email*. SMTP and ticket notifications come next.
 
+## New ticket opened by an operator
+
+*New ticket* in the ticket list (or in a customer page, pre-filled) opens `/op/tickets/new`, for requests received by phone, email or in person:
+
+1. **Customer**: type an email or part of a name/company to pick an existing customer, or enter email + name for a new one. **People in copy**: any number of additional customers (existing or new), added as additional customers of the ticket.
+2. **Customer request** (required): subject and text, saved as the customer's first message (plain text), with optional files received from the customer.
+3. **First reply** (optional): written with the editor, with attachments and the status after sending.
+
+Department (only the operator's own departments; administrators see all), priority and "assign to me" are in the side panel. The history records that the ticket was opened by the operator. After creation the operator gets the customer's direct link to send by hand (until email notifications exist).
+
 ## Rich text editor and operator attachments
 
 **Editor.** Operator replies, internal notes, department signatures and canned responses use a WYSIWYG editor ([Quill 2](https://quilljs.com), BSD-3, vendored in `public/assets/vendor/quill-2.0.3/` — no CDN, compatible with the CSP). Formatting: headings, bold/italic/underline/strike, lists and indentation, alignment, quotes, code blocks, links and **images**. Without JavaScript a plain textarea is shown and the text is stored as plain text.

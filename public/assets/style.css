@@ -359,3 +359,12 @@ fieldset.card legend { font-weight: 700; padding: 0 .4rem; }
 .is-file.file-doc .file-icon, .is-file.file-docx .file-icon { background: #dbeafe; color: #1e40af; }
 .is-file.file-xls .file-icon, .is-file.file-xlsx .file-icon { background: #dcfce7; color: #166534; }
 .is-file.file-zip .file-icon, .is-file.file-tar .file-icon, .is-file.file-gz .file-icon, .is-file.file-tgz .file-icon, .is-file.file-bz2 .file-icon { background: #fef3c7; color: #92400e; }
+
+/* new ticket (operators) */
+.new-ticket .step { display: inline-flex; align-items: center; justify-content: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: #ede9fe; color: #5b21b6; font-size: .85rem; margin-right: .3rem; }
+.new-ticket .layout-side > div > .card { margin-bottom: 1rem; }
+.cc-rows { display: flex; flex-direction: column; gap: .5rem; margin-bottom: .5rem; }
+.cc-row input { margin-top: 0 !important; }
+.side-sticky { position: sticky; top: 1rem; }
+.page-head-actions { display: flex; align-items: center; gap: .75rem; }
+.inline-num select { max-width: 240px; }

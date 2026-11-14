@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{AccessLinks, Attachments, Auth, Canned, CustomerAuth, Customers, Departments, Html, IpGuard, Lang, Media, Operators, Router, Session, Settings, Throttle, Tickets, View};
+use Bhelpdesk\{AccessLinks, Attachments, Auth, Canned, CustomerAuth, Customers, Db, Departments, Html, IpGuard, Lang, Media, Operators, Router, Session, Settings, Throttle, Tickets, View};
 
 // ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
@@ -71,6 +71,129 @@ $r->get('/', static function (): void {
             ? Tickets::departments(false)
             : array_values(array_filter(Tickets::departments(false), static fn ($d) => in_array((int) $d['id'], Operators::departmentIds((int) $op['id']), true))),
     ]);
+});
+
+// =====================================================================
+//  New ticket opened by an operator (phone call, email, walk-in...)
+// =====================================================================
+
+/** Departments the operator may open tickets in: all active ones for admins, their own for agents */
+$allowedDepartments = static function (array $op): array {
+    $all = Tickets::departments(true);
+    if ($op['role'] === 'admin') {
+        return $all;
+    }
+    $mine = Operators::departmentIds((int) $op['id']);
+    return array_values(array_filter($all, static fn ($d) => in_array((int) $d['id'], $mine, true)));
+};
+
+$newTicketPage = static function (array $op, array $values, array $errors) use ($allowedDepartments): void {
+    View::render('op', 'ticket_new', [
+        'title'       => __('nt.title'),
+        'op'          => $op,
+        'values'      => $values,
+        'errors'      => $errors,
+        'departments' => $allowedDepartments($op),
+    ]);
+};
+
+$r->get('/tickets/new', static function () use ($newTicketPage, $allowedDepartments): void {
+    $op = Auth::require();
+    $deps = $allowedDepartments($op);
+    // preselect a customer when coming from the customer page (?customer=ID)
+    $c = isset($_GET['customer']) ? Customers::find((int) $_GET['customer']) : null;
+    $newTicketPage($op, [
+        'email' => $c['email'] ?? '', 'name' => $c['name'] ?? '', 'cc' => [],
+        'department' => count($deps) === 1 ? (int) $deps[0]['id'] : 0,
+        'subject' => '', 'priority' => 'normal', 'request' => '', 'reply' => '', 'status' => 'answered', 'assign_me' => 1,
+    ], []);
+});
+
+$r->post('/tickets/new', static function () use ($newTicketPage, $allowedDepartments): void {
+    $op = Auth::require();
+    $ip = client_ip();
+
+    // cc rows: cc_email[] / cc_name[]
+    $cc = [];
+    foreach ((array) ($_POST['cc_email'] ?? []) as $i => $em) {
+        $em = mb_strtolower(trim((string) $em));
+        if ($em !== '') {
+            $cc[] = ['email' => $em, 'name' => trim((string) (((array) ($_POST['cc_name'] ?? []))[$i] ?? ''))];
+        }
+    }
+    $replyFormat = ($_POST['format'] ?? '') === 'html' ? 'html' : 'text';
+    $reply = $replyFormat === 'html' ? Html::sanitize((string) ($_POST['reply'] ?? '')) : trim((string) ($_POST['reply'] ?? ''));
+    $v = [
+        'email'      => mb_strtolower(trim((string) ($_POST['email'] ?? ''))),
+        'name'       => trim((string) ($_POST['name'] ?? '')),
+        'cc'         => $cc,
+        'department' => (int) ($_POST['department'] ?? 0),
+        'subject'    => trim((string) ($_POST['subject'] ?? '')),
+        'priority'   => in_array($_POST['priority'] ?? '', Tickets::PRIORITIES, true) ? $_POST['priority'] : 'normal',
+        'request'    => trim((string) ($_POST['request'] ?? '')),
+        'reply'      => $replyFormat === 'html' ? $reply : Html::fromText($reply),
+        'status'     => in_array($_POST['status'] ?? '', Tickets::STATUSES, true) ? $_POST['status'] : 'answered',
+        'assign_me'  => !empty($_POST['assign_me']) ? 1 : 0,
+    ];
+    $hasReply = $replyFormat === 'html' ? !Html::isEmpty($reply) : $reply !== '';
+
+    $errors = [];
+    // main customer: existing one (by email) or a new one (email + name)
+    $main = Customers::findByEmail($v['email']);
+    if (!filter_var($v['email'], FILTER_VALIDATE_EMAIL)) {
+        $errors[] = __('nt.err_customer_email');
+    } elseif (!$main && ($v['name'] === '' || mb_strlen($v['name']) > 100)) {
+        $errors[] = __('val.customer_new_needs_name');
+    }
+    foreach ($cc as $row) {
+        if (!filter_var($row['email'], FILTER_VALIDATE_EMAIL)) {
+            $errors[] = __('nt.err_cc_email', ['email' => $row['email']]);
+        } elseif (!Customers::findByEmail($row['email']) && $row['name'] === '') {
+            $errors[] = __('nt.err_cc_name', ['email' => $row['email']]);
+        }
+    }
+    if (!in_array($v['department'], array_map('intval', array_column($allowedDepartments($op), 'id')), true)) {
+        $errors[] = __('nt.err_department');
+    }
+    if ($v['subject'] === '' || mb_strlen($v['subject']) > 255) {
+        $errors[] = __('val.subject_required');
+    }
+    if ($v['request'] === '') {
+        $errors[] = __('nt.err_request');
+    }
+    $reqFiles = Attachments::fromUpload($_FILES['request_files'] ?? null, 'operator');
+    $repFiles = Attachments::fromUpload($_FILES['attachments'] ?? null, 'operator');
+    array_push($errors, ...$reqFiles['errors'], ...$repFiles['errors']);
+    if ($errors) {
+        http_response_code(422);
+        $newTicketPage($op, $v, array_values(array_unique($errors)));
+        return;
+    }
+
+    // customers: the main one is created by Tickets::create if new; cc customers here
+    $mainName = $main ? (string) $main['name'] : $v['name'];
+    $lang = (string) ($main['language'] ?? config('default_language', 'en'));
+    $t = Tickets::create($mainName, $v['email'], $v['department'], $v['subject'], $v['request'], $ip, $lang, $reqFiles['files']);
+    $ticket = Tickets::findByNumber($t['number']);
+    $tid = (int) $ticket['id'];
+
+    Db::exec('UPDATE tickets SET priority = ? WHERE id = ?', [$v['priority'], $tid]);
+    Tickets::logOpened($tid, $op);
+    foreach ($cc as $row) {
+        $res = Customers::resolve($row['email'], $row['name']);
+        if ($res['id']) {
+            Tickets::addParticipant($ticket, $op, (int) $res['id']);
+        }
+    }
+    if ($v['assign_me']) {
+        Tickets::update(Tickets::find($tid), $op, ['assigned_to' => (int) $op['id']]);
+    }
+    if ($hasReply || $repFiles['files']) {
+        Tickets::operatorReply(Tickets::find($tid), $op, $hasReply ? $reply : '', false, $v['status'], $ip, $replyFormat, $repFiles['files']);
+    }
+    // direct link for the main customer, to send by hand until email notifications exist
+    flash('link', 'nt.created', ['number' => $t['number'], 'url' => $t['link'], 'days' => AccessLinks::days()]);
+    redirect('/op/ticket/' . $tid);
 });
 
 // ---------- Ticket ----------

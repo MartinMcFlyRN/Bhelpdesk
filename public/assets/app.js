@@ -70,7 +70,7 @@ document.addEventListener('keydown', function (ev) {
 
 // Customer autocomplete: <input data-customer-lookup="datalist-id" data-name-field="input-id">
 // Suggests existing customers (name, company, email); picking one fills the name field.
-document.querySelectorAll('input[data-customer-lookup]').forEach(function (input) {
+function bhdCustomerLookup(input) {
     var list = document.getElementById(input.getAttribute('data-customer-lookup'));
     var nameField = document.getElementById(input.getAttribute('data-name-field'));
     var known = {};
@@ -100,6 +100,36 @@ document.querySelectorAll('input[data-customer-lookup]').forEach(function (input
                 })
                 .catch(function () {});
         }, 200);
+    });
+}
+document.querySelectorAll('input[data-customer-lookup]').forEach(bhdCustomerLookup);
+
+// New ticket: "+ add" more CC rows (each with its own autocomplete)
+document.querySelectorAll('[data-add-cc]').forEach(function (btn) {
+    var box = document.getElementById(btn.getAttribute('data-add-cc'));
+    if (!box) {
+        return;
+    }
+    btn.hidden = false;
+    var n = box.querySelectorAll('.cc-row').length;
+    btn.addEventListener('click', function () {
+        var first = box.querySelector('.cc-row');
+        var row = first.cloneNode(true);
+        var email = row.querySelector('input[name="cc_email[]"]');
+        var name = row.querySelector('input[name="cc_name[]"]');
+        var list = row.querySelector('datalist');
+        email.value = '';
+        name.value = '';
+        list.textContent = '';
+        list.id = 'nt-cc-list-' + n;
+        name.id = 'nt-cc-name-' + n;
+        email.setAttribute('list', list.id);
+        email.setAttribute('data-customer-lookup', list.id);
+        email.setAttribute('data-name-field', name.id);
+        n += 1;
+        box.appendChild(row);
+        bhdCustomerLookup(email);
+        email.focus();
     });
 });
 

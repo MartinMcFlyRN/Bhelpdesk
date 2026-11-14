@@ -208,6 +208,12 @@ final class Tickets
         return true;
     }
 
+    /** History event: ticket opened by an operator on behalf of the customer */
+    public static function logOpened(int $ticketId, array $op): void
+    {
+        self::logEvent($ticketId, $op, ['event' => 'opened_by_operator']);
+    }
+
     private static function customerLabel(int $customerId): string
     {
         $c = Db::one('SELECT name, email FROM customers WHERE id = ?', [$customerId]);

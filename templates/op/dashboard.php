@@ -7,6 +7,10 @@ $qs = static function (array $over) use ($filters): string {
 };
 $openTotal = $counts['open'] + $counts['answered'] + $counts['on_hold'];
 ?>
+<div class="page-head">
+    <h1><?= t('dash.title') ?></h1>
+    <a class="btn btn-primary" href="/op/tickets/new">+ <?= t('nt.button') ?></a>
+</div>
 <div class="tabs">
     <a class="<?= $filters['status'] === '' ? 'active' : '' ?>" href="<?= e($qs(['status' => '', 'page' => ''])) ?>"><?= t('dash.active') ?> <span class="count"><?= $openTotal ?></span></a>
     <?php foreach (Tickets::STATUSES as $k): ?>

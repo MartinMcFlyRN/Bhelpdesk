@@ -3,7 +3,10 @@
 <div class="page-head">
     <h1><?= $isNew ? t('cust.new') : e($customer['name']) ?></h1>
     <?php if (!$isNew): ?>
-        <span class="muted"><?= t('cust.since', ['date' => fmt_date($customer['created_at'])]) ?></span>
+        <span class="page-head-actions">
+            <span class="muted"><?= t('cust.since', ['date' => fmt_date($customer['created_at'])]) ?></span>
+            <a class="btn btn-primary btn-small" href="/op/tickets/new?customer=<?= (int) $customer['id'] ?>">+ <?= t('nt.button') ?></a>
+        </span>
     <?php endif; ?>
 </div>
 
