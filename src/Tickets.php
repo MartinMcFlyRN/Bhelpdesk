@@ -23,9 +23,60 @@ final class Tickets
         return Db::all('SELECT id, name FROM departments' . ($onlyActive ? ' WHERE active = 1' : '') . ' ORDER BY sort_order, name');
     }
 
-    public static function operators(): array
+    /**
+     * Active operators who can work on tickets of a department:
+     * administrators plus agents assigned to that department.
+     */
+    public static function operators(?int $departmentId = null): array
     {
-        return Db::all('SELECT id, name FROM operators WHERE active = 1 ORDER BY name');
+        return Db::all(
+            "SELECT o.id, o.name, o.role FROM operators o
+              WHERE o.active = 1
+                AND (o.role = 'admin' OR EXISTS (SELECT 1 FROM operator_departments od WHERE od.operator_id = o.id AND od.department_id = ?))
+              ORDER BY o.name",
+            [(int) $departmentId]
+        );
+    }
+
+    /**
+     * SQL condition (on the tickets alias) limiting tickets to those $op may see:
+     * administrators see everything; agents see the tickets of their departments
+     * plus the tickets assigned to them.
+     * @return array{0: string, 1: array}
+     */
+    public static function visibility(array $op, string $alias = 't'): array
+    {
+        if (($op['role'] ?? '') === 'admin') {
+            return ['1 = 1', []];
+        }
+        $deps = Operators::departmentIds((int) $op['id']);
+        $cond = $alias . '.assigned_to = ?';
+        $params = [(int) $op['id']];
+        if ($deps) {
+            $cond = '(' . $alias . '.department_id IN (' . implode(',', array_fill(0, count($deps), '?')) . ') OR ' . $cond . ')';
+            $params = array_merge($deps, $params);
+        }
+        return [$cond, $params];
+    }
+
+    public static function canSee(array $ticket, array $op): bool
+    {
+        if (($op['role'] ?? '') === 'admin' || (int) $ticket['assigned_to'] === (int) $op['id']) {
+            return true;
+        }
+        return $ticket['department_id'] !== null
+            && in_array((int) $ticket['department_id'], Operators::departmentIds((int) $op['id']), true);
+    }
+
+    /** May this operator be assigned a ticket of that department? */
+    public static function canWorkOn(int $operatorId, ?int $departmentId): bool
+    {
+        $op = Db::one('SELECT id, role FROM operators WHERE id = ? AND active = 1', [$operatorId]);
+        if (!$op) {
+            return false;
+        }
+        return $op['role'] === 'admin'
+            || ($departmentId && in_array($departmentId, Operators::departmentIds($operatorId), true));
     }
 
     /** @return array{number: string, link: string, customer_id: int} */
@@ -248,7 +299,9 @@ final class Tickets
         }
         if (array_key_exists('assigned_to', $changes)) {
             $to = $changes['assigned_to'] ?: null;
-            if ($to !== null && !Db::value('SELECT 1 FROM operators WHERE id = ? AND active = 1', [$to])) {
+            // the assignee must be able to work on the ticket's (possibly new) department
+            $depNow = (int) Db::value('SELECT department_id FROM tickets WHERE id = ?', [$id]) ?: null;
+            if ($to !== null && (int) $to !== (int) $ticket['assigned_to'] && !self::canWorkOn((int) $to, $depNow)) {
                 $to = (int) $ticket['assigned_to'] ?: null;
             }
             if ((int) $to !== (int) $ticket['assigned_to']) {
@@ -263,9 +316,10 @@ final class Tickets
         }
     }
 
-    public static function countsByStatus(): array
+    public static function countsByStatus(array $op): array
     {
-        $rows = Db::all('SELECT status, COUNT(*) n FROM tickets GROUP BY status');
+        [$vis, $vp] = self::visibility($op);
+        $rows = Db::all('SELECT t.status, COUNT(*) n FROM tickets t WHERE ' . $vis . ' GROUP BY t.status', $vp);
         $out = array_fill_keys(self::STATUSES, 0);
         foreach ($rows as $r) {
             $out[$r['status']] = (int) $r['n'];
@@ -277,10 +331,12 @@ final class Tickets
      * Search for the operators dashboard.
      * @return array{rows: array, total: int}
      */
-    public static function search(array $f, int $opId, int $page = 1, int $perPage = 25): array
+    public static function search(array $f, array $op, int $page = 1, int $perPage = 25): array
     {
-        $where = [];
-        $p = [];
+        $opId = (int) $op['id'];
+        [$vis, $vp] = self::visibility($op);
+        $where = [$vis];
+        $p = $vp;
 
         if (!empty($f['status']) && in_array($f['status'], self::STATUSES, true)) {
             $where[] = 't.status = ?';

@@ -13,6 +13,8 @@
         <dl class="meta">
             <dt><?= t('ops.last_login') ?></dt><dd><?= fmt_date($me['last_login_at']) ?></dd>
             <dt>IP</dt><dd><?= e($me['last_login_ip'] ?? '—') ?></dd>
+            <dt><?= t('ops.departments') ?></dt>
+            <dd><?= $me['role'] === 'admin' ? t('ops.all_departments') : e(implode(', ', \Bhelpdesk\Operators::departmentNames()[(int) $me['id']] ?? ['—'])) ?></dd>
         </dl>
     </div>
 

@@ -5,7 +5,7 @@
 
         <table class="table">
             <thead><tr>
-                <th><?= t('ops.username') ?></th><th><?= t('ops.name') ?></th><th><?= t('ops.email') ?></th><th><?= t('ops.role') ?></th>
+                <th><?= t('ops.username') ?></th><th><?= t('ops.name') ?></th><th><?= t('ops.email') ?></th><th><?= t('ops.role') ?></th><th><?= t('ops.departments') ?></th>
                 <th><?= t('ops.open_tickets') ?></th><th><?= t('ops.last_login') ?></th><th><?= t('ops.state') ?></th><th></th>
             </tr></thead>
             <tbody>
@@ -15,6 +15,15 @@
                     <td><?= e($o['name']) ?></td>
                     <td><?= e($o['email']) ?></td>
                     <td><?= t('role.' . $o['role']) ?></td>
+                    <td class="dep-list">
+                        <?php if ($o['role'] === 'admin'): ?>
+                            <span class="muted"><?= t('ops.all_departments') ?></span>
+                        <?php elseif (!empty($depNames[(int) $o['id']])): ?>
+                            <?= e(implode(', ', $depNames[(int) $o['id']])) ?>
+                        <?php else: ?>
+                            <span class="badge status-on_hold"><?= t('ops.no_departments') ?></span>
+                        <?php endif; ?>
+                    </td>
                     <td><?= (int) $o['open_tickets'] ?></td>
                     <td><?= fmt_date($o['last_login_at']) ?><?= $o['last_login_ip'] ? '<br><small class="muted">' . e($o['last_login_ip']) . '</small>' : '' ?></td>
                     <td><?= $o['active'] ? t('ops.active') : t('ops.disabled') ?></td>
@@ -52,6 +61,7 @@
                         </select>
                     </label>
                 </div>
+                <?php $role = old('role', 'agent'); require BHD_ROOT . '/templates/op/config/_departments_pick.php'; ?>
                 <label><?= t('ops.password') ?> <input type="password" name="password" required minlength="12" autocomplete="new-password"></label>
                 <button class="btn btn-primary" type="submit"><?= t('ops.create') ?></button>
             </form>

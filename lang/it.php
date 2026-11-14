@@ -377,6 +377,14 @@ return [
     'val.dep_signature'      => 'La firma è troppo lunga (max 2000 caratteri).',
     'opticket.signature_added' => "La firma di :department verrà aggiunta all'email",
 
+    // ---- Operator departments ----
+    'ops.departments'       => 'Reparti',
+    'ops.departments_help'  => 'Gli operatori vedono solo i ticket di questi reparti (più i ticket assegnati a loro). Gli amministratori vedono sempre tutti i reparti.',
+    'ops.all_departments'   => 'Tutti (amministratore)',
+    'ops.no_departments'    => 'Nessun reparto',
+    'val.ops_departments'   => 'Seleziona almeno un reparto per un operatore.',
+    'opticket.transferred'  => 'Ticket spostato in un reparto che non gestisci: non è più nel tuo elenco.',
+
     // ---- Configuration (/op/config) ----
     'cfg.title'             => 'Configurazione',
     'cfg.menu.general'      => 'Generale',

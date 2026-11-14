@@ -7,6 +7,37 @@ final class Operators
 {
     public const MIN_PASSWORD = 12;
 
+    /** @var array<int, list<int>> */
+    private static array $depCache = [];
+
+    /** Departments assigned to an operator */
+    public static function departmentIds(int $operatorId): array
+    {
+        return self::$depCache[$operatorId] ??= array_map('intval', array_column(
+            Db::all('SELECT department_id FROM operator_departments WHERE operator_id = ?', [$operatorId]),
+            'department_id'
+        ));
+    }
+
+    public static function setDepartments(int $operatorId, array $departmentIds): void
+    {
+        Db::exec('DELETE FROM operator_departments WHERE operator_id = ?', [$operatorId]);
+        foreach (array_unique(array_map('intval', $departmentIds)) as $d) {
+            Db::exec('INSERT IGNORE INTO operator_departments (operator_id, department_id) SELECT ?, id FROM departments WHERE id = ?', [$operatorId, $d]);
+        }
+        unset(self::$depCache[$operatorId]);
+    }
+
+    /** Department names per operator, for lists: operator_id => [names] */
+    public static function departmentNames(): array
+    {
+        $out = [];
+        foreach (Db::all('SELECT od.operator_id, d.name FROM operator_departments od JOIN departments d ON d.id = od.department_id ORDER BY d.sort_order, d.name') as $r) {
+            $out[(int) $r['operator_id']][] = $r['name'];
+        }
+        return $out;
+    }
+
     public static function all(): array
     {
         return Db::all(
@@ -36,6 +67,7 @@ final class Operators
             'role'     => ($in['role'] ?? '') === 'admin' ? 'admin' : 'agent',
             'active'   => $existing ? (!empty($in['active']) ? 1 : 0) : 1,
             'password' => (string) ($in['password'] ?? ''),
+            'departments' => array_values(array_unique(array_filter(array_map('intval', (array) ($in['departments'] ?? []))))),
         ];
         $errors = [];
         if (!$existing && !preg_match('/^[a-z0-9._-]{3,50}$/i', $v['username'])) {
@@ -46,6 +78,10 @@ final class Operators
         }
         if (!filter_var($v['email'], FILTER_VALIDATE_EMAIL) || strlen($v['email']) > 190) {
             $errors[] = __('val.email_invalid');
+        }
+        // agents work only on the tickets of their departments: at least one is needed
+        if ($v['role'] === 'agent' && !$v['departments']) {
+            $errors[] = __('val.ops_departments');
         }
         // password required on create, optional on edit
         if ((!$existing || $v['password'] !== '') && strlen($v['password']) < self::MIN_PASSWORD) {
@@ -65,10 +101,12 @@ final class Operators
 
     public static function create(array $v): int
     {
-        return Db::insert(
+        $id = Db::insert(
             'INSERT INTO operators (username, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)',
             [$v['username'], $v['name'], $v['email'], password_hash($v['password'], PASSWORD_DEFAULT), $v['role']]
         );
+        self::setDepartments($id, $v['departments'] ?? []);
+        return $id;
     }
 
     public static function update(int $id, array $v): void
@@ -77,6 +115,7 @@ final class Operators
         if ($v['password'] !== '') {
             Db::exec('UPDATE operators SET password_hash = ? WHERE id = ?', [password_hash($v['password'], PASSWORD_DEFAULT), $id]);
         }
+        self::setDepartments($id, $v['departments'] ?? []);
     }
 
     /**

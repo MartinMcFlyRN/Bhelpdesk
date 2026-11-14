@@ -382,6 +382,14 @@ return [
     'val.dep_signature'      => 'The signature is too long (max 2000 characters).',
     'opticket.signature_added' => 'The signature of :department will be added to the email',
 
+    // ---- Operator departments ----
+    'ops.departments'       => 'Departments',
+    'ops.departments_help'  => 'Agents see only the tickets of these departments (plus tickets assigned to them). Administrators always see all departments.',
+    'ops.all_departments'   => 'All (administrator)',
+    'ops.no_departments'    => 'No department',
+    'val.ops_departments'   => 'Select at least one department for an agent.',
+    'opticket.transferred'  => 'Ticket moved to a department you do not handle: it is no longer in your list.',
+
     // ---- Configuration (/op/config) ----
     'cfg.title'             => 'Configuration',
     'cfg.menu.general'      => 'General',

@@ -321,3 +321,5 @@ fieldset.card legend { font-weight: 700; padding: 0 .4rem; }
 .canned-preview { max-width: 380px; }
 .mono-area { font-family: ui-monospace, monospace; font-size: .9rem; }
 .table + .card, .table + form + .card { margin-top: 1rem; }
+.dep-pick.is-admin .checks { opacity: .45; }
+.dep-list { max-width: 260px; font-size: .85rem; }

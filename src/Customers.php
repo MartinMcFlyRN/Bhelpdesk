@@ -11,8 +11,10 @@ final class Customers
     /**
      * @return array{rows: array, total: int}
      */
-    public static function search(string $q, int $page = 1): array
+    public static function search(string $q, int $page = 1, ?array $op = null): array
     {
+        // ticket counts only include the tickets the operator may see
+        [$vis, $vp] = $op ? Tickets::visibility($op) : ['1 = 1', []];
         $where = '';
         $p = [];
         if ($q !== '') {
@@ -28,11 +30,11 @@ final class Customers
                     SUM(t.status <> \'closed\') AS open_count,
                     MAX(t.updated_at) AS last_activity
                FROM customers c
-               LEFT JOIN tickets t ON t.customer_id = c.id' . $where . '
+               LEFT JOIN tickets t ON t.customer_id = c.id AND ' . $vis . $where . '
               GROUP BY c.id
               ORDER BY COALESCE(MAX(t.updated_at), c.created_at) DESC
               LIMIT ' . self::PER_PAGE . ' OFFSET ' . $offset,
-            $p
+            array_merge($vp, $p)
         );
         return ['rows' => $rows, 'total' => $total];
     }
@@ -85,18 +87,23 @@ final class Customers
         return Db::one('SELECT * FROM customers WHERE id = ?', [$id]);
     }
 
-    /** Tickets where the customer is the main customer or an additional one (role = main|cc) */
-    // also used for the customer's own "My tickets" page
-    public static function tickets(int $customerId): array
+    /**
+     * Tickets where the customer is the main customer or an additional one (role = main|cc).
+     * Used for the customer's own "My tickets" page ($op = null) and, limited to
+     * the tickets the operator may see, for the customer page in /op.
+     */
+    public static function tickets(int $customerId, ?array $op = null): array
     {
+        [$vis, $vp] = $op ? Tickets::visibility($op) : ['1 = 1', []];
         return Db::all(
             'SELECT t.id, t.number, t.subject, t.status, t.priority, t.created_at, t.updated_at, d.name AS department_name,
                     IF(t.customer_id = ?, \'main\', \'cc\') AS role
                FROM tickets t LEFT JOIN departments d ON d.id = t.department_id
-              WHERE t.customer_id = ?
-                 OR EXISTS (SELECT 1 FROM ticket_customers tc WHERE tc.ticket_id = t.id AND tc.customer_id = ?)
+              WHERE (t.customer_id = ?
+                 OR EXISTS (SELECT 1 FROM ticket_customers tc WHERE tc.ticket_id = t.id AND tc.customer_id = ?))
+                AND ' . $vis . '
               ORDER BY t.updated_at DESC',
-            [$customerId, $customerId, $customerId]
+            array_merge([$customerId, $customerId, $customerId], $vp)
         );
     }
 

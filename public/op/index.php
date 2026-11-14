@@ -56,7 +56,7 @@ $r->get('/', static function (): void {
         'q'          => trim((string) ($_GET['q'] ?? '')),
     ];
     $page = max(1, (int) ($_GET['page'] ?? 1));
-    $res = Tickets::search($filters, (int) $op['id'], $page);
+    $res = Tickets::search($filters, $op, $page);
     View::render('op', 'dashboard', [
         'title'       => __('dash.title'),
         'op'          => $op,
@@ -65,15 +65,19 @@ $r->get('/', static function (): void {
         'total'       => $res['total'],
         'page'        => $page,
         'perPage'     => 25,
-        'counts'      => Tickets::countsByStatus(),
-        'departments' => Tickets::departments(false),
+        'counts'      => Tickets::countsByStatus($op),
+        // department filter: agents only see their own departments
+        'departments' => $op['role'] === 'admin'
+            ? Tickets::departments(false)
+            : array_values(array_filter(Tickets::departments(false), static fn ($d) => in_array((int) $d['id'], Operators::departmentIds((int) $op['id']), true))),
     ]);
 });
 
 // ---------- Ticket ----------
+// Tickets outside the operator's departments answer "not found", as if they did not exist
 $loadTicket = static function (array $p): array {
     $t = Tickets::find((int) $p['id']);
-    if (!$t) {
+    if (!$t || !Tickets::canSee($t, Auth::require())) {
         http_response_code(404);
         View::render('op', 'error', ['title' => __('error.ticket_not_found.title'), 'message' => __('error.ticket_not_found.message')]);
         exit;
@@ -98,7 +102,7 @@ $r->get('/ticket/{id}', static function (array $p) use ($loadTicket): void {
         ),
         'signature'    => Canned::signature($t, $op),
         'departments' => Tickets::departments(false),
-        'operators'   => Tickets::operators(),
+        'operators'   => Tickets::operators($t['department_id'] !== null ? (int) $t['department_id'] : null),
     ]);
 });
 
@@ -129,6 +133,11 @@ $r->post('/ticket/{id}/update', static function (array $p) use ($loadTicket): vo
         'department_id' => (int) ($_POST['department_id'] ?? 0),
         'assigned_to'   => (int) ($_POST['assigned_to'] ?? 0),
     ]);
+    // moved to a department the operator does not handle: back to the list
+    if (!Tickets::canSee(Tickets::find((int) $t['id']), $op)) {
+        flash('success', 'opticket.transferred');
+        redirect('/op/');
+    }
     flash('success', 'opticket.saved');
     redirect('/op/ticket/' . $t['id']);
 });
@@ -186,9 +195,10 @@ $r->post('/ticket/{id}/customer', static function (array $p) use ($loadTicket): 
 
 // ---------- Attachment download ----------
 $r->get('/file/{id}', static function (array $p): void {
-    Auth::require();
+    $op = Auth::require();
     $file = Attachments::find((int) $p['id']);
-    if (!$file) {
+    $ticket = $file ? Tickets::find((int) $file['ticket_id']) : null;
+    if (!$file || !$ticket || !Tickets::canSee($ticket, $op)) {
         http_response_code(404);
         View::render('op', 'error', ['title' => __('error.not_found.title'), 'message' => __('error.not_found.message')]);
         return;
@@ -238,7 +248,7 @@ $r->get('/customers', static function (): void {
     $op = Auth::require();
     $q = trim((string) ($_GET['q'] ?? ''));
     $page = max(1, (int) ($_GET['page'] ?? 1));
-    $res = Customers::search($q, $page);
+    $res = Customers::search($q, $page, $op);
     View::render('op', 'customers/list', [
         'title' => __('cust.title'), 'op' => $op, 'q' => $q, 'page' => $page,
         'rows' => $res['rows'], 'total' => $res['total'], 'perPage' => Customers::PER_PAGE,
@@ -252,7 +262,7 @@ $customerForm = static function (?array $customer, array $values, array $errors)
         'customer'  => $customer,
         'values'    => $values,
         'errors'    => $errors,
-        'tickets'   => $customer ? Customers::tickets((int) $customer['id']) : [],
+        'tickets'   => $customer ? Customers::tickets((int) $customer['id'], Auth::user()) : [],
         'languages' => Lang::available(true),
     ]);
 };
@@ -502,7 +512,7 @@ $r->post('/config/canned/{id}/delete', static function (array $p) use ($loadCann
 // ---------- Operators ----------
 $r->get('/config/operators', static function () use ($cfgView): void {
     Auth::requireAdmin();
-    $cfgView('operators', __('cfg.menu.operators'), ['operators' => Operators::all(), 'errors' => []]);
+    $cfgView('operators', __('cfg.menu.operators'), ['operators' => Operators::all(), 'errors' => [], 'departments' => Departments::all(), 'depNames' => Operators::departmentNames(), 'selDeps' => []]);
 });
 
 $r->post('/config/operators', static function () use ($cfgView): void {
@@ -510,7 +520,7 @@ $r->post('/config/operators', static function () use ($cfgView): void {
     $res = Operators::validate($_POST);
     if ($res['errors']) {
         http_response_code(422);
-        $cfgView('operators', __('cfg.menu.operators'), ['operators' => Operators::all(), 'errors' => $res['errors']]);
+        $cfgView('operators', __('cfg.menu.operators'), ['operators' => Operators::all(), 'errors' => $res['errors'], 'departments' => Departments::all(), 'depNames' => Operators::departmentNames(), 'selDeps' => $res['values']['departments']]);
         return;
     }
     Operators::create($res['values']);
@@ -530,7 +540,8 @@ $loadOp = static function (array $p): array {
 
 $r->get('/config/operators/{id}', static function (array $p) use ($cfgView, $loadOp): void {
     Auth::requireAdmin();
-    $cfgView('operator_edit', __('ops.edit'), ['target' => $loadOp($p), 'errors' => []]);
+    $o = $loadOp($p);
+    $cfgView('operator_edit', __('ops.edit'), ['target' => $o, 'errors' => [], 'departments' => Departments::all(), 'selDeps' => Operators::departmentIds((int) $o['id'])]);
 });
 
 $r->post('/config/operators/{id}', static function (array $p) use ($cfgView, $loadOp): void {
@@ -554,7 +565,7 @@ $r->post('/config/operators/{id}', static function (array $p) use ($cfgView, $lo
 
     if ($errors) {
         http_response_code(422);
-        $cfgView('operator_edit', __('ops.edit'), ['target' => array_merge($o, $v), 'errors' => array_values(array_unique($errors))]);
+        $cfgView('operator_edit', __('ops.edit'), ['target' => array_merge($o, $v), 'errors' => array_values(array_unique($errors)), 'departments' => Departments::all(), 'selDeps' => $v['departments']]);
         return;
     }
     Operators::update((int) $o['id'], $v);

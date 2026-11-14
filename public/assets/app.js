@@ -129,3 +129,14 @@ document.querySelectorAll('select[data-canned-target]').forEach(function (sel) {
         sel.selectedIndex = 0;
     });
 });
+
+// Operator form: department checkboxes do not matter for administrators
+document.querySelectorAll('select[name="role"]').forEach(function (sel) {
+    var pick = sel.closest('form') && sel.closest('form').querySelector('[data-role-field]');
+    if (!pick) {
+        return;
+    }
+    var sync = function () { pick.classList.toggle('is-admin', sel.value === 'admin'); };
+    sel.addEventListener('change', sync);
+    sync();
+});

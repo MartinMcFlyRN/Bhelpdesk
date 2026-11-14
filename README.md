@@ -110,6 +110,7 @@ mariadb bhelpdesk < sql/migrations/005_customers.sql
 mariadb bhelpdesk < sql/migrations/006_ticket_customers.sql
 mariadb bhelpdesk < sql/migrations/007_customer_access.sql
 mariadb bhelpdesk < sql/migrations/008_canned_signatures.sql
+mariadb bhelpdesk < sql/migrations/009_operator_departments.sql
 ```
 
 ## Operators area
@@ -131,6 +132,15 @@ mariadb bhelpdesk < sql/migrations/008_canned_signatures.sql
 
 **Email (preview).** `Mailer` sends plain-text UTF-8 messages. With `mail.driver = 'log'` (default) nothing is sent: messages are appended to `storage/mail.log`, handy for testing. With `'mail'` the server's sendmail/postfix is used. The sender (**Default from** address and name) is set in */op/config/general → Email*. SMTP and ticket notifications come next.
 
+## Departments and ticket visibility
+
+- **Administrators** see every ticket.
+- **Agents** see only the tickets of the departments assigned to them in */op/config/operators*, plus any ticket assigned to them personally (even if it belongs to another department).
+- The rule is enforced on the server everywhere: dashboard list and counters, department filter, opening a ticket by URL (other tickets answer *not found*), replies and changes, attachment downloads, ticket history and counts in the customer pages.
+- A ticket can only be assigned to administrators or to agents of its department (the *Assigned to* menu lists only them). An agent who moves a ticket to a department they do not handle is sent back to the list.
+- Tickets without a department are visible to administrators only.
+- Upgrading: migration 009 gives existing agents all current departments, so nobody loses tickets; then narrow them down from the operator page.
+
 ## Customers on a ticket
 
 Each ticket has a **main customer** and any number of **additional customers** (like CC / collaborators). From the *Customers* card in the ticket sidebar operators can:
@@ -148,7 +158,7 @@ Reserved to operators with the **Administrator** role (others get 403; the link 
 - **General** — application name, public URL, time zone, default from address/name for emails, default/offered languages, ticket reopening, hide operator names from customers (they see "Staff Operator"), captcha, attachment limits (with a warning when they exceed the PHP limits of the server), operator session timeout, rate limits. Saved in the `settings` table, they override `config/config.php`. Database, allowed IPs, trusted proxies, cookie and storage settings stay in `config.php` only and are shown read-only.
 - **Departments** — create, rename, reorder, activate/deactivate, **email signature** (added at the end of reply emails for tickets of that department; operators see a preview under the reply form). A department used by tickets cannot be deleted (deactivate it: it disappears from the customer form but stays on existing tickets).
 - **Canned responses** — ready-made texts, for all departments or one; operators insert them from the *Insert canned response* menu of the reply form (at the cursor position). Deactivated responses are hidden.
-- **Operators** — create, edit name/email/role, reset password, activate/deactivate. Safeguards: you cannot remove your own admin role or disable yourself, and at least one active administrator always remains.
+- **Operators** — assign one or more **departments** to each agent (required for agents), create, edit name/email/role, reset password, activate/deactivate. Safeguards: you cannot remove your own admin role or disable yourself, and at least one active administrator always remains.
 
 Canned responses and signatures support placeholders replaced with the ticket and operator data: `{customer_name}`, `{customer_email}`, `{ticket_number}`, `{ticket_subject}`, `{department_name}`, `{operator_name}`, `{operator_email}`, `{app_name}`.
 

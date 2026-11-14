@@ -27,6 +27,16 @@ CREATE TABLE IF NOT EXISTS operators (
     UNIQUE KEY uq_operators_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Departments handled by each agent (administrators see all departments)
+CREATE TABLE IF NOT EXISTS operator_departments (
+    operator_id    INT UNSIGNED NOT NULL,
+    department_id  INT UNSIGNED NOT NULL,
+    PRIMARY KEY (operator_id, department_id),
+    KEY ix_operator_departments_dep (department_id),
+    CONSTRAINT fk_opdep_operator   FOREIGN KEY (operator_id)   REFERENCES operators(id)   ON DELETE CASCADE,
+    CONSTRAINT fk_opdep_department FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS customers (
     id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     name        VARCHAR(100) NOT NULL,
