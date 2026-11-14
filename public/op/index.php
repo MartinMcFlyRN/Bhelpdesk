@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Canned, CustomerAuth, Customers, Db, Departments, EmailTemplates, Html, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, Operators, Router, Session, Settings, Throttle, Tickets, View};
+use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Canned, CustomerAuth, Customers, Db, Departments, EmailTemplates, Html, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, Operators, Router, Session, Settings, Tasks, Throttle, Tickets, View};
 
 // ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
@@ -534,6 +534,147 @@ $r->post('/profile', static function () use ($profilePage): void {
     }
     flash('success', 'profile.saved');
     redirect('/op/profile');
+});
+
+// =====================================================================
+//  Tasks (every operator)
+// =====================================================================
+$loadTask = static function (array $p): array {
+    $t = Tasks::find((int) $p['id']);
+    if (!$t) {
+        http_response_code(404);
+        View::render('op', 'error', ['title' => __('error.not_found.title'), 'message' => __('error.not_found.message')]);
+        exit;
+    }
+    return $t;
+};
+
+$taskForm = static function (array $op, ?array $task, array $values, array $errors): void {
+    View::render('op', 'tasks/form', [
+        'title'       => __($task ? 'tasks.edit_title' : 'tasks.new_title'),
+        'op'          => $op,
+        'task'        => $task,
+        'values'      => $values,
+        'errors'      => $errors,
+        'departments' => Tickets::departments(true),
+        'operators'   => Db::all('SELECT id, name FROM operators WHERE active = 1 ORDER BY name'),
+    ]);
+};
+
+$taskList = static function (bool $mine): void {
+    $op = Auth::require();
+    $f = [
+        'state' => in_array($_GET['state'] ?? '', ['open', 'todo', 'scheduled', 'done', 'all'], true) ? $_GET['state'] : 'open',
+        'q'     => trim((string) ($_GET['q'] ?? '')),
+        'mine'  => $mine,
+    ];
+    $page = max(1, (int) ($_GET['page'] ?? 1));
+    $res = Tasks::search($f, $op, $page);
+    View::render('op', 'tasks/list', [
+        'title'   => __($mine ? 'tasks.mine_title' : 'tasks.all_title'),
+        'op'      => $op,
+        'mine'    => $mine,
+        'filters' => $f,
+        'rows'    => $res['rows'],
+        'total'   => $res['total'],
+        'page'    => $page,
+        'perPage' => 30,
+    ]);
+};
+
+$r->get('/tasks', static fn () => $taskList(false));
+$r->get('/tasks/mine', static fn () => $taskList(true));
+
+$r->get('/tasks/new', static function () use ($taskForm): void {
+    $op = Auth::require();
+    $taskForm($op, null, ['title' => '', 'description' => '', 'due_date' => date('Y-m-d'), 'due_time' => '', 'assign' => 'o:' . (int) $op['id']], []);
+});
+
+$r->post('/tasks', static function () use ($taskForm): void {
+    $op = Auth::require();
+    $res = Tasks::validate($_POST);
+    if ($res['errors']) {
+        http_response_code(422);
+        $taskForm($op, null, $res['values'], $res['errors']);
+        return;
+    }
+    $id = Tasks::create($res['values'], (int) $op['id']);
+    flash('success', 'tasks.created');
+    redirect('/op/tasks/' . $id);
+});
+
+$r->get('/tasks/{id}', static function (array $p) use ($loadTask): void {
+    $op = Auth::require();
+    $t = $loadTask($p);
+    View::render('op', 'tasks/view', [
+        'title'       => $t['title'],
+        'op'          => $op,
+        'task'        => $t,
+        'state'       => Tasks::state($t),
+        'canComplete' => Tasks::canComplete($t, $op),
+        'canEdit'     => Tasks::canEdit($t, $op),
+    ]);
+});
+
+$r->get('/tasks/{id}/edit', static function (array $p) use ($loadTask, $taskForm): void {
+    $op = Auth::require();
+    $t = $loadTask($p);
+    if (!Tasks::canEdit($t, $op)) {
+        http_response_code(403);
+        View::render('op', 'error', ['title' => __('error.forbidden.title'), 'message' => __('tasks.not_allowed')]);
+        return;
+    }
+    $taskForm($op, $t, Tasks::formValues($t), []);
+});
+
+$r->post('/tasks/{id}', static function (array $p) use ($loadTask, $taskForm): void {
+    $op = Auth::require();
+    $t = $loadTask($p);
+    if (!Tasks::canEdit($t, $op)) {
+        http_response_code(403);
+        View::render('op', 'error', ['title' => __('error.forbidden.title'), 'message' => __('tasks.not_allowed')]);
+        return;
+    }
+    $res = Tasks::validate($_POST);
+    if ($res['errors']) {
+        http_response_code(422);
+        $taskForm($op, $t, $res['values'], $res['errors']);
+        return;
+    }
+    Tasks::update((int) $t['id'], $res['values']);
+    flash('success', 'tasks.saved');
+    redirect('/op/tasks/' . $t['id']);
+});
+
+$r->post('/tasks/{id}/done', static function (array $p) use ($loadTask): void {
+    $op = Auth::require();
+    $t = $loadTask($p);
+    if (Tasks::canComplete($t, $op)) {
+        Tasks::markDone((int) $t['id'], (int) $op['id']);
+        flash('success', 'tasks.done_ok', ['title' => $t['title']]);
+    }
+    redirect('/op/tasks/' . $t['id']);
+});
+
+$r->post('/tasks/{id}/reopen', static function (array $p) use ($loadTask): void {
+    $op = Auth::require();
+    $t = $loadTask($p);
+    if (Tasks::canComplete($t, $op) || Tasks::canEdit($t, $op)) {
+        Tasks::reopen((int) $t['id']);
+        flash('success', 'tasks.reopened');
+    }
+    redirect('/op/tasks/' . $t['id']);
+});
+
+$r->post('/tasks/{id}/delete', static function (array $p) use ($loadTask): void {
+    $op = Auth::require();
+    $t = $loadTask($p);
+    if (Tasks::canEdit($t, $op)) {
+        Tasks::delete((int) $t['id']);
+        flash('success', 'tasks.deleted');
+        redirect('/op/tasks');
+    }
+    redirect('/op/tasks/' . $t['id']);
 });
 
 // =====================================================================

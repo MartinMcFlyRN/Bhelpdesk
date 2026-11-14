@@ -44,7 +44,7 @@ main.wrap { padding-top: 1.5rem; padding-bottom: 3rem; }
 
 .form label { display: block; margin-bottom: .9rem; font-weight: 500; font-size: .9rem; }
 .form input[type=text], .form input[type=email], .form input[type=password], .form input[type=search],
-.form input[type=tel], .form input[type=number], .form input[type=url],
+.form input[type=tel], .form input[type=number], .form input[type=url], .form input[type=date], .form input[type=time], .tabs-search input,
 .form select, .form textarea, .filters input, .filters select {
     display: block; width: 100%; margin-top: .3rem; padding: .55rem .7rem;
     border: 1px solid var(--border); border-radius: 6px; font: inherit; background: #fff;
@@ -462,3 +462,39 @@ a.badge-mail:hover { background: #bae6fd; }
 .mail-boxes { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: 1rem; }
 .mail-box { display: flex; flex-direction: column; gap: .3rem; align-items: flex-start; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: .7rem .9rem; max-width: 360px; }
 .mail-alert { background: #ede9fe; color: #5b21b6; }
+
+/* Tasks: menu with dropdown, box under the menu, list and detail */
+.main-nav { align-items: center; }
+.nav-menu { position: relative; }
+.nav-menu summary { list-style: none; cursor: pointer; color: #ddd6fe; padding: .4rem .75rem; border-radius: 6px; user-select: none; }
+.nav-menu summary::-webkit-details-marker { display: none; }
+.nav-menu summary:hover, .nav-menu[open] summary { background: rgba(255,255,255,.08); color: #fff; }
+.nav-menu.active summary { background: rgba(255,255,255,.14); color: #fff; font-weight: 600; }
+.nav-menu .caret { font-size: .7rem; opacity: .8; }
+.nav-menu .menu { position: absolute; left: 0; top: calc(100% + 8px); min-width: 200px; background: #fff; border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 30px rgba(17,24,39,.18); padding: .4rem; z-index: 50; }
+.nav-menu .menu a { display: block; padding: .55rem .7rem; border-radius: 6px; color: var(--text); }
+.nav-menu .menu a:hover, .nav-menu .menu a.active { background: #f3f4f6; text-decoration: none; }
+.nav-count { display: inline-block; min-width: 1.3rem; padding: 0 .35rem; border-radius: 999px; background: #f59e0b; color: #fff; font-size: .75rem; font-weight: 700; text-align: center; }
+.task-banner { background: #fff7ed; border: 1px solid #fdba74; border-left: 5px solid #f97316; border-radius: var(--radius); padding: .7rem 1rem; margin-bottom: 1rem; }
+.task-banner-head { display: flex; justify-content: space-between; gap: 1rem; color: #9a3412; margin-bottom: .35rem; }
+.task-banner ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .4rem .6rem; }
+.task-banner li { background: #fff; border: 1px solid #fed7aa; border-radius: 8px; padding: .35rem .65rem; display: flex; flex-direction: column; }
+.task-banner li a { font-weight: 600; color: #7c2d12; }
+.task-banner li small { color: #9a3412; }
+.task-banner li.task-late { border-color: #fca5a5; background: #fef2f2; }
+.task-banner li.task-late a, .task-banner li.task-late small { color: #991b1b; }
+.task-banner li.more { justify-content: center; }
+.tabs-search { margin-left: auto; padding-bottom: .3rem; }
+.task-state { display: inline-block; padding: .1rem .55rem; border-radius: 999px; font-size: .78rem; font-weight: 600; }
+.task-state-scheduled { background: #e0f2fe; color: #075985; }
+.task-state-today { background: #ffedd5; color: #9a3412; }
+.task-state-late { background: #fee2e2; color: #991b1b; }
+.task-state-done { background: #dcfce7; color: #166534; }
+.tasks-table tr.task-done td { color: var(--muted); }
+.tasks-table tr.task-done a { color: var(--muted); }
+.task-detail.task-today { border-left: 5px solid #f97316; }
+.task-detail.task-late { border-left: 5px solid #dc2626; }
+.task-done-form { display: flex; align-items: center; gap: 1rem; margin: 1rem 0; }
+.btn-big { font-size: 1.05rem; padding: .7rem 1.4rem; }
+.task-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
+.tabs-search input { margin-top: 0; padding: .4rem .65rem; min-width: 220px; }

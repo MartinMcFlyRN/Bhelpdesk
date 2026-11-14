@@ -123,6 +123,7 @@ mariadb bhelpdesk < sql/migrations/013_mail_messages.sql
 mariadb bhelpdesk < sql/migrations/014_operator_alerts.sql
 mariadb bhelpdesk < sql/migrations/015_email_templates.sql
 mariadb bhelpdesk < sql/migrations/016_mail_source.sql
+mariadb bhelpdesk < sql/migrations/017_tasks.sql
 ```
 
 ## Operators area
@@ -199,6 +200,15 @@ Each operator chooses in **their profile** which alerts to receive (texts: templ
 - a ticket **assigned** to them.
 
 Nobody is alerted for what they did themselves. Alerts contain the ticket data, an excerpt of the customer's message and the link to `/op/ticket/N`, sent with the department's identity (`Auto-Submitted: auto-generated`). They are sent **after the page has been delivered** (`fastcgi_finish_request`), so operators and customers do not wait for the SMTP server. They can be turned off for everyone in *General → Email*. Emails coming from an operator's address are not turned into tickets: operators answer from the ticket page.
+
+## Tasks
+
+*Task* in the top menu (New task, All tasks, My tasks) manages internal to-dos for the operators.
+
+- A task has a title, an optional description (rich text), the **day it becomes active** (optional time) and is assigned to **everyone**, to a **department** (all its operators) or to **one operator**.
+- From that moment it appears in the **box under the menu**, on every page, for its operators (overdue tasks in red), with a counter next to *Task*. Clicking it opens the detail with **Done**: the task leaves the box of everybody and goes to the list as done (who and when). It can be reopened.
+- **All tasks** shows every task to every operator, with assignee and state (scheduled, to do, overdue, done); **My tasks** only those assigned to me, to my departments or to everyone.
+- The assignees and the administrators mark tasks done; the creator and the administrators edit or delete them.
 
 ## Bulk actions in the ticket list
 
