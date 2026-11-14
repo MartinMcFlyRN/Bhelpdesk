@@ -372,8 +372,8 @@ return [
     'val.canned_duplicate'   => 'Esiste già una risposta predefinita con questo titolo.',
     'val.canned_body'        => 'Il testo della risposta è obbligatorio.',
     'dep.signature'          => 'Firma email',
-    'dep.signature_placeholder' => "{operator_name}\nAssistenza tecnica - {app_name}\nTel. +39 0541 000000",
-    'dep.signature_help'     => 'Aggiunta in fondo alle email di risposta inviate per i ticket di questo reparto. Lascia vuoto per nessuna firma.',
+    'dep.signature_placeholder' => '{operator_name} - Assistenza tecnica - {app_name}',
+    'dep.signature_help'     => 'Aggiunta in fondo alle email di risposta inviate per i ticket di questo reparto. Puoi formattarla e inserire immagini (es. un logo) con il pulsante 🖼. Lascia vuoto per nessuna firma.',
     'val.dep_signature'      => 'La firma è troppo lunga (max 2000 caratteri).',
     'opticket.signature_added' => "La firma di :department verrà aggiunta all'email",
 
@@ -384,6 +384,17 @@ return [
     'ops.no_departments'    => 'Nessun reparto',
     'val.ops_departments'   => 'Seleziona almeno un reparto per un operatore.',
     'opticket.transferred'  => 'Ticket spostato in un reparto che non gestisci: non è più nel tuo elenco.',
+
+    // ---- Editor, images and operator attachments ----
+    'media.upload_failed'    => "Impossibile caricare l'immagine.",
+    'media.too_big'          => "L'immagine supera :size MB.",
+    'media.only_images'      => 'Si possono inserire solo immagini JPG, PNG, GIF o WEBP.',
+    'val.file_type_op'       => '":name" non è ammesso. File consentiti: :types.',
+    'opticket.attach'        => 'Allega file',
+    'opticket.attach_hint'   => ':types - fino a :count file, max :size MB ciascuno.',
+    'set.attachments.op_max_files'    => 'Operatori: numero massimo di file per risposta',
+    'set.attachments.op_max_size_mb'  => 'Operatori: dimensione massima per file (MB)',
+    'set.attachments.op_max_total_mb' => 'Operatori: dimensione massima totale per risposta (MB)',
 
     // ---- Configuration (/op/config) ----
     'cfg.title'             => 'Configurazione',
@@ -419,9 +430,9 @@ return [
     'set.hide_operator_name.help' => 'I clienti vedono "Operatore Staff" al posto del nome dell\'operatore che ha risposto.',
     'set.captcha.enabled'      => 'Captcha nel modulo di apertura ticket',
     'set.attachments.enabled'  => "Consenti allegati all'apertura ticket (immagini e PDF)",
-    'set.attachments.max_files'    => 'Numero massimo di file per ticket',
-    'set.attachments.max_size_mb'  => 'Dimensione massima per file (MB)',
-    'set.attachments.max_total_mb' => 'Dimensione massima totale (MB)',
+    'set.attachments.max_files'    => 'Clienti: numero massimo di file per ticket',
+    'set.attachments.max_size_mb'  => 'Clienti: dimensione massima per file (MB)',
+    'set.attachments.max_total_mb' => 'Clienti: dimensione massima totale (MB)',
     'set.op_session_idle'      => 'Scadenza sessione operatori (secondi)',
     'set.op_session_idle.help' => 'Gli operatori vengono disconnessi dopo questo periodo di inattività (300 - 86400).',
     'set.throttle.op_login_fail' => 'Login operatori falliti per IP',

@@ -35,6 +35,8 @@ bhelpdesk/
 │   ├── Tickets.php         ticket logic
 │   ├── Attachments.php     uploads: validation, storage, protected download
 │   ├── Captcha.php         self-hosted image captcha (GD)
+│   ├── Html.php            whitelist HTML sanitizer for editor content
+│   ├── Media.php           images inserted with the editor (public, random names)
 │   ├── Settings.php        settings editable from /op/config (stored in DB)
 │   ├── Departments.php, Operators.php
 ├── templates/{customer,op}/
@@ -49,7 +51,7 @@ bhelpdesk/
 
 ```bash
 # 1. packages
-apt install nginx mariadb-server php8.3-fpm php8.3-mysql php8.3-mbstring php8.3-gd fonts-dejavu-core git
+apt install nginx mariadb-server php8.3-fpm php8.3-mysql php8.3-mbstring php8.3-gd php8.3-xml fonts-dejavu-core git
 
 # 2. user and code
 useradd --system --home /var/www/bhelpdesk --shell /usr/sbin/nologin bhelpdesk
@@ -111,6 +113,7 @@ mariadb bhelpdesk < sql/migrations/006_ticket_customers.sql
 mariadb bhelpdesk < sql/migrations/007_customer_access.sql
 mariadb bhelpdesk < sql/migrations/008_canned_signatures.sql
 mariadb bhelpdesk < sql/migrations/009_operator_departments.sql
+mariadb bhelpdesk < sql/migrations/010_rich_text.sql
 ```
 
 ## Operators area
@@ -131,6 +134,19 @@ mariadb bhelpdesk < sql/migrations/009_operator_departments.sql
 **Direct links.** When a ticket is opened a unique link `/customer/t/<token>` is generated (shown on the confirmation page; it will be sent by email with the notifications). It opens that ticket without signing in and expires **`customer_link_days` days (default 30, editable in /op/config/general) after the last reply** visible to the customer — every new reply extends it; internal notes do not. After that the page says *Link expired* and invites to sign in. Tokens are stored as SHA-256 hashes only. Removing a customer from a ticket revokes their links. Operators can create a new link for any customer of the ticket (🔗 in the Customers card) to send it by hand. Old `/customer/ticket/N?t=…` links keep working (migration 007 converts them).
 
 **Email (preview).** `Mailer` sends plain-text UTF-8 messages. With `mail.driver = 'log'` (default) nothing is sent: messages are appended to `storage/mail.log`, handy for testing. With `'mail'` the server's sendmail/postfix is used. The sender (**Default from** address and name) is set in */op/config/general → Email*. SMTP and ticket notifications come next.
+
+## Rich text editor and operator attachments
+
+**Editor.** Operator replies, internal notes, department signatures and canned responses use a WYSIWYG editor ([Quill 2](https://quilljs.com), BSD-3, vendored in `public/assets/vendor/quill-2.0.3/` — no CDN, compatible with the CSP). Formatting: headings, bold/italic/underline/strike, lists and indentation, alignment, quotes, code blocks, links and **images**. Without JavaScript a plain textarea is shown and the text is stored as plain text.
+
+- **Sanitized on the server** (`src/Html.php`, whitelist): only formatting tags survive; scripts, styles, event handlers, iframes/objects/SVG, `javascript:`/`data:` URLs and external images are removed. Applied when saving and again when displaying.
+- **Images** (toolbar button, drag & drop, paste) are uploaded to `/op/media` (JPG/PNG/GIF/WEBP, max 5 MB, checked with `getimagesize`) and stored in `storage/media/` with a random 32-hex name. They are served publicly from `/customer/media/<name>` (needed by customers and, later, by email clients) with `nosniff` and a sandbox CSP.
+- Customer messages stay plain text. Old signatures/canned responses are converted to HTML by migration 010.
+- Canned responses are inserted into the editor at the cursor; signatures can contain a logo and are previewed under the reply form.
+
+**Operator attachments** (replies and internal notes): JPG, PNG, GIF, WEBP, PDF, DOC, DOCX, XLS, XLSX, ZIP, TAR, GZ/TGZ (tar.gz), BZ2 (tar.bz2). Each file must have an allowed extension, a matching detected type (`finfo`) and the right signature (OLE, ZIP, ustar, gzip, bzip2, `%PDF-`, image check): a renamed PHP file or executable is rejected. Defaults: 10 files, 20 MB each, 50 MB per reply — editable in *General → Attachments*. Non-image files are always downloaded (never displayed inline). Attachments of internal notes are never available to customers. If a reply is rejected (e.g. wrong file type) the text written in the editor is kept.
+
+> Larger uploads need higher PHP / web-server limits: `upload_max_filesize = 25M`, `post_max_size = 64M` in the FPM pool and `client_max_body_size 64m` in nginx (see `deploy/`).
 
 ## Departments and ticket visibility
 

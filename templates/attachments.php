@@ -10,11 +10,12 @@ if (!empty($files)): ?>
     <strong class="attachments-title"><?= t('attach.title') ?></strong>
     <ul>
     <?php foreach ($files as $f): $url = $fileUrl((int) $f['id']); $isImg = str_starts_with($f['mime'], 'image/'); ?>
-        <li class="<?= $isImg ? 'is-image' : 'is-pdf' ?>">
+        <?php $ext = strtoupper(pathinfo((string) $f['original_name'], PATHINFO_EXTENSION)) ?: 'FILE'; ?>
+        <li class="<?= $isImg ? 'is-image' : 'is-file file-' . e(strtolower($ext)) ?>">
             <?php if ($isImg): ?>
                 <a href="<?= e($url) ?>" target="_blank" rel="noopener"><img src="<?= e($url) ?>" alt="<?= e($f['original_name']) ?>" loading="lazy"></a>
             <?php else: ?>
-                <span class="file-icon" aria-hidden="true">PDF</span>
+                <span class="file-icon" aria-hidden="true"><?= e(mb_substr($ext, 0, 4)) ?></span>
             <?php endif; ?>
             <span class="file-meta">
                 <a href="<?= e($url) ?>?download=1"><?= e($f['original_name']) ?></a>

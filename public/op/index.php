@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{AccessLinks, Attachments, Auth, Canned, CustomerAuth, Customers, Departments, IpGuard, Lang, Operators, Router, Session, Settings, Throttle, Tickets, View};
+use Bhelpdesk\{AccessLinks, Attachments, Auth, Canned, CustomerAuth, Customers, Departments, Html, IpGuard, Lang, Media, Operators, Router, Session, Settings, Throttle, Tickets, View};
 
 // ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
@@ -101,6 +101,12 @@ $r->get('/ticket/{id}', static function (array $p) use ($loadTicket): void {
             Canned::forTicket($t)
         ),
         'signature'    => Canned::signature($t, $op),
+        // text kept after a failed submit (e.g. a rejected attachment)
+        'drafts'       => (static function () use ($t): array {
+            $d = ['reply' => $_SESSION['drafts'][$t['id'] . ':reply'] ?? '', 'note' => $_SESSION['drafts'][$t['id'] . ':note'] ?? ''];
+            unset($_SESSION['drafts'][$t['id'] . ':reply'], $_SESSION['drafts'][$t['id'] . ':note']);
+            return $d;
+        })(),
         'departments' => Tickets::departments(false),
         'operators'   => Tickets::operators($t['department_id'] !== null ? (int) $t['department_id'] : null),
     ]);
@@ -109,19 +115,38 @@ $r->get('/ticket/{id}', static function (array $p) use ($loadTicket): void {
 $r->post('/ticket/{id}/reply', static function (array $p) use ($loadTicket): void {
     $op = Auth::require();
     $t = $loadTicket($p);
-    $body = trim((string) ($_POST['message'] ?? ''));
     $internal = !empty($_POST['internal']);
     $default = $internal ? $t['status'] : 'answered';
-    if ($body === '') {
-        flash('error', 'ticket.empty_message');
-    } else {
-        Tickets::operatorReply($t, $op, $body, $internal, (string) ($_POST['status'] ?? $default), client_ip());
-        if (!$internal && !$t['assigned_to']) {
-            Tickets::update(Tickets::find((int) $t['id']), $op, ['assigned_to' => $op['id']]);
+    // the editor posts HTML (format=html); without JavaScript the plain textarea posts text
+    $format = ($_POST['format'] ?? '') === 'html' ? 'html' : 'text';
+    $body = $format === 'html' ? Html::sanitize((string) ($_POST['message'] ?? '')) : trim((string) ($_POST['message'] ?? ''));
+    $empty = $format === 'html' ? Html::isEmpty($body) : $body === '';
+    $upload = Attachments::fromUpload($_FILES['attachments'] ?? null, 'operator');
+    $draftKey = $t['id'] . ($internal ? ':note' : ':reply');
+
+    if ($upload['errors'] || ($empty && !$upload['files'])) {
+        foreach ($upload['errors'] ?: [__('ticket.empty_message')] as $err) {
+            flash('error', 'tc.error', ['error' => $err]);
         }
-        flash('success', $internal ? 'opticket.note_added' : 'opticket.reply_sent');
+        // keep what was written: the editor is refilled on the next page
+        $_SESSION['drafts'][$draftKey] = $format === 'html' ? $body : Html::fromText($body);
+        redirect('/op/ticket/' . $t['id'] . ($internal ? '#note' : '#reply'));
     }
+    Tickets::operatorReply($t, $op, $empty ? '' : $body, $internal, (string) ($_POST['status'] ?? $default), client_ip(), $format, $upload['files']);
+    if (!$internal && !$t['assigned_to']) {
+        Tickets::update(Tickets::find((int) $t['id']), $op, ['assigned_to' => $op['id']]);
+    }
+    flash('success', $internal ? 'opticket.note_added' : 'opticket.reply_sent');
     redirect('/op/ticket/' . $t['id']);
+});
+
+// ---------- Images inserted with the editor (signatures, replies, canned responses) ----------
+$r->post('/media', static function (): void {
+    $op = Auth::require();
+    $res = Media::upload($_FILES['image'] ?? null, (int) $op['id']);
+    header('Content-Type: application/json; charset=utf-8');
+    http_response_code($res['error'] ? 422 : 200);
+    echo json_encode($res, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 });
 
 $r->post('/ticket/{id}/update', static function (array $p) use ($loadTicket): void {

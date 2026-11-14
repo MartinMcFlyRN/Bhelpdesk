@@ -11,6 +11,7 @@
         <div class="card narrow-left">
             <form method="post" action="/op/config/departments/<?= (int) $dep['id'] ?>" class="form">
                 <?= \Bhelpdesk\Csrf::field() ?>
+                <input type="hidden" name="format" value="text">
                 <div class="row-2 narrow-right">
                     <label><?= t('dep.name') ?> <input type="text" name="name" required maxlength="100" value="<?= e($dep['name']) ?>"></label>
                     <label><?= t('dep.order') ?> <input type="number" name="sort_order" value="<?= (int) $dep['sort_order'] ?>" min="-999" max="999"></label>
@@ -18,7 +19,7 @@
                 <label class="check"><input type="checkbox" name="active" value="1" <?= $dep['active'] ? 'checked' : '' ?>> <?= t('dep.active_label') ?></label>
                 <small class="muted hint field-help"><?= t('dep.active_help') ?></small>
                 <label><?= t('dep.signature') ?>
-                    <textarea name="signature" rows="6" maxlength="2000" class="mono-area" placeholder="<?= t('dep.signature_placeholder') ?>"><?= e($dep['signature'] ?? '') ?></textarea>
+                    <textarea name="signature" rows="6" data-editor="signature" placeholder="<?= t('dep.signature_placeholder') ?>"><?= e($dep['signature'] ?? '') ?></textarea>
                     <small class="muted hint"><?= t('dep.signature_help') ?></small>
                 </label>
                 <?php require BHD_ROOT . '/templates/op/config/_placeholders.php'; ?>

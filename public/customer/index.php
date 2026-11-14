@@ -62,6 +62,11 @@ $r->get('/', static function (): void {
     View::render('customer', 'home', ['title' => __('home.title'), 'me' => CustomerAuth::user()]);
 });
 
+// ---------- Images inserted by operators with the editor (public, unguessable names) ----------
+$r->get('/media/{file}', static function (array $p): void {
+    \Bhelpdesk\Media::send((string) $p['file']);
+});
+
 // ---------- Captcha image ----------
 $r->get('/captcha', static function (): void {
     Captcha::output();

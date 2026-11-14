@@ -26,7 +26,7 @@
                     <?php if ($m['is_internal']): ?><span class="badge"><?= t('opticket.internal_badge') ?></span><?php endif; ?>
                     <span class="muted"><?= fmt_date($m['created_at']) ?><?= $m['ip'] ? ' · ' . e($m['ip']) : '' ?></span>
                 </header>
-                <div class="body"><?= nl2br_e($m['body']) ?></div>
+                <div class="body"><?= \Bhelpdesk\Html::body($m) ?></div>
                 <?php
                 $files = $attachments[(int) $m['id']] ?? [];
                 $fileUrl = static fn (int $id): string => '/op/file/' . $id;
@@ -51,15 +51,17 @@
                 </label>
                 <?php endif; ?>
             </div>
-            <form method="post" action="/op/ticket/<?= (int) $ticket['id'] ?>/reply" class="form">
+            <form method="post" action="/op/ticket/<?= (int) $ticket['id'] ?>/reply" class="form" enctype="multipart/form-data" id="reply">
                 <?= \Bhelpdesk\Csrf::field() ?>
-                <textarea name="message" id="reply-message" rows="7" required></textarea>
+                <input type="hidden" name="format" value="text">
+                <textarea name="message" id="reply-message" rows="7" data-editor="full"><?= e($drafts['reply'] ?? '') ?></textarea>
                 <?php if ($signature !== ''): ?>
                 <details class="signature-preview">
                     <summary><?= t('opticket.signature_added', ['department' => $ticket['department_name'] ?? '']) ?></summary>
-                    <pre><?= e($signature) ?></pre>
+                    <div class="rich"><?= $signature ?></div>
                 </details>
                 <?php endif; ?>
+                <?php $fileId = 'reply-files'; require BHD_ROOT . '/templates/op/_op_files.php'; ?>
                 <div class="row-inline">
                     <label><?= t('opticket.status_after') ?>
                         <select name="status">
@@ -75,11 +77,13 @@
 
         <div class="card card-internal">
             <h2><?= t('opticket.internal_title') ?></h2>
-            <form method="post" action="/op/ticket/<?= (int) $ticket['id'] ?>/reply" class="form">
+            <form method="post" action="/op/ticket/<?= (int) $ticket['id'] ?>/reply" class="form" enctype="multipart/form-data" id="note">
                 <?= \Bhelpdesk\Csrf::field() ?>
                 <input type="hidden" name="internal" value="1">
+                <input type="hidden" name="format" value="text">
                 <input type="hidden" name="status" value="<?= e($ticket['status']) ?>">
-                <textarea name="message" rows="3" required placeholder="<?= t('opticket.internal_hint') ?>"></textarea>
+                <textarea name="message" rows="3" data-editor="full" placeholder="<?= t('opticket.internal_hint') ?>"><?= e($drafts['note'] ?? '') ?></textarea>
+                <?php $fileId = 'note-files'; require BHD_ROOT . '/templates/op/_op_files.php'; ?>
                 <button class="btn" type="submit"><?= t('opticket.add_note') ?></button>
             </form>
         </div>

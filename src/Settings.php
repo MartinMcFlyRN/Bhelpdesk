@@ -33,6 +33,9 @@ final class Settings
         'attachments.max_files'    => ['section' => 'attachments', 'type' => 'int', 'min' => 1, 'max' => 20],
         'attachments.max_size_mb'  => ['section' => 'attachments', 'type' => 'int', 'min' => 1, 'max' => 100],
         'attachments.max_total_mb' => ['section' => 'attachments', 'type' => 'int', 'min' => 1, 'max' => 500],
+        'attachments.op_max_files'    => ['section' => 'attachments', 'type' => 'int', 'min' => 1, 'max' => 50],
+        'attachments.op_max_size_mb'  => ['section' => 'attachments', 'type' => 'int', 'min' => 1, 'max' => 500],
+        'attachments.op_max_total_mb' => ['section' => 'attachments', 'type' => 'int', 'min' => 1, 'max' => 1000],
         'op_session_idle'          => ['section' => 'security',    'type' => 'int', 'min' => 300, 'max' => 86400],
         'throttle.op_login_fail'   => ['section' => 'security',    'type' => 'pair'],
         'throttle.ticket_create'   => ['section' => 'security',    'type' => 'pair'],
@@ -57,6 +60,9 @@ final class Settings
         'attachments.max_files'    => 5,
         'attachments.max_size_mb'  => 5,
         'attachments.max_total_mb' => 20,
+        'attachments.op_max_files'    => 10,
+        'attachments.op_max_size_mb'  => 20,
+        'attachments.op_max_total_mb' => 50,
         'op_session_idle'          => 1800,
         'throttle.op_login_fail'   => [5, 900],
         'throttle.ticket_create'   => [5, 3600],
@@ -185,7 +191,8 @@ final class Settings
             && !in_array($values['default_language'], $values['enabled_languages'], true)) {
             $errors[] = __('val.set_default_not_enabled');
         }
-        if (($values['attachments.max_total_mb'] ?? 0) < ($values['attachments.max_size_mb'] ?? 0)) {
+        if (($values['attachments.max_total_mb'] ?? 0) < ($values['attachments.max_size_mb'] ?? 0)
+            || ($values['attachments.op_max_total_mb'] ?? 0) < ($values['attachments.op_max_size_mb'] ?? 0)) {
             $errors[] = __('val.set_total_lt_file');
         }
         return ['values' => $values, 'errors' => $errors];
@@ -239,8 +246,8 @@ final class Settings
     public static function attachmentLimitsExceedPhp(): bool
     {
         $php = self::phpLimits();
-        return (int) self::current('attachments.max_size_mb') * 1048576 > $php['upload']
-            || (int) self::current('attachments.max_total_mb') * 1048576 >= $php['post']
-            || (int) self::current('attachments.max_files') > $php['files'];
+        return max((int) self::current('attachments.max_size_mb'), (int) self::current('attachments.op_max_size_mb')) * 1048576 > $php['upload']
+            || max((int) self::current('attachments.max_total_mb'), (int) self::current('attachments.op_max_total_mb')) * 1048576 >= $php['post']
+            || max((int) self::current('attachments.max_files'), (int) self::current('attachments.op_max_files')) > $php['files'];
     }
 }

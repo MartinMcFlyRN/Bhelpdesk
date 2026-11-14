@@ -10,6 +10,7 @@
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.5; }
 a { color: var(--primary); text-decoration: none; }
 a:hover { text-decoration: underline; }
@@ -323,3 +324,38 @@ fieldset.card legend { font-weight: 700; padding: 0 .4rem; }
 .table + .card, .table + form + .card { margin-top: 1rem; }
 .dep-pick.is-admin .checks { opacity: .45; }
 .dep-list { max-width: 260px; font-size: .85rem; }
+
+/* rich text (editor output) - also on the customer side */
+.rich > :first-child { margin-top: 0; }
+.rich > :last-child { margin-bottom: 0; }
+.rich p { margin: 0 0 .6em; }
+.rich h2 { font-size: 1.15rem; margin: .8em 0 .4em; }
+.rich h3 { font-size: 1rem; margin: .8em 0 .4em; }
+.rich ul, .rich ol { margin: .3em 0 .6em; padding-left: 1.6em; }
+.rich blockquote { margin: .5em 0; padding: .2em .8em; border-left: 3px solid #cbd5e1; color: #475569; }
+.rich pre { background: #0f172a; color: #e2e8f0; padding: .6em .8em; border-radius: 6px; overflow-x: auto; font-size: .85rem; white-space: pre-wrap; }
+.rich code { background: #f1f5f9; padding: .05em .3em; border-radius: 3px; font-size: .9em; }
+.rich pre code { background: none; padding: 0; }
+.rich img { max-width: 100%; height: auto; }
+.rich a { overflow-wrap: anywhere; }
+.rich .ql-align-center { text-align: center; }
+.rich .ql-align-right { text-align: right; }
+.rich .ql-align-justify { text-align: justify; }
+.rich .ql-indent-1 { padding-left: 2em; } .rich .ql-indent-2 { padding-left: 4em; } .rich .ql-indent-3 { padding-left: 6em; }
+.rich .ql-indent-4 { padding-left: 8em; } .rich .ql-indent-5 { padding-left: 10em; } .rich .ql-indent-6 { padding-left: 12em; }
+.rich .ql-indent-7 { padding-left: 14em; } .rich .ql-indent-8 { padding-left: 16em; }
+
+/* editor */
+.editor { background: #fff; margin-bottom: .75rem; }
+.editor .ql-editor { min-height: 160px; font-size: .95rem; line-height: 1.5; }
+.card-internal .editor .ql-editor { min-height: 90px; }
+.editor-signature .ql-editor { min-height: 110px; }
+.ql-toolbar.ql-snow, .ql-container.ql-snow { border-color: var(--border); }
+.ql-toolbar.ql-snow { border-radius: 6px 6px 0 0; background: #f9fafb; }
+.ql-container.ql-snow { border-radius: 0 0 6px 6px; font-family: inherit; }
+.signature-preview .rich { background: #f9fafb; border: 1px dashed var(--border); border-radius: 6px; padding: .6rem .75rem; margin-top: .4rem; }
+.op-files { margin-bottom: .4rem; }
+.file-icon { width: 46px; font-size: .68rem; }
+.is-file.file-doc .file-icon, .is-file.file-docx .file-icon { background: #dbeafe; color: #1e40af; }
+.is-file.file-xls .file-icon, .is-file.file-xlsx .file-icon { background: #dcfce7; color: #166534; }
+.is-file.file-zip .file-icon, .is-file.file-tar .file-icon, .is-file.file-gz .file-icon, .is-file.file-tgz .file-icon, .is-file.file-bz2 .file-icon { background: #fef3c7; color: #92400e; }

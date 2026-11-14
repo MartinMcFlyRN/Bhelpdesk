@@ -1,5 +1,6 @@
 <form method="post" action="<?= e($formAction) ?>" class="form">
     <?= \Bhelpdesk\Csrf::field() ?>
+    <input type="hidden" name="format" value="text">
     <div class="row-2">
         <label><?= t('canned.title_col') ?>
             <input type="text" name="title" required maxlength="150" value="<?= e($values['title'] ?? '') ?>" placeholder="<?= t('canned.title_placeholder') ?>">
@@ -14,7 +15,7 @@
         </label>
     </div>
     <label><?= t('canned.body') ?>
-        <textarea name="body" rows="8" required maxlength="20000"><?= e($values['body'] ?? '') ?></textarea>
+        <textarea name="body" rows="8" data-editor="full"><?= e($values['body'] ?? '') ?></textarea>
     </label>
     <?php require BHD_ROOT . '/templates/op/config/_placeholders.php'; ?>
     <?php if (!empty($item)): ?>

@@ -6,22 +6,53 @@ namespace Bhelpdesk;
 use RuntimeException;
 
 /**
- * Ticket attachments: images (JPG, PNG, GIF, WEBP) and PDF only.
+ * Ticket attachments.
  *
- * - Type is detected from the file content (finfo), not from the browser
- *   or the extension; the extension must also match the detected type.
- * - Files are stored outside public/ with a random name and no extension,
- *   and are only served through PHP after a permission check.
+ * Two profiles:
+ *  - 'customer': images (JPG, PNG, GIF, WEBP) and PDF;
+ *  - 'operator': also Word, Excel, ZIP, TAR, GZ/TGZ, BZ2.
+ * For every file the extension must be allowed, the type detected from the
+ * content (finfo) must be one expected for that extension, and the file must
+ * start with the right signature (magic bytes / getimagesize).
+ * Files are stored outside public/ with a random name and no extension,
+ * and are only served through PHP after a permission check.
  */
 final class Attachments
 {
-    /** detected MIME type => allowed extensions */
+    /**
+     * extension => [MIME types finfo may report, MIME type stored/served, content check]
+     */
+    private const EXT = [
+        'jpg'  => [['image/jpeg'], 'image/jpeg', 'image'],
+        'jpeg' => [['image/jpeg'], 'image/jpeg', 'image'],
+        'png'  => [['image/png'], 'image/png', 'image'],
+        'gif'  => [['image/gif'], 'image/gif', 'image'],
+        'webp' => [['image/webp'], 'image/webp', 'image'],
+        'pdf'  => [['application/pdf'], 'application/pdf', 'pdf'],
+        'doc'  => [['application/msword', 'application/CDFV2', 'application/x-ole-storage', 'application/vnd.ms-office', 'application/octet-stream'], 'application/msword', 'ole'],
+        'xls'  => [['application/vnd.ms-excel', 'application/CDFV2', 'application/x-ole-storage', 'application/vnd.ms-office', 'application/octet-stream'], 'application/vnd.ms-excel', 'ole'],
+        'docx' => [['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/zip', 'application/octet-stream'], 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'zip'],
+        'xlsx' => [['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/zip', 'application/octet-stream'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'zip'],
+        'zip'  => [['application/zip', 'application/x-zip-compressed'], 'application/zip', 'zip'],
+        'tar'  => [['application/x-tar'], 'application/x-tar', 'tar'],
+        'gz'   => [['application/gzip', 'application/x-gzip'], 'application/gzip', 'gzip'],
+        'tgz'  => [['application/gzip', 'application/x-gzip'], 'application/gzip', 'gzip'],
+        'bz2'  => [['application/x-bzip2'], 'application/x-bzip2', 'bzip2'],
+        'tbz2' => [['application/x-bzip2'], 'application/x-bzip2', 'bzip2'],
+    ];
+
+    private const PROFILES = [
+        'customer' => ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf'],
+        'operator' => ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'zip', 'tar', 'gz', 'tgz', 'bz2', 'tbz2'],
+    ];
+
+    /** MIME types that may be served (used by send()) */
     public const TYPES = [
-        'image/jpeg'      => ['jpg', 'jpeg'],
-        'image/png'       => ['png'],
-        'image/gif'       => ['gif'],
-        'image/webp'      => ['webp'],
-        'application/pdf' => ['pdf'],
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf',
+        'application/msword', 'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/zip', 'application/x-tar', 'application/gzip', 'application/x-bzip2',
     ];
 
     public static function enabled(): bool
@@ -29,31 +60,41 @@ final class Attachments
         return (bool) config('attachments.enabled', true);
     }
 
-    public static function maxFiles(): int
+    private static function key(string $profile): string
     {
-        return max(1, (int) config('attachments.max_files', 5));
+        return $profile === 'operator' ? 'attachments.op_' : 'attachments.';
     }
 
-    public static function maxSizeMb(): int
+    public static function maxFiles(string $profile = 'customer'): int
     {
-        return max(1, (int) config('attachments.max_size_mb', 5));
+        return max(1, (int) config(self::key($profile) . 'max_files', $profile === 'operator' ? 10 : 5));
     }
 
-    public static function maxTotalMb(): int
+    public static function maxSizeMb(string $profile = 'customer'): int
     {
-        return max(1, (int) config('attachments.max_total_mb', 20));
+        return max(1, (int) config(self::key($profile) . 'max_size_mb', $profile === 'operator' ? 20 : 5));
+    }
+
+    public static function maxTotalMb(string $profile = 'customer'): int
+    {
+        return max(1, (int) config(self::key($profile) . 'max_total_mb', $profile === 'operator' ? 50 : 20));
     }
 
     /** Value for the <input accept="..."> attribute */
-    public static function acceptAttr(): string
+    public static function acceptAttr(string $profile = 'customer'): string
     {
-        $exts = [];
-        foreach (self::TYPES as $list) {
-            foreach ($list as $e) {
-                $exts[] = '.' . $e;
-            }
+        $out = [];
+        foreach (self::PROFILES[$profile] as $ext) {
+            $out[] = '.' . $ext;
         }
-        return implode(',', array_merge(array_keys(self::TYPES), $exts));
+        return implode(',', $out);
+    }
+
+    /** Human list of the allowed extensions, e.g. "JPG, PNG, PDF, DOCX" */
+    public static function extList(string $profile = 'customer'): string
+    {
+        $list = array_diff(self::PROFILES[$profile], ['jpeg', 'tgz', 'tbz2']);
+        return strtoupper(implode(', ', $list));
     }
 
     public static function storageDir(): string
@@ -65,7 +106,7 @@ final class Attachments
      * Validate an uploaded field (e.g. $_FILES['attachments']).
      * @return array{files: list<array{tmp: string, name: string, size: int, mime: string}>, errors: list<string>}
      */
-    public static function fromUpload(?array $field): array
+    public static function fromUpload(?array $field, string $profile = 'customer'): array
     {
         $files = [];
         $errors = [];
@@ -77,8 +118,10 @@ final class Attachments
         $names = (array) $field['name'];
         $count = 0;
         $total = 0;
-        $maxBytes = self::maxSizeMb() * 1048576;
+        $maxMb = self::maxSizeMb($profile);
+        $maxBytes = $maxMb * 1048576;
         $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $typeError = $profile === 'operator' ? 'val.file_type_op' : 'val.file_type';
 
         foreach (array_keys($names) as $i) {
             $err  = (int) ((array) $field['error'])[$i];
@@ -91,7 +134,7 @@ final class Attachments
             $count++;
 
             if ($err === UPLOAD_ERR_INI_SIZE || $err === UPLOAD_ERR_FORM_SIZE || $size > $maxBytes) {
-                $errors[] = __('val.file_too_big', ['name' => $name, 'size' => self::maxSizeMb()]);
+                $errors[] = __('val.file_too_big', ['name' => $name, 'size' => $maxMb]);
                 continue;
             }
             if ($err !== UPLOAD_ERR_OK || !is_uploaded_file($tmp)) {
@@ -99,39 +142,49 @@ final class Attachments
                 continue;
             }
 
-            $mime = (string) $finfo->file($tmp);
-            $ext  = strtolower(pathinfo($name, PATHINFO_EXTENSION));
-            if (!isset(self::TYPES[$mime]) || !in_array($ext, self::TYPES[$mime], true) || !self::contentOk($tmp, $mime)) {
-                $errors[] = __('val.file_type', ['name' => $name]);
+            $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+            $rule = in_array($ext, self::PROFILES[$profile], true) ? self::EXT[$ext] : null;
+            $detected = (string) $finfo->file($tmp);
+            if (!$rule || !in_array($detected, $rule[0], true) || !self::contentOk($tmp, $rule[2], $rule[1])) {
+                $errors[] = __($typeError, ['name' => $name, 'types' => self::extList($profile)]);
                 continue;
             }
 
             $total += $size;
-            $files[] = ['tmp' => $tmp, 'name' => $name, 'size' => $size, 'mime' => $mime];
+            $files[] = ['tmp' => $tmp, 'name' => $name, 'size' => $size, 'mime' => $rule[1]];
         }
 
-        if ($count > self::maxFiles()) {
-            array_unshift($errors, __('val.too_many_files', ['max' => self::maxFiles()]));
+        if ($count > self::maxFiles($profile)) {
+            array_unshift($errors, __('val.too_many_files', ['max' => self::maxFiles($profile)]));
         }
-        if ($total > self::maxTotalMb() * 1048576) {
-            $errors[] = __('val.total_too_big', ['size' => self::maxTotalMb()]);
+        if ($total > self::maxTotalMb($profile) * 1048576) {
+            $errors[] = __('val.total_too_big', ['size' => self::maxTotalMb($profile)]);
         }
         return ['files' => $errors ? [] : $files, 'errors' => $errors];
     }
 
-    /** Extra content checks beyond the MIME sniffing */
-    private static function contentOk(string $path, string $mime): bool
+    /** File signature check for each kind of file */
+    private static function contentOk(string $path, string $kind, string $mime): bool
     {
-        if ($mime === 'application/pdf') {
-            $fh = fopen($path, 'rb');
-            $head = $fh ? (string) fread($fh, 5) : '';
-            if ($fh) {
-                fclose($fh);
-            }
-            return $head === '%PDF-';
+        if ($kind === 'image') {
+            $info = @getimagesize($path);
+            return is_array($info) && $info[0] > 0 && $info[1] > 0 && ($info['mime'] ?? '') === $mime;
         }
-        $info = @getimagesize($path);
-        return is_array($info) && $info[0] > 0 && $info[1] > 0 && ($info['mime'] ?? '') === $mime;
+        $fh = fopen($path, 'rb');
+        if (!$fh) {
+            return false;
+        }
+        $head = (string) fread($fh, 512);
+        fclose($fh);
+        return match ($kind) {
+            'pdf'   => str_starts_with($head, '%PDF-'),
+            'ole'   => str_starts_with($head, "\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1"),
+            'zip'   => str_starts_with($head, "PK\x03\x04") || str_starts_with($head, "PK\x05\x06"),
+            'tar'   => substr($head, 257, 5) === 'ustar',
+            'gzip'  => str_starts_with($head, "\x1F\x8B"),
+            'bzip2' => str_starts_with($head, 'BZh'),
+            default => false,
+        };
     }
 
     private static function cleanName(string $name): string
@@ -210,7 +263,7 @@ final class Attachments
     public static function send(array $a, bool $forceDownload = false): never
     {
         $path = self::storageDir() . '/' . $a['stored_name'];
-        if (!isset(self::TYPES[$a['mime']]) || !is_file($path)) {
+        if (!in_array($a['mime'], self::TYPES, true) || !is_file($path)) {
             http_response_code(404);
             exit;
         }

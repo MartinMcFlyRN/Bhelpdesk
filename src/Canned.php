@@ -48,7 +48,8 @@ final class Canned
     {
         $v = [
             'title'         => trim((string) ($in['title'] ?? '')),
-            'body'          => trim((string) ($in['body'] ?? '')),
+            // HTML from the editor, plain text when JavaScript is off
+            'body'          => ($in['format'] ?? '') === 'html' ? Html::sanitize((string) ($in['body'] ?? '')) : Html::fromText((string) ($in['body'] ?? '')),
             'department_id' => (int) ($in['department_id'] ?? 0) ?: null,
             'active'        => !empty($in['active']) ? 1 : 0,
         ];
@@ -58,7 +59,7 @@ final class Canned
         } elseif (Db::value('SELECT 1 FROM canned_responses WHERE title = ? AND id <> ?', [$v['title'], (int) $id])) {
             $errors[] = __('val.canned_duplicate');
         }
-        if ($v['body'] === '' || mb_strlen($v['body']) > 20000) {
+        if (Html::isEmpty($v['body']) || mb_strlen($v['body']) > 50000) {
             $errors[] = __('val.canned_body');
         }
         if ($v['department_id'] && !Db::value('SELECT 1 FROM departments WHERE id = ?', [$v['department_id']])) {
@@ -103,13 +104,14 @@ final class Canned
         ];
     }
 
-    public static function render(string $text, array $context): string
+    /** Replace placeholders in HTML content (values are escaped) and sanitize the result */
+    public static function render(string $html, array $context): string
     {
-        return strtr($text, $context);
+        return Html::sanitize(strtr($html, array_map(static fn ($v) => e($v), $context)));
     }
 
     /**
-     * Signature of the ticket's department with placeholders filled in,
+     * Signature (HTML) of the ticket's department with placeholders filled in,
      * or '' when the department has none. Appended to reply emails.
      */
     public static function signature(array $ticket, array $op): string
@@ -118,6 +120,6 @@ final class Canned
             return '';
         }
         $sig = (string) Db::value('SELECT signature FROM departments WHERE id = ?', [(int) $ticket['department_id']]);
-        return trim($sig) === '' ? '' : self::render(trim($sig), self::context($ticket, $op));
+        return Html::isEmpty($sig) ? '' : self::render($sig, self::context($ticket, $op));
     }
 }

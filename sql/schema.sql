@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS ticket_messages (
     operator_id  INT UNSIGNED NULL,
     customer_id  INT UNSIGNED NULL,
     body         MEDIUMTEXT NOT NULL,
+    body_format  ENUM('text','html') NOT NULL DEFAULT 'text',
     is_internal  TINYINT(1) NOT NULL DEFAULT 0,
     ip           VARCHAR(45) NULL,
     created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -146,6 +147,20 @@ CREATE TABLE IF NOT EXISTS attachments (
     KEY ix_attachments_ticket (ticket_id),
     CONSTRAINT fk_attachments_ticket  FOREIGN KEY (ticket_id)  REFERENCES tickets(id)         ON DELETE CASCADE,
     CONSTRAINT fk_attachments_message FOREIGN KEY (message_id) REFERENCES ticket_messages(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Images inserted with the editor (public URLs /customer/media/<file_name>)
+CREATE TABLE IF NOT EXISTS media (
+    id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    file_name    VARCHAR(64)  NOT NULL,
+    mime         VARCHAR(50)  NOT NULL,
+    size         INT UNSIGNED NOT NULL,
+    width        INT UNSIGNED NOT NULL DEFAULT 0,
+    height       INT UNSIGNED NOT NULL DEFAULT 0,
+    uploaded_by  INT UNSIGNED NULL,
+    created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_media_file (file_name),
+    CONSTRAINT fk_media_operator FOREIGN KEY (uploaded_by) REFERENCES operators(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Canned responses (/op/config/canned)

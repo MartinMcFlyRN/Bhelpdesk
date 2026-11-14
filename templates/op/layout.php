@@ -9,7 +9,11 @@ $navActive = static fn (string $prefix): string => str_starts_with($uri, $prefix
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex,nofollow">
     <title><?= e($title ?? '') ?> · <?= e(config('app_name', 'Bhelpdesk')) ?> <?= t('app.operators_area') ?></title>
+    <link rel="stylesheet" href="/assets/vendor/quill-2.0.3/quill.snow.css">
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/assets/style.css">
+    <script src="/assets/vendor/quill-2.0.3/quill.js" defer></script>
+    <script src="/assets/editor.js" defer></script>
     <script src="/assets/app.js" defer></script>
 </head>
 <body class="area-op">

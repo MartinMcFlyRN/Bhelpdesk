@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="referrer" content="no-referrer">
     <title><?= e($title ?? '') ?> · <?= e(config('app_name', 'Bhelpdesk')) ?></title>
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/assets/style.css">
     <script src="/assets/app.js" defer></script>
 </head>

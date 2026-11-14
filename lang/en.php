@@ -377,8 +377,8 @@ return [
     'val.canned_duplicate'   => 'A canned response with this title already exists.',
     'val.canned_body'        => 'The text of the response is required.',
     'dep.signature'          => 'Email signature',
-    'dep.signature_placeholder' => "{operator_name}\nTechnical support - {app_name}\nPhone +39 0541 000000",
-    'dep.signature_help'     => 'Added at the end of the reply emails sent for tickets of this department. Leave empty for no signature.',
+    'dep.signature_placeholder' => '{operator_name} - Technical support - {app_name}',
+    'dep.signature_help'     => 'Added at the end of the reply emails sent for tickets of this department. You can format it and insert images (e.g. a logo) with the 🖼 button. Leave empty for no signature.',
     'val.dep_signature'      => 'The signature is too long (max 2000 characters).',
     'opticket.signature_added' => 'The signature of :department will be added to the email',
 
@@ -389,6 +389,17 @@ return [
     'ops.no_departments'    => 'No department',
     'val.ops_departments'   => 'Select at least one department for an agent.',
     'opticket.transferred'  => 'Ticket moved to a department you do not handle: it is no longer in your list.',
+
+    // ---- Editor, images and operator attachments ----
+    'media.upload_failed'    => 'The image could not be uploaded.',
+    'media.too_big'          => 'The image is larger than :size MB.',
+    'media.only_images'      => 'Only JPG, PNG, GIF or WEBP images can be inserted.',
+    'val.file_type_op'       => '":name" is not allowed. Allowed files: :types.',
+    'opticket.attach'        => 'Attach files',
+    'opticket.attach_hint'   => ':types - up to :count files, max :size MB each.',
+    'set.attachments.op_max_files'    => 'Operators: max files per reply',
+    'set.attachments.op_max_size_mb'  => 'Operators: max size per file (MB)',
+    'set.attachments.op_max_total_mb' => 'Operators: max total size per reply (MB)',
 
     // ---- Configuration (/op/config) ----
     'cfg.title'             => 'Configuration',
@@ -424,9 +435,9 @@ return [
     'set.hide_operator_name.help' => 'Customers see "Staff Operator" instead of the name of the operator who replied.',
     'set.captcha.enabled'      => 'Captcha on the new ticket form',
     'set.attachments.enabled'  => 'Allow attachments on new tickets (images and PDF)',
-    'set.attachments.max_files'    => 'Max files per ticket',
-    'set.attachments.max_size_mb'  => 'Max size per file (MB)',
-    'set.attachments.max_total_mb' => 'Max total size (MB)',
+    'set.attachments.max_files'    => 'Customers: max files per ticket',
+    'set.attachments.max_size_mb'  => 'Customers: max size per file (MB)',
+    'set.attachments.max_total_mb' => 'Customers: max total size (MB)',
     'set.op_session_idle'      => 'Operator session timeout (seconds)',
     'set.op_session_idle.help' => 'Operators are logged out after this period of inactivity (300 - 86400).',
     'set.throttle.op_login_fail' => 'Failed operator logins per IP',

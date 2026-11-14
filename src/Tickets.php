@@ -232,11 +232,12 @@ final class Tickets
         );
     }
 
-    public static function addMessage(int $ticketId, string $authorType, ?int $operatorId, string $body, bool $internal, ?string $ip, ?int $customerId = null): int
+    public static function addMessage(int $ticketId, string $authorType, ?int $operatorId, string $body, bool $internal, ?string $ip, ?int $customerId = null, string $format = 'text'): int
     {
+        $format = $format === 'html' ? 'html' : 'text';
         $id = Db::insert(
-            'INSERT INTO ticket_messages (ticket_id, author_type, operator_id, customer_id, body, is_internal, ip) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [$ticketId, $authorType, $operatorId, $customerId, $body, (int) $internal, $ip]
+            'INSERT INTO ticket_messages (ticket_id, author_type, operator_id, customer_id, body, body_format, is_internal, ip) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [$ticketId, $authorType, $operatorId, $customerId, $format === 'html' ? Html::sanitize($body) : $body, $format, (int) $internal, $ip]
         );
         Db::exec('UPDATE tickets SET updated_at = NOW() WHERE id = ?', [$ticketId]);
         return $id;
@@ -253,9 +254,24 @@ final class Tickets
         }
     }
 
-    public static function operatorReply(array $ticket, array $op, string $body, bool $internal, string $newStatus, string $ip): void
+    /**
+     * Operator reply or internal note; $format 'html' for the WYSIWYG editor,
+     * $files = validated uploads (Attachments::fromUpload with the 'operator' profile).
+     */
+    public static function operatorReply(array $ticket, array $op, string $body, bool $internal, string $newStatus, string $ip, string $format = 'text', array $files = []): void
     {
-        self::addMessage((int) $ticket['id'], 'operator', (int) $op['id'], $body, $internal, $ip);
+        $pdo = Db::pdo();
+        $pdo->beginTransaction();
+        try {
+            $messageId = self::addMessage((int) $ticket['id'], 'operator', (int) $op['id'], $body, $internal, $ip, null, $format);
+            if ($files) {
+                Attachments::store((int) $ticket['id'], $messageId, $files);
+            }
+            $pdo->commit();
+        } catch (\Throwable $ex) {
+            $pdo->rollBack();
+            throw $ex;
+        }
         if (in_array($newStatus, self::STATUSES, true) && $newStatus !== $ticket['status']) {
             self::update($ticket, $op, ['status' => $newStatus]);
         }

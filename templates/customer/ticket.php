@@ -28,7 +28,7 @@
             <strong><?php if ($m['author_type'] !== 'operator'): ?><?= e($m['customer_name'] ?? $ticket['customer_name']) ?><?php elseif (config('hide_operator_name', false) || empty($m['operator_name'])): ?><?= t('ticket.staff_operator') ?><?php else: ?><?= e($m['operator_name']) ?> (<?= t('ticket.support') ?>)<?php endif; ?></strong>
             <span class="muted"><?= fmt_date($m['created_at']) ?></span>
         </header>
-        <div class="body"><?= nl2br_e($m['body']) ?></div>
+        <div class="body"><?= \Bhelpdesk\Html::body($m) ?></div>
         <?php
         $files = $attachments[(int) $m['id']] ?? [];
         $fileUrl = static fn (int $id): string => '/customer/ticket/' . rawurlencode($ticket['number']) . '/file/' . $id;

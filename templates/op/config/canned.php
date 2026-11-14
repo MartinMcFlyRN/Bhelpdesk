@@ -16,7 +16,7 @@
                 <tr class="<?= $c['active'] ? '' : 'disabled' ?>">
                     <td><a href="/op/config/canned/<?= (int) $c['id'] ?>"><strong><?= e($c['title']) ?></strong></a></td>
                     <td><?= $c['department_name'] ? e($c['department_name']) : '<span class="muted">' . t('canned.all_departments') . '</span>' ?></td>
-                    <td class="muted canned-preview"><?= e(mb_strimwidth(preg_replace('/\s+/', ' ', $c['body']), 0, 90, '…')) ?></td>
+                    <td class="muted canned-preview"><?= e(mb_strimwidth(preg_replace('/\s+/', ' ', \Bhelpdesk\Html::toText($c['body'])), 0, 90, '…')) ?></td>
                     <td><?= $c['active'] ? t('dep.active') : t('dep.inactive') ?></td>
                     <td class="right"><a class="btn btn-small" href="/op/config/canned/<?= (int) $c['id'] ?>"><?= t('cfg.edit') ?></a></td>
                 </tr>

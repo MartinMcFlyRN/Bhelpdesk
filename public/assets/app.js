@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 list.textContent = '';
                 Array.prototype.forEach.call(input.files, function (f) {
                     var li = document.createElement('li');
-                    li.textContent = f.name + ' (' + (f.size / 1048576).toFixed(1) + ' MB)';
+                    li.textContent = f.name + ' (' + (f.size >= 1048576 ? (f.size / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(f.size / 1024)) + ' KB') + ')';
                     if (f.size > maxBytes) {
                         li.className = 'too-big';
                     }
@@ -114,7 +114,13 @@ document.querySelectorAll('select[data-canned-target]').forEach(function (sel) {
     sel.addEventListener('change', function () {
         var opt = sel.options[sel.selectedIndex];
         var text = opt ? opt.getAttribute('data-body') : null;
-        if (text) {
+        if (text && area._quill) {
+            // rich editor: paste the HTML at the cursor
+            var q = area._quill;
+            var range = q.getSelection(true) || { index: q.getLength() };
+            q.clipboard.dangerouslyPasteHTML(range.index, text, 'user');
+            q.focus();
+        } else if (text) {
             var start = area.selectionStart != null ? area.selectionStart : area.value.length;
             var end = area.selectionEnd != null ? area.selectionEnd : area.value.length;
             var before = area.value.slice(0, start);
