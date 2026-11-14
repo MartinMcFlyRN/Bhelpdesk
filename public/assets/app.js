@@ -67,3 +67,38 @@ document.addEventListener('keydown', function (ev) {
         });
     }
 });
+
+// Customer autocomplete: <input data-customer-lookup="datalist-id" data-name-field="input-id">
+// Suggests existing customers (name, company, email); picking one fills the name field.
+document.querySelectorAll('input[data-customer-lookup]').forEach(function (input) {
+    var list = document.getElementById(input.getAttribute('data-customer-lookup'));
+    var nameField = document.getElementById(input.getAttribute('data-name-field'));
+    var known = {};
+    var timer = null;
+    input.setAttribute('type', 'text'); // type=email does not allow searching by name
+    input.addEventListener('input', function () {
+        var q = input.value.trim();
+        if (known[q.toLowerCase()] && nameField) {
+            nameField.value = known[q.toLowerCase()];
+        }
+        clearTimeout(timer);
+        if (q.length < 2) {
+            return;
+        }
+        timer = setTimeout(function () {
+            fetch('/op/customers/lookup?q=' + encodeURIComponent(q), { credentials: 'same-origin' })
+                .then(function (r) { return r.ok ? r.json() : []; })
+                .then(function (rows) {
+                    list.textContent = '';
+                    rows.forEach(function (c) {
+                        known[c.email.toLowerCase()] = c.name;
+                        var opt = document.createElement('option');
+                        opt.value = c.email;
+                        opt.label = c.name + (c.company ? ' · ' + c.company : '');
+                        list.appendChild(opt);
+                    });
+                })
+                .catch(function () {});
+        }, 200);
+    });
+});

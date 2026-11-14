@@ -109,6 +109,13 @@ function system_message(string $body): string
     switch ($ev['event']) {
         case 'reopened':
             return __('log.reopened');
+        case 'customer_added':
+            return __('log.customer_added', ['who' => (string) ($ev['by'] ?? '?'), 'name' => (string) ($ev['name'] ?? '?')]);
+        case 'customer_removed':
+            return __('log.customer_removed', ['who' => (string) ($ev['by'] ?? '?'), 'name' => (string) ($ev['name'] ?? '?')]);
+        case 'customer_changed':
+            $params = ['who' => (string) ($ev['by'] ?? '?'), 'from' => (string) ($ev['from'] ?? '?'), 'to' => (string) ($ev['to'] ?? '?')];
+            return !empty($ev['kept']) ? __('log.customer_changed_kept', $params) : __('log.customer_changed', $params);
         case 'changed':
             $parts = [];
             foreach ((array) ($ev['changes'] ?? []) as $c) {

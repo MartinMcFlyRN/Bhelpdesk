@@ -9,8 +9,29 @@ Session::start('BHD_CUST', '/customer/');
 
 $r = new Router('/customer', 'customer');
 
-/** May the customer see this ticket? (after number+email check or token link) */
-$canSee = static fn (string $number): bool => !empty($_SESSION['tickets'][$number]);
+/**
+ * Ticket visible to the current visitor, or null.
+ * $_SESSION['tickets'][number] holds the id of the customer who unlocked it
+ * (number+email check or token link); access is re-checked on every request,
+ * so a customer removed from the ticket loses it immediately.
+ * The returned row has viewer_id set.
+ */
+$canSee = static function (string $number): ?array {
+    $viewer = $_SESSION['tickets'][$number] ?? null;
+    if (!$viewer) {
+        return null;
+    }
+    $ticket = Tickets::findByNumber($number);
+    if (!$ticket) {
+        return null;
+    }
+    $viewer = $viewer === true ? (int) $ticket['customer_id'] : (int) $viewer; // sessions from older versions
+    if (!Tickets::customerHasAccess($ticket, $viewer)) {
+        unset($_SESSION['tickets'][$number]);
+        return null;
+    }
+    return $ticket + ['viewer_id' => $viewer];
+};
 
 $r->get('/', static function (): void {
     View::render('customer', 'home', ['title' => __('home.title')]);
@@ -84,7 +105,7 @@ $r->post('/new', static function (): void {
 
     Throttle::hit('ticket_create', $ip);
     $t = Tickets::create($in['name'], $in['email'], $depId, $in['subject'], $in['message'], $ip, Lang::current(), $upload['files'], $in['phone'] !== '' ? $in['phone'] : null);
-    $_SESSION['tickets'][$t['number']] = true;
+    $_SESSION['tickets'][$t['number']] = (int) Tickets::findByNumber($t['number'])['customer_id'];
     $_SESSION['just_created'] = $t;
     redirect('/customer/created');
 });
@@ -124,7 +145,7 @@ $r->post('/status', static function (): void {
     }
 
     session_regenerate_id(true);
-    $_SESSION['tickets'][$ticket['number']] = true;
+    $_SESSION['tickets'][$ticket['number']] = (int) $ticket['viewer_id'];
     redirect('/customer/ticket/' . $ticket['number']);
 });
 
@@ -136,13 +157,14 @@ $r->get('/ticket/{number}', static function (array $p) use ($canSee): void {
     if (isset($_GET['t'])) {
         $ticket = Tickets::findByNumber($number);
         if ($ticket && hash_equals($ticket['access_token'], (string) $_GET['t'])) {
+            // the access link belongs to the main customer
             session_regenerate_id(true);
-            $_SESSION['tickets'][$number] = true;
+            $_SESSION['tickets'][$number] = (int) $ticket['customer_id'];
         }
         redirect('/customer/ticket/' . rawurlencode($number));
     }
 
-    $ticket = $canSee($number) ? Tickets::findByNumber($number) : null;
+    $ticket = $canSee($number);
     if (!$ticket) {
         flash('error', 'lookup.need_login');
         redirect('/customer/status');
@@ -159,15 +181,16 @@ $r->get('/ticket/{number}', static function (array $p) use ($canSee): void {
     View::render('customer', 'ticket', [
         'title'       => __('ticket.title', ['number' => $ticket['number']]),
         'ticket'      => $ticket,
-        'messages'    => $messages,
-        'attachments' => Attachments::forMessages(array_column($messages, 'id')),
+        'messages'     => $messages,
+        'attachments'  => Attachments::forMessages(array_column($messages, 'id')),
+        'participants' => Tickets::participants((int) $ticket['id']),
     ]);
 });
 
 // ---------- Attachment download (only files of the customer's own ticket, never internal) ----------
 $r->get('/ticket/{number}/file/{id}', static function (array $p) use ($canSee): void {
     $number = (string) $p['number'];
-    $ticket = $canSee($number) ? Tickets::findByNumber($number) : null;
+    $ticket = $canSee($number);
     $file = $ticket ? Attachments::find((int) $p['id']) : null;
     if (!$file || (int) $file['ticket_id'] !== (int) $ticket['id'] || $file['is_internal']) {
         http_response_code(404);
@@ -179,7 +202,7 @@ $r->get('/ticket/{number}/file/{id}', static function (array $p) use ($canSee): 
 
 $r->post('/ticket/{number}/reply', static function (array $p) use ($canSee): void {
     $number = (string) $p['number'];
-    $ticket = $canSee($number) ? Tickets::findByNumber($number) : null;
+    $ticket = $canSee($number);
     if (!$ticket) {
         redirect('/customer/status');
     }
@@ -191,7 +214,7 @@ $r->post('/ticket/{number}/reply', static function (array $p) use ($canSee): voi
     if ($body === '') {
         flash('error', 'ticket.empty_message');
     } else {
-        Tickets::customerReply($ticket, $body, client_ip());
+        Tickets::customerReply($ticket, $body, client_ip(), (int) $ticket['viewer_id']);
         flash('success', 'ticket.reply_sent');
     }
     redirect('/customer/ticket/' . $number);

@@ -48,6 +48,7 @@
                     <a href="/op/ticket/<?= (int) $tk['id'] ?>"><strong>#<?= e($tk['number']) ?></strong> <?= e($tk['subject']) ?></a>
                     <div>
                         <span class="badge status-<?= e($tk['status']) ?>"><?= e(status_label($tk['status'])) ?></span>
+                        <?php if (($tk['role'] ?? 'main') === 'cc'): ?><span class="badge"><?= t('tc.cc_badge') ?></span><?php endif; ?>
                         <small class="muted"><?= fmt_date($tk['updated_at']) ?><?= $tk['department_name'] ? ' · ' . e($tk['department_name']) : '' ?></small>
                     </div>
                 </li>

@@ -69,13 +69,28 @@ CREATE TABLE IF NOT EXISTS ticket_messages (
     ticket_id    INT UNSIGNED NOT NULL,
     author_type  ENUM('customer','operator','system') NOT NULL,
     operator_id  INT UNSIGNED NULL,
+    customer_id  INT UNSIGNED NULL,
     body         MEDIUMTEXT NOT NULL,
     is_internal  TINYINT(1) NOT NULL DEFAULT 0,
     ip           VARCHAR(45) NULL,
     created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     KEY ix_messages_ticket (ticket_id, created_at),
     CONSTRAINT fk_messages_ticket   FOREIGN KEY (ticket_id)   REFERENCES tickets(id)   ON DELETE CASCADE,
-    CONSTRAINT fk_messages_operator FOREIGN KEY (operator_id) REFERENCES operators(id) ON DELETE SET NULL
+    CONSTRAINT fk_messages_operator FOREIGN KEY (operator_id) REFERENCES operators(id) ON DELETE SET NULL,
+    CONSTRAINT fk_messages_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Additional customers of a ticket (the main one is tickets.customer_id)
+CREATE TABLE IF NOT EXISTS ticket_customers (
+    ticket_id    INT UNSIGNED NOT NULL,
+    customer_id  INT UNSIGNED NOT NULL,
+    added_by     INT UNSIGNED NULL,
+    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (ticket_id, customer_id),
+    KEY ix_ticket_customers_customer (customer_id),
+    CONSTRAINT fk_tc_ticket   FOREIGN KEY (ticket_id)   REFERENCES tickets(id)   ON DELETE CASCADE,
+    CONSTRAINT fk_tc_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+    CONSTRAINT fk_tc_operator FOREIGN KEY (added_by)    REFERENCES operators(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS attachments (

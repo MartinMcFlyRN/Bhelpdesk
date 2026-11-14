@@ -4,6 +4,10 @@
         <p class="muted"><?= t('ticket.opened_on', ['date' => fmt_date($ticket['created_at'])]) ?>
             <?php if ($ticket['department_name']): ?> · <?= e($ticket['department_name']) ?><?php endif; ?>
             · <?= t('ticket.last_update', ['date' => fmt_date($ticket['updated_at'])]) ?></p>
+        <?php if ($participants): ?>
+            <p class="muted participants-line"><?= t('ticket.participants') ?>
+                <?= e(implode(', ', array_merge([$ticket['customer_name']], array_column($participants, 'name')))) ?></p>
+        <?php endif; ?>
     </div>
     <span class="badge status-<?= e($ticket['status']) ?>"><?= e(status_label($ticket['status'])) ?></span>
 </div>
@@ -11,14 +15,17 @@
 <div class="thread">
 <?php foreach ($messages as $m): ?>
     <?php if ($m['author_type'] === 'system') continue; ?>
-    <article class="msg msg-<?= e($m['author_type']) ?>">
+    <?php $mine = $m['author_type'] === 'customer' && (int) ($m['customer_id'] ?? $ticket['customer_id']) === (int) $ticket['viewer_id']; ?>
+    <article class="msg msg-<?= e($m['author_type']) ?><?= $m['author_type'] === 'customer' && !$mine ? ' msg-other-customer' : '' ?>">
         <header>
             <?php if ($m['author_type'] === 'operator'): ?>
                 <span class="msg-role msg-role-support"><?= t('ticket.badge_support') ?></span>
-            <?php else: ?>
+            <?php elseif ($mine): ?>
                 <span class="msg-role msg-role-you"><?= t('ticket.badge_you') ?></span>
+            <?php else: ?>
+                <span class="msg-role msg-role-other"><?= t('ticket.badge_other') ?></span>
             <?php endif; ?>
-            <strong><?php if ($m['author_type'] !== 'operator'): ?><?= e($ticket['customer_name']) ?><?php elseif (config('hide_operator_name', false) || empty($m['operator_name'])): ?><?= t('ticket.staff_operator') ?><?php else: ?><?= e($m['operator_name']) ?> (<?= t('ticket.support') ?>)<?php endif; ?></strong>
+            <strong><?php if ($m['author_type'] !== 'operator'): ?><?= e($m['customer_name'] ?? $ticket['customer_name']) ?><?php elseif (config('hide_operator_name', false) || empty($m['operator_name'])): ?><?= t('ticket.staff_operator') ?><?php else: ?><?= e($m['operator_name']) ?> (<?= t('ticket.support') ?>)<?php endif; ?></strong>
             <span class="muted"><?= fmt_date($m['created_at']) ?></span>
         </header>
         <div class="body"><?= nl2br_e($m['body']) ?></div>

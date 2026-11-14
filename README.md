@@ -107,6 +107,7 @@ mariadb bhelpdesk < sql/migrations/002_attachments.sql
 mariadb bhelpdesk < sql/migrations/003_settings.sql
 mariadb bhelpdesk < sql/migrations/004_phone.sql
 mariadb bhelpdesk < sql/migrations/005_customers.sql
+mariadb bhelpdesk < sql/migrations/006_ticket_customers.sql
 ```
 
 ## Operators area
@@ -114,6 +115,16 @@ mariadb bhelpdesk < sql/migrations/005_customers.sql
 - **Top bar**: Tickets, My tickets, Customers on the left; language switch and the user menu on the right (avatar with initials and name). The menu has *Configuration* (administrators only), *Profile* and *Log out*. It is a native `<details>` element, so it works without JavaScript; with JS it also closes on outside click / Escape.
 - **Profile** (`/op/profile`): every operator can change name, email and password. Changing email or password requires the current password; the session id is regenerated after a password change.
 - **Customers** (`/op/customers`): every customer who opened a ticket is registered automatically (by email). Operators can search (name, company, email, phone), create customers manually and edit name, company, email, phone, language and internal notes. The customer page shows the ticket history; internal notes also appear in the ticket sidebar. When an existing customer opens a new ticket, the registry data curated by operators is not overwritten (only a missing phone is filled in). The email is the key customers use to check their tickets: changing it changes who can look them up.
+
+## Customers on a ticket
+
+Each ticket has a **main customer** and any number of **additional customers** (like CC / collaborators). From the *Customers* card in the ticket sidebar operators can:
+
+- **Add a customer**: type an email or part of a name/company to get suggestions from the registry; if the email is new, also enter a name and the customer is created.
+- **Remove** an additional customer (they lose access immediately, even with an open session).
+- **Change the main customer**, optionally keeping the previous one as additional customer. The ticket access link (`?t=` token) is regenerated, because the old one was given to the previous main customer.
+
+Every customer on the ticket can open it with the ticket number and **their own** email and can reply; each message records which customer wrote it. Customers see the names (not the emails) of the other customers on the ticket. All changes are logged in the ticket history, and the customer page lists tickets where the customer is main or additional.
 
 ## Configuration area (/op/config)
 

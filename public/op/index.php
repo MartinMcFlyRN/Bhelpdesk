@@ -89,8 +89,9 @@ $r->get('/ticket/{id}', static function (array $p) use ($loadTicket): void {
         'title'       => '#' . $t['number'] . ' ' . $t['subject'],
         'op'          => $op,
         'ticket'      => $t,
-        'messages'    => $messages,
-        'attachments' => Attachments::forMessages(array_column($messages, 'id')),
+        'messages'     => $messages,
+        'attachments'  => Attachments::forMessages(array_column($messages, 'id')),
+        'participants' => Tickets::participants((int) $t['id']),
         'departments' => Tickets::departments(false),
         'operators'   => Tickets::operators(),
     ]);
@@ -124,6 +125,44 @@ $r->post('/ticket/{id}/update', static function (array $p) use ($loadTicket): vo
         'assigned_to'   => (int) ($_POST['assigned_to'] ?? 0),
     ]);
     flash('success', 'opticket.saved');
+    redirect('/op/ticket/' . $t['id']);
+});
+
+// ---------- Ticket customers: add / remove additional customers, change main customer ----------
+$r->post('/ticket/{id}/customers', static function (array $p) use ($loadTicket): void {
+    $op = Auth::require();
+    $t = $loadTicket($p);
+    $res = Customers::resolve((string) ($_POST['email'] ?? ''), (string) ($_POST['name'] ?? ''));
+    if ($res['error']) {
+        flash('error', 'tc.error', ['error' => $res['error']]);
+    } elseif (Tickets::addParticipant($t, $op, (int) $res['id'])) {
+        flash('success', 'tc.added');
+    } else {
+        flash('error', 'tc.already');
+    }
+    redirect('/op/ticket/' . $t['id']);
+});
+
+$r->post('/ticket/{id}/customers/{cid}/remove', static function (array $p) use ($loadTicket): void {
+    $op = Auth::require();
+    $t = $loadTicket($p);
+    if (Tickets::removeParticipant($t, $op, (int) $p['cid'])) {
+        flash('success', 'tc.removed');
+    }
+    redirect('/op/ticket/' . $t['id']);
+});
+
+$r->post('/ticket/{id}/customer', static function (array $p) use ($loadTicket): void {
+    $op = Auth::require();
+    $t = $loadTicket($p);
+    $res = Customers::resolve((string) ($_POST['email'] ?? ''), (string) ($_POST['name'] ?? ''));
+    if ($res['error']) {
+        flash('error', 'tc.error', ['error' => $res['error']]);
+    } elseif (Tickets::changeCustomer($t, $op, (int) $res['id'], !empty($_POST['keep_previous']))) {
+        flash('success', 'tc.changed');
+    } else {
+        flash('error', 'tc.same');
+    }
     redirect('/op/ticket/' . $t['id']);
 });
 
@@ -199,6 +238,13 @@ $customerForm = static function (?array $customer, array $values, array $errors)
         'languages' => Lang::available(true),
     ]);
 };
+
+// JSON for the customer autocomplete in the ticket page
+$r->get('/customers/lookup', static function (): void {
+    Auth::require();
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(Customers::lookup(trim((string) ($_GET['q'] ?? ''))), JSON_UNESCAPED_UNICODE);
+});
 
 $r->get('/customers/new', static function () use ($customerForm): void {
     Auth::require();

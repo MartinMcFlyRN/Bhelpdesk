@@ -37,19 +37,65 @@ final class Customers
         return ['rows' => $rows, 'total' => $total];
     }
 
+    public static function findByEmail(string $email): ?array
+    {
+        return Db::one('SELECT * FROM customers WHERE email = ?', [mb_strtolower(trim($email))]);
+    }
+
+    /** Quick search for the autocomplete in the ticket page */
+    public static function lookup(string $q, int $limit = 10): array
+    {
+        if (mb_strlen($q) < 2) {
+            return [];
+        }
+        $like = '%' . addcslashes($q, '%_\\') . '%';
+        return Db::all(
+            'SELECT id, name, email, company FROM customers
+              WHERE name LIKE ? OR email LIKE ? OR company LIKE ?
+              ORDER BY name LIMIT ' . max(1, min(25, $limit)),
+            [$like, $like, $like]
+        );
+    }
+
+    /**
+     * Customer picked from the ticket page: existing one by email, or a new one
+     * when a name is given too.
+     * @return array{id: ?int, error: ?string}
+     */
+    public static function resolve(string $email, string $name): array
+    {
+        $email = mb_strtolower(trim($email));
+        $name = trim($name);
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 190) {
+            return ['id' => null, 'error' => __('val.email_invalid')];
+        }
+        $existing = self::findByEmail($email);
+        if ($existing) {
+            return ['id' => (int) $existing['id'], 'error' => null];
+        }
+        if ($name === '' || mb_strlen($name) > 100) {
+            return ['id' => null, 'error' => __('val.customer_new_needs_name')];
+        }
+        $id = self::create(['name' => $name, 'company' => '', 'email' => $email, 'phone' => '', 'language' => (string) config('default_language', 'en'), 'notes' => '']);
+        return ['id' => $id, 'error' => null];
+    }
+
     public static function find(int $id): ?array
     {
         return Db::one('SELECT * FROM customers WHERE id = ?', [$id]);
     }
 
+    /** Tickets where the customer is the main customer or an additional one (role = main|cc) */
     public static function tickets(int $customerId): array
     {
         return Db::all(
-            'SELECT t.id, t.number, t.subject, t.status, t.priority, t.created_at, t.updated_at, d.name AS department_name
+            'SELECT t.id, t.number, t.subject, t.status, t.priority, t.created_at, t.updated_at, d.name AS department_name,
+                    IF(t.customer_id = ?, \'main\', \'cc\') AS role
                FROM tickets t LEFT JOIN departments d ON d.id = t.department_id
               WHERE t.customer_id = ?
+                 OR EXISTS (SELECT 1 FROM ticket_customers tc WHERE tc.ticket_id = t.id AND tc.customer_id = ?)
               ORDER BY t.updated_at DESC',
-            [$customerId]
+            [$customerId, $customerId, $customerId]
         );
     }
 

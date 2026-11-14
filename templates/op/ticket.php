@@ -22,7 +22,7 @@
             <?php endif; ?>
             <article class="msg msg-<?= e($m['author_type']) ?><?= $m['is_internal'] ? ' msg-internal' : '' ?>">
                 <header>
-                    <strong><?= $m['author_type'] === 'operator' ? e($m['operator_name'] ?? __('opticket.operator')) : e($ticket['customer_name']) ?></strong>
+                    <strong><?= $m['author_type'] === 'operator' ? e($m['operator_name'] ?? __('opticket.operator')) : e($m['customer_name'] ?? $ticket['customer_name']) ?></strong>
                     <?php if ($m['is_internal']): ?><span class="badge"><?= t('opticket.internal_badge') ?></span><?php endif; ?>
                     <span class="muted"><?= fmt_date($m['created_at']) ?><?= $m['ip'] ? ' · ' . e($m['ip']) : '' ?></span>
                 </header>
@@ -66,7 +66,9 @@
         </div>
     </div>
 
-    <aside class="card">
+    <aside class="side-stack">
+        <?php require BHD_ROOT . '/templates/op/ticket_customers.php'; ?>
+        <div class="card">
         <h2><?= t('opticket.manage') ?></h2>
         <form method="post" action="/op/ticket/<?= (int) $ticket['id'] ?>/update" class="form">
             <?= \Bhelpdesk\Csrf::field() ?>
@@ -114,5 +116,6 @@
                 <a href="/op/customers/<?= (int) $ticket['customer_id'] ?>"><?= t('cfg.edit') ?></a>
             </div>
         <?php endif; ?>
+        </div>
     </aside>
 </div>

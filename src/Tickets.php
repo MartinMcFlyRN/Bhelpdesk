@@ -49,7 +49,7 @@ final class Tickets
                 'INSERT INTO tickets (number, access_token, customer_id, department_id, subject, phone, created_ip) VALUES (?, ?, ?, ?, ?, ?, ?)',
                 [$number, $token, $customerId, $departmentId, $subject, $phone, $ip]
             );
-            $messageId = self::addMessage($ticketId, 'customer', null, $body, false, $ip);
+            $messageId = self::addMessage($ticketId, 'customer', null, $body, false, $ip, $customerId);
             if ($files) {
                 Attachments::store($ticketId, $messageId, $files);
             }
@@ -82,37 +82,135 @@ final class Tickets
         return Db::one(self::SELECT . ' WHERE t.number = ?', [$number]);
     }
 
-    /** Check ticket number + customer email ("check status" form) */
+    /**
+     * Check ticket number + email ("check status" form).
+     * Matches the main customer and any additional customer of the ticket;
+     * the returned row has viewer_id = id of the customer who matched.
+     */
     public static function findForCustomer(string $number, string $email): ?array
     {
-        return Db::one(self::SELECT . ' WHERE t.number = ? AND c.email = ?', [$number, $email]);
+        $ticket = Db::one(self::SELECT . ' WHERE t.number = ?', [$number]);
+        if (!$ticket) {
+            return null;
+        }
+        $viewer = Db::value(
+            'SELECT cu.id FROM customers cu
+              WHERE cu.email = ?
+                AND (cu.id = ? OR EXISTS (SELECT 1 FROM ticket_customers tc WHERE tc.ticket_id = ? AND tc.customer_id = cu.id))',
+            [$email, (int) $ticket['customer_id'], (int) $ticket['id']]
+        );
+        return $viewer ? $ticket + ['viewer_id' => (int) $viewer] : null;
+    }
+
+    /** May this customer still access the ticket? (main or additional customer) */
+    public static function customerHasAccess(array $ticket, int $customerId): bool
+    {
+        return $customerId === (int) $ticket['customer_id']
+            || (bool) Db::value('SELECT 1 FROM ticket_customers WHERE ticket_id = ? AND customer_id = ?', [(int) $ticket['id'], $customerId]);
+    }
+
+    /** Additional customers of a ticket */
+    public static function participants(int $ticketId): array
+    {
+        return Db::all(
+            'SELECT c.id, c.name, c.email, c.company, tc.created_at AS added_at
+               FROM ticket_customers tc JOIN customers c ON c.id = tc.customer_id
+              WHERE tc.ticket_id = ?
+              ORDER BY tc.created_at, c.name',
+            [$ticketId]
+        );
+    }
+
+    public static function addParticipant(array $ticket, array $op, int $customerId): bool
+    {
+        if ($customerId === (int) $ticket['customer_id']
+            || Db::value('SELECT 1 FROM ticket_customers WHERE ticket_id = ? AND customer_id = ?', [(int) $ticket['id'], $customerId])) {
+            return false;
+        }
+        Db::exec('INSERT INTO ticket_customers (ticket_id, customer_id, added_by) VALUES (?, ?, ?)', [(int) $ticket['id'], $customerId, (int) $op['id']]);
+        self::logEvent((int) $ticket['id'], $op, ['event' => 'customer_added', 'name' => self::customerLabel($customerId)]);
+        return true;
+    }
+
+    public static function removeParticipant(array $ticket, array $op, int $customerId): bool
+    {
+        $n = Db::exec('DELETE FROM ticket_customers WHERE ticket_id = ? AND customer_id = ?', [(int) $ticket['id'], $customerId]);
+        if ($n) {
+            self::logEvent((int) $ticket['id'], $op, ['event' => 'customer_removed', 'name' => self::customerLabel($customerId)]);
+        }
+        return $n > 0;
+    }
+
+    /**
+     * Change the main customer. The previous one can stay on the ticket as additional customer.
+     */
+    public static function changeCustomer(array $ticket, array $op, int $newCustomerId, bool $keepPrevious): bool
+    {
+        $old = (int) $ticket['customer_id'];
+        if ($newCustomerId === $old) {
+            return false;
+        }
+        $pdo = Db::pdo();
+        $pdo->beginTransaction();
+        try {
+            // new access token: the old link was issued to the previous main customer
+            Db::exec('UPDATE tickets SET customer_id = ?, access_token = ?, updated_at = NOW() WHERE id = ?', [$newCustomerId, bin2hex(random_bytes(32)), (int) $ticket['id']]);
+            // the new main customer is no longer an "additional" one
+            Db::exec('DELETE FROM ticket_customers WHERE ticket_id = ? AND customer_id = ?', [(int) $ticket['id'], $newCustomerId]);
+            if ($keepPrevious) {
+                Db::exec('INSERT IGNORE INTO ticket_customers (ticket_id, customer_id, added_by) VALUES (?, ?, ?)', [(int) $ticket['id'], $old, (int) $op['id']]);
+            }
+            self::logEvent((int) $ticket['id'], $op, [
+                'event' => 'customer_changed',
+                'from'  => self::customerLabel($old),
+                'to'    => self::customerLabel($newCustomerId),
+                'kept'  => $keepPrevious,
+            ]);
+            $pdo->commit();
+        } catch (\Throwable $ex) {
+            $pdo->rollBack();
+            throw $ex;
+        }
+        return true;
+    }
+
+    private static function customerLabel(int $customerId): string
+    {
+        $c = Db::one('SELECT name, email FROM customers WHERE id = ?', [$customerId]);
+        return $c ? $c['name'] . ' <' . $c['email'] . '>' : '#' . $customerId;
+    }
+
+    private static function logEvent(int $ticketId, array $op, array $event): void
+    {
+        self::addMessage($ticketId, 'system', (int) $op['id'], json_encode($event + ['by' => $op['name']], JSON_UNESCAPED_UNICODE), true, null);
     }
 
     public static function messages(int $ticketId, bool $includeInternal): array
     {
         return Db::all(
-            'SELECT m.*, o.name AS operator_name
+            'SELECT m.*, o.name AS operator_name, mc.name AS customer_name, mc.email AS customer_email
                FROM ticket_messages m
                LEFT JOIN operators o ON o.id = m.operator_id
+               LEFT JOIN customers mc ON mc.id = m.customer_id
               WHERE m.ticket_id = ?' . ($includeInternal ? '' : ' AND m.is_internal = 0') . '
               ORDER BY m.created_at, m.id',
             [$ticketId]
         );
     }
 
-    public static function addMessage(int $ticketId, string $authorType, ?int $operatorId, string $body, bool $internal, ?string $ip): int
+    public static function addMessage(int $ticketId, string $authorType, ?int $operatorId, string $body, bool $internal, ?string $ip, ?int $customerId = null): int
     {
         $id = Db::insert(
-            'INSERT INTO ticket_messages (ticket_id, author_type, operator_id, body, is_internal, ip) VALUES (?, ?, ?, ?, ?, ?)',
-            [$ticketId, $authorType, $operatorId, $body, (int) $internal, $ip]
+            'INSERT INTO ticket_messages (ticket_id, author_type, operator_id, customer_id, body, is_internal, ip) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [$ticketId, $authorType, $operatorId, $customerId, $body, (int) $internal, $ip]
         );
         Db::exec('UPDATE tickets SET updated_at = NOW() WHERE id = ?', [$ticketId]);
         return $id;
     }
 
-    public static function customerReply(array $ticket, string $body, string $ip): void
+    public static function customerReply(array $ticket, string $body, string $ip, ?int $customerId = null): void
     {
-        self::addMessage((int) $ticket['id'], 'customer', null, $body, false, $ip);
+        self::addMessage((int) $ticket['id'], 'customer', null, $body, false, $ip, $customerId ?: (int) $ticket['customer_id']);
         if ($ticket['status'] !== 'open') {
             self::setStatus((int) $ticket['id'], 'open');
             if ($ticket['status'] === 'closed') {
