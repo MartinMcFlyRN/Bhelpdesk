@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{Lang, Router, Session, Throttle, Tickets, View};
+use Bhelpdesk\{Attachments, Captcha, Lang, Router, Session, Throttle, Tickets, View};
 
 Session::start('BHD_CUST', '/customer/');
 
@@ -14,6 +14,11 @@ $canSee = static fn (string $number): bool => !empty($_SESSION['tickets'][$numbe
 
 $r->get('/', static function (): void {
     View::render('customer', 'home', ['title' => __('home.title')]);
+});
+
+// ---------- Captcha image ----------
+$r->get('/captcha', static function (): void {
+    Captcha::output();
 });
 
 // ---------- Open a ticket ----------
@@ -48,6 +53,17 @@ $r->post('/new', static function (): void {
     if (mb_strlen($in['message']) < 10) {
         $errors[] = __('val.message_min');
     }
+    // captcha is single-use: checked (and consumed) on every submit
+    if (Captcha::enabled() && !Captcha::verify((string) ($_POST['captcha'] ?? ''))) {
+        $errors[] = __('val.captcha');
+    }
+
+    $upload = ['files' => [], 'errors' => []];
+    if (Attachments::enabled()) {
+        $upload = Attachments::fromUpload($_FILES['attachments'] ?? null);
+        array_push($errors, ...$upload['errors']);
+    }
+
     $deps = array_map('intval', array_column(Tickets::departments(), 'id'));
     $depId = in_array($in['department'], $deps, true) ? $in['department'] : null;
 
@@ -62,7 +78,7 @@ $r->post('/new', static function (): void {
     }
 
     Throttle::hit('ticket_create', $ip);
-    $t = Tickets::create($in['name'], $in['email'], $depId, $in['subject'], $in['message'], $ip, Lang::current());
+    $t = Tickets::create($in['name'], $in['email'], $depId, $in['subject'], $in['message'], $ip, Lang::current(), $upload['files']);
     $_SESSION['tickets'][$t['number']] = true;
     $_SESSION['just_created'] = $t;
     redirect('/customer/created');
@@ -126,11 +142,26 @@ $r->get('/ticket/{number}', static function (array $p) use ($canSee): void {
         flash('error', 'lookup.need_login');
         redirect('/customer/status');
     }
+    $messages = Tickets::messages((int) $ticket['id'], false);
     View::render('customer', 'ticket', [
-        'title'    => __('ticket.title', ['number' => $ticket['number']]),
-        'ticket'   => $ticket,
-        'messages' => Tickets::messages((int) $ticket['id'], false),
+        'title'       => __('ticket.title', ['number' => $ticket['number']]),
+        'ticket'      => $ticket,
+        'messages'    => $messages,
+        'attachments' => Attachments::forMessages(array_column($messages, 'id')),
     ]);
+});
+
+// ---------- Attachment download (only files of the customer's own ticket, never internal) ----------
+$r->get('/ticket/{number}/file/{id}', static function (array $p) use ($canSee): void {
+    $number = (string) $p['number'];
+    $ticket = $canSee($number) ? Tickets::findByNumber($number) : null;
+    $file = $ticket ? Attachments::find((int) $p['id']) : null;
+    if (!$file || (int) $file['ticket_id'] !== (int) $ticket['id'] || $file['is_internal']) {
+        http_response_code(404);
+        View::render('customer', 'error', ['title' => __('error.not_found.title'), 'message' => __('error.not_found.message')]);
+        return;
+    }
+    Attachments::send($file, isset($_GET['download']));
 });
 
 $r->post('/ticket/{number}/reply', static function (array $p) use ($canSee): void {

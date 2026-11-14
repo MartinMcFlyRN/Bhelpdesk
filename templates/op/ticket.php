@@ -26,6 +26,11 @@
                     <span class="muted"><?= fmt_date($m['created_at']) ?><?= $m['ip'] ? ' · ' . e($m['ip']) : '' ?></span>
                 </header>
                 <div class="body"><?= nl2br_e($m['body']) ?></div>
+                <?php
+                $files = $attachments[(int) $m['id']] ?? [];
+                $fileUrl = static fn (int $id): string => '/op/file/' . $id;
+                require BHD_ROOT . '/templates/attachments.php';
+                ?>
             </article>
         <?php endforeach; ?>
         </div>

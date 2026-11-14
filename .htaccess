@@ -9,7 +9,7 @@ Options -Indexes -MultiViews
     RewriteEngine On
 
     # internal folders and files are never reachable
-    RewriteRule ^(src|config|sql|templates|bin|deploy)(/|$) - [F,L]
+    RewriteRule ^(src|config|sql|templates|bin|deploy|lang|storage)(/|$) - [F,L]
     RewriteRule (^|/)\. - [F,L]
     RewriteRule ^(README\.md|composer\.(json|lock))$ - [F,L]
 

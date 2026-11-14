@@ -31,6 +31,13 @@ final class Router
         $path = '/' . trim($path, '/');
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
+        // body larger than post_max_size: PHP drops $_POST and $_FILES entirely
+        if ($method === 'POST' && !$_POST && !$_FILES && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+            http_response_code(413);
+            View::render($this->area, 'error', ['title' => __('error.too_large.title'), 'message' => __('error.too_large.message')]);
+            return;
+        }
+
         if ($method === 'POST' && !Csrf::valid()) {
             http_response_code(400);
             View::render($this->area, 'error', ['title' => __('error.session_expired.title'), 'message' => __('error.session_expired.message')]);

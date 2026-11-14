@@ -6,6 +6,7 @@
     <meta name="robots" content="noindex,nofollow">
     <title><?= e($title ?? '') ?> · <?= e(config('app_name', 'Bhelpdesk')) ?> <?= t('app.operators_area') ?></title>
     <link rel="stylesheet" href="/assets/style.css">
+    <script src="/assets/app.js" defer></script>
 </head>
 <body class="area-op">
 <header class="topbar">

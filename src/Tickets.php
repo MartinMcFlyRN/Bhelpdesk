@@ -29,7 +29,7 @@ final class Tickets
     }
 
     /** @return array{number: string, token: string} */
-    public static function create(string $name, string $email, ?int $departmentId, string $subject, string $body, string $ip, string $language = 'en'): array
+    public static function create(string $name, string $email, ?int $departmentId, string $subject, string $body, string $ip, string $language = 'en', array $files = []): array
     {
         $pdo = Db::pdo();
         $pdo->beginTransaction();
@@ -47,7 +47,10 @@ final class Tickets
                 'INSERT INTO tickets (number, access_token, customer_id, department_id, subject, created_ip) VALUES (?, ?, ?, ?, ?, ?)',
                 [$number, $token, $customerId, $departmentId, $subject, $ip]
             );
-            self::addMessage($ticketId, 'customer', null, $body, false, $ip);
+            $messageId = self::addMessage($ticketId, 'customer', null, $body, false, $ip);
+            if ($files) {
+                Attachments::store($ticketId, $messageId, $files);
+            }
             $pdo->commit();
         } catch (\Throwable $ex) {
             $pdo->rollBack();
@@ -95,13 +98,14 @@ final class Tickets
         );
     }
 
-    public static function addMessage(int $ticketId, string $authorType, ?int $operatorId, string $body, bool $internal, ?string $ip): void
+    public static function addMessage(int $ticketId, string $authorType, ?int $operatorId, string $body, bool $internal, ?string $ip): int
     {
-        Db::insert(
+        $id = Db::insert(
             'INSERT INTO ticket_messages (ticket_id, author_type, operator_id, body, is_internal, ip) VALUES (?, ?, ?, ?, ?, ?)',
             [$ticketId, $authorType, $operatorId, $body, (int) $internal, $ip]
         );
         Db::exec('UPDATE tickets SET updated_at = NOW() WHERE id = ?', [$ticketId]);
+        return $id;
     }
 
     public static function customerReply(array $ticket, string $body, string $ip): void

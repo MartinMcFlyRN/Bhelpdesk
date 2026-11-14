@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($title ?? '') ?> · <?= e(config('app_name', 'Bhelpdesk')) ?></title>
     <link rel="stylesheet" href="/assets/style.css">
+    <script src="/assets/app.js" defer></script>
 </head>
 <body class="area-customer">
 <header class="topbar">

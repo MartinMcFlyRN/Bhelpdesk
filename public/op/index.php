@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{Auth, Db, IpGuard, Router, Session, Throttle, Tickets, View};
+use Bhelpdesk\{Attachments, Auth, Db, IpGuard, Router, Session, Throttle, Tickets, View};
 
 // ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
@@ -84,11 +84,13 @@ $loadTicket = static function (array $p): array {
 $r->get('/ticket/{id}', static function (array $p) use ($loadTicket): void {
     $op = Auth::require();
     $t = $loadTicket($p);
+    $messages = Tickets::messages((int) $t['id'], true);
     View::render('op', 'ticket', [
         'title'       => '#' . $t['number'] . ' ' . $t['subject'],
         'op'          => $op,
         'ticket'      => $t,
-        'messages'    => Tickets::messages((int) $t['id'], true),
+        'messages'    => $messages,
+        'attachments' => Attachments::forMessages(array_column($messages, 'id')),
         'departments' => Tickets::departments(false),
         'operators'   => Tickets::operators(),
     ]);
@@ -123,6 +125,18 @@ $r->post('/ticket/{id}/update', static function (array $p) use ($loadTicket): vo
     ]);
     flash('success', 'opticket.saved');
     redirect('/op/ticket/' . $t['id']);
+});
+
+// ---------- Attachment download ----------
+$r->get('/file/{id}', static function (array $p): void {
+    Auth::require();
+    $file = Attachments::find((int) $p['id']);
+    if (!$file) {
+        http_response_code(404);
+        View::render('op', 'error', ['title' => __('error.not_found.title'), 'message' => __('error.not_found.message')]);
+        return;
+    }
+    Attachments::send($file, isset($_GET['download']));
 });
 
 // ---------- Operator management (admins only) ----------

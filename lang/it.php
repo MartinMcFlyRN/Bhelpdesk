@@ -68,6 +68,25 @@ return [
     'val.message_min'       => 'Descrivi il problema (almeno 10 caratteri).',
     'val.too_many_tickets'  => 'Hai aperto troppi ticket in poco tempo. Riprova più tardi.',
 
+    // ---- Customer: attachments and captcha ----
+    'new.attachments'          => 'Allegati (facoltativi)',
+    'new.attachments_hint'     => 'Immagini (JPG, PNG, GIF, WEBP) o PDF: fino a :count file, max :size MB ciascuno.',
+    'new.attachments_reselect' => 'Per sicurezza, dopo un errore i file allegati vanno selezionati di nuovo.',
+    'captcha.label'            => 'Codice di sicurezza',
+    'captcha.alt'              => 'Immagine del codice di sicurezza',
+    'captcha.hint'             => 'Digita i caratteri',
+    'captcha.refresh'          => 'Nuovo codice',
+    'val.captcha'              => 'Il codice di sicurezza è errato o scaduto. Digita quello nuovo.',
+    'val.too_many_files'       => 'Puoi allegare al massimo :max file.',
+    'val.file_too_big'         => '":name" supera :size MB.',
+    'val.file_type'            => '":name" non è ammesso: solo immagini (JPG, PNG, GIF, WEBP) e PDF.',
+    'val.upload_failed'        => 'Impossibile caricare ":name", riprova.',
+    'val.total_too_big'        => 'Gli allegati insieme superano :size MB.',
+    'error.too_large.title'    => 'Caricamento troppo grande',
+    'error.too_large.message'  => 'I file inviati sono troppo grandi. Torna indietro e allega file più piccoli o in numero minore.',
+    'attach.title'             => 'Allegati',
+    'attach.download'          => 'scarica',
+
     // ---- Customer: ticket created ----
     'created.title'  => 'Ticket aperto',
     'created.intro'  => 'La tua richiesta è stata registrata con il numero:',

@@ -29,11 +29,14 @@ bhelpdesk/
 │   ├── Auth.php            operator login
 │   ├── IpGuard.php         IPv4/IPv6 CIDR matching, X-Forwarded-For handling
 │   ├── Throttle.php        rate limiting (login, ticket creation, status lookup)
-│   └── Tickets.php         ticket logic
+│   ├── Tickets.php         ticket logic
+│   ├── Attachments.php     uploads: validation, storage, protected download
+│   └── Captcha.php         self-hosted image captcha (GD)
 ├── templates/{customer,op}/
 ├── config/config.example.php
 ├── sql/schema.sql, sql/migrations/
 ├── bin/create-operator.php, bin/check-translations.php
+├── storage/                uploaded attachments (outside public/, not in git)
 └── deploy/                 nginx, IP allow-list snippet, php-fpm pool examples
 ```
 
@@ -41,7 +44,7 @@ bhelpdesk/
 
 ```bash
 # 1. packages
-apt install nginx mariadb-server php8.3-fpm php8.3-mysql php8.3-mbstring git
+apt install nginx mariadb-server php8.3-fpm php8.3-mysql php8.3-mbstring php8.3-gd fonts-dejavu-core git
 
 # 2. user and code
 useradd --system --home /var/www/bhelpdesk --shell /usr/sbin/nologin bhelpdesk
@@ -62,6 +65,8 @@ chown -R root:bhelpdesk /var/www/bhelpdesk
 chmod -R u=rwX,g=rX,o= /var/www/bhelpdesk
 chmod o+x /var/www/bhelpdesk && chmod -R o+rX /var/www/bhelpdesk/public
 chmod 640 config/config.php
+# storage/ (attachments) is the only folder PHP writes to
+chown -R bhelpdesk:bhelpdesk storage && chmod -R u=rwX,g=rX,o= storage
 
 # 6. php-fpm
 mkdir -p /var/lib/php/sessions-bhelpdesk /var/log/php
@@ -85,10 +90,16 @@ sudo -u bhelpdesk php /var/www/bhelpdesk/bin/create-operator.php --role=admin
 cd /var/www/bhelpdesk
 git pull --ff-only
 chown -R root:bhelpdesk . && chmod -R u=rwX,g=rX,o= . && chmod o+x . && chmod -R o+rX public && chmod 640 config/config.php
+chown -R bhelpdesk:bhelpdesk storage
 systemctl reload php8.3-fpm     # clears opcache
 ```
 
-Apply any new file in `sql/migrations/` after pulling (they are idempotent).
+Apply any new file in `sql/migrations/` after pulling (they are idempotent):
+
+```bash
+mariadb bhelpdesk < sql/migrations/001_customer_language.sql
+mariadb bhelpdesk < sql/migrations/002_attachments.sql
+```
 
 ## Apache (testing or hosting without nginx)
 
@@ -136,6 +147,17 @@ Ticket history events (status/priority/department/assignee changes, reopen) are 
 
 Not translated by design: data entered by users, such as department names, ticket subjects and messages.
 
+## Attachments and captcha (new ticket form)
+
+**Attachments**: customers can attach images (JPG, PNG, GIF, WEBP) and PDF files when opening a ticket. Default limits: 5 files, 5 MB each, 20 MB in total (`attachments` in `config.php`).
+
+- The type is detected from the file **content** (`finfo` + `getimagesize` / `%PDF-` header); the extension must match it. SVG, HTML, Office files etc. are rejected.
+- Files are saved in `storage/attachments/YYYY/MM/` with a random name and no extension, outside the document root. Only PHP writes there (`bhelpdesk` user).
+- Downloads go through PHP with a permission check: customers only see files of their own ticket, operators see everything. Responses carry `nosniff` and a sandbox CSP; images open inline, PDFs are downloaded.
+- PHP and web-server limits must be higher than the app limits: see `deploy/php-fpm-bhelpdesk.conf` (`upload_max_filesize`, `post_max_size`, `max_file_uploads`) and `client_max_body_size` in the nginx vhost. On Apache with mod_php set them in `php.ini`. If a request exceeds `post_max_size` the user sees "Upload too large".
+
+**Captcha**: self-hosted image captcha generated with PHP GD, no external service and no data sent to third parties. Single-use, expires after 15 minutes, case-insensitive, look-alike characters (0/O/Q, 1/I/L, 2/Z, 5/S, 8/B, 6/G, U/V) excluded. A "New code" button reloads the image (small JS in `assets/app.js`, the form also works without JS). Disable with `'captcha' => ['enabled' => false]`. For a more readable image install `fonts-dejavu-core` (the pool's `open_basedir` already includes `/usr/share/fonts/`).
+
 ## Ticket flow
 
 Statuses: **Open** → (operator reply) **Answered** → (customer reply) **Open** … → **Closed**. There is also **On hold**.
@@ -153,7 +175,7 @@ CSRF on every POST · separate sessions per area (cookie `BHD_CUST` path `/custo
 ## Roadmap
 
 1. Email notifications (new ticket, replies) via SMTP, in the customer's language
-2. Attachments (stored outside `public/`, downloaded through PHP with permission checks)
+2. Attachments on replies (customer and operator)
 3. Tickets from email (piping/IMAP)
 4. Department management UI, canned responses, SLA/due dates
 5. TOTP 2FA for operators

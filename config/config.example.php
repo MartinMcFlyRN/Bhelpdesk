@@ -53,4 +53,28 @@ return [
 
     // Customers may reply to a closed ticket (it gets reopened)
     'allow_reopen' => true,
+
+    // ---- Ticket form protection ----
+    // Self-hosted image captcha (needs the PHP GD extension).
+    // 'font' = optional path to a .ttf file; default: DejaVu/Liberation if installed,
+    // otherwise GD's built-in font (less readable).
+    'captcha' => [
+        'enabled' => true,
+        'font'    => null,
+    ],
+
+    // ---- Attachments (images and PDF only) ----
+    // Keep PHP limits in line: upload_max_filesize >= max_size_mb,
+    // post_max_size > max_total_mb, max_file_uploads >= max_files,
+    // nginx client_max_body_size > max_total_mb.
+    'attachments' => [
+        'enabled'      => true,
+        'max_files'    => 5,
+        'max_size_mb'  => 5,
+        'max_total_mb' => 20,
+    ],
+
+    // Where uploaded files are kept: must be OUTSIDE public/ and writable by PHP.
+    // null = <project>/storage
+    'storage_path' => null,
 ];

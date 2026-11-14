@@ -73,6 +73,25 @@ return [
     'val.message_min'       => 'Please describe the problem (at least 10 characters).',
     'val.too_many_tickets'  => 'You have opened too many tickets in a short time. Please try again later.',
 
+    // ---- Customer: attachments and captcha ----
+    'new.attachments'          => 'Attachments (optional)',
+    'new.attachments_hint'     => 'Images (JPG, PNG, GIF, WEBP) or PDF: up to :count files, max :size MB each.',
+    'new.attachments_reselect' => 'For security reasons attached files must be selected again after an error.',
+    'captcha.label'            => 'Security code',
+    'captcha.alt'              => 'Security code image',
+    'captcha.hint'             => 'Type the characters',
+    'captcha.refresh'          => 'New code',
+    'val.captcha'              => 'The security code is wrong or expired. Please type the new one.',
+    'val.too_many_files'       => 'You can attach at most :max files.',
+    'val.file_too_big'         => '":name" is larger than :size MB.',
+    'val.file_type'            => '":name" is not allowed: only images (JPG, PNG, GIF, WEBP) and PDF files.',
+    'val.upload_failed'        => '":name" could not be uploaded, please try again.',
+    'val.total_too_big'        => 'The attachments together exceed :size MB.',
+    'error.too_large.title'    => 'Upload too large',
+    'error.too_large.message'  => 'The files sent are too large. Go back and attach smaller or fewer files.',
+    'attach.title'             => 'Attachments',
+    'attach.download'          => 'download',
+
     // ---- Customer: ticket created ----
     'created.title'  => 'Ticket opened',
     'created.intro'  => 'Your request has been registered with number:',
