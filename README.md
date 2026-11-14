@@ -127,6 +127,7 @@ mariadb bhelpdesk < sql/migrations/017_tasks.sql
 mariadb bhelpdesk < sql/migrations/018_task_ticket.sql
 mariadb bhelpdesk < sql/migrations/019_invoices.sql
 mariadb bhelpdesk < sql/migrations/020_invoice_ticket.sql
+mariadb bhelpdesk < sql/migrations/021_quotes.sql
 ```
 
 ## Operators area
@@ -216,7 +217,7 @@ Nobody is alerted for what they did themselves. Alerts contain the ticket data, 
 
 ## Billing
 
-*Billing* in the top menu (after Customers) has **Invoice** and **Quote** (quotes: coming next).
+*Billing* in the top menu (after Customers) has **Invoice** and **Quote**.
 
 - An invoice has an automatic numeric **ID**, a **customer** chosen from the registry (search by name, company or email), a **text**, the **amount** (`120,50`, `1.234,56` and `1,234.56` are all accepted), the **day billing starts** and the **type**: one-off, monthly, every two months, yearly.
 - **Invoice issued** switches it from *to issue* to *issued* (who and when are recorded); in the list the state is a button that switches it in one click.
@@ -224,6 +225,7 @@ Nobody is alerted for what they did themselves. Alerts contain the ticket data, 
 - The customer page lists the customer's invoices with *+ New invoice*.
 - **Invoices of a ticket**: the *Invoices* box in the ticket sidebar lists the linked invoices; *+ New invoice* opens the form with the ticket's main customer and the text `Ticket #number - subject`, linked to the ticket (back to the ticket after saving). The invoice shows the ticket in the form and in the list (searchable by ticket number); the ticket history records the new invoice. Merging tickets moves their invoices.
 - Switching an invoice between *to issue* and *issued* (list button or checkbox of an existing invoice) asks for confirmation.
+- **Quotes** work like invoices (automatic ID, customer from the registry, text, amount, list with search and total, creation from a ticket with the reference, *Quotes* box in the ticket and in the customer page, history event, merge, delete by creator/admins) without issued state, billing date and type.
 - Every operator can use Billing; the creator and the administrators delete invoices.
 
 ## Bulk actions in the ticket list

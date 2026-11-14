@@ -94,6 +94,25 @@
 
     <aside class="side-stack">
         <?php require BHD_ROOT . '/templates/op/ticket_customers.php'; ?>
+        <div class="card ticket-tasks ticket-quotes">
+            <div class="row-between">
+                <h2><?= t('quote.title') ?><?php if ($quotes): ?> <span class="count"><?= count($quotes) ?></span><?php endif; ?></h2>
+                <a class="btn btn-small" href="/op/billing/quotes/new?ticket=<?= (int) $ticket['id'] ?>">+ <?= t('quote.new') ?></a>
+            </div>
+            <?php if (!$quotes): ?>
+                <p class="muted hint"><?= t('quote.ticket_none') ?></p>
+            <?php else: ?>
+                <ul class="ticket-task-list">
+                    <?php foreach ($quotes as $qt): ?>
+                        <li>
+                            <a href="/op/billing/quotes/<?= (int) $qt['id'] ?>"><?= t('quote.edit_title', ['id' => $qt['id']]) ?></a>
+                            <strong><?= e(\Bhelpdesk\Invoices::money((float) $qt['amount'])) ?></strong>
+                            <small class="muted"><?= e(mb_strimwidth(preg_replace('/\s+/', ' ', (string) $qt['description']), 0, 60, '…')) ?></small>
+                        </li>
+                    <?php endforeach; ?>
+                </ul>
+            <?php endif; ?>
+        </div>
         <div class="card ticket-tasks ticket-invoices">
             <div class="row-between">
                 <h2><?= t('inv.title') ?><?php if ($invoices): ?> <span class="count"><?= count($invoices) ?></span><?php endif; ?></h2>

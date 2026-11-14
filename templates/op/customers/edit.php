@@ -98,6 +98,24 @@
             </ul>
         <?php endif; ?>
     </div>
+    <div class="card">
+        <div class="row-between">
+            <h2><?= t('quote.title') ?> <span class="count-pill"><?= count($quotes) ?></span></h2>
+            <a class="btn btn-small" href="/op/billing/quotes/new?customer=<?= (int) $customer['id'] ?>">+ <?= t('quote.new') ?></a>
+        </div>
+        <?php if (!$quotes): ?>
+            <p class="muted"><?= t('quote.empty') ?></p>
+        <?php else: ?>
+            <ul class="ticket-mini">
+            <?php foreach ($quotes as $qt): ?>
+                <li>
+                    <a href="/op/billing/quotes/<?= (int) $qt['id'] ?>"><strong><?= (int) $qt['id'] ?></strong> <?= e(mb_strimwidth(preg_replace('/\s+/', ' ', (string) $qt['description']), 0, 50, '…')) ?></a>
+                    <div><strong><?= e(\Bhelpdesk\Invoices::money((float) $qt['amount'])) ?></strong> <small class="muted"><?= e(fmt_date((string) $qt['created_at'])) ?></small></div>
+                </li>
+            <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+    </div>
     </aside>
     <?php endif; ?>
 </div>

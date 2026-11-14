@@ -302,6 +302,7 @@ final class Tickets
                 Db::exec('UPDATE ticket_links SET ticket_id = ? WHERE ticket_id = ?', [$targetId, $sid]);
                 Db::exec('UPDATE tasks SET ticket_id = ? WHERE ticket_id = ?', [$targetId, $sid]);
                 Db::exec('UPDATE invoices SET ticket_id = ? WHERE ticket_id = ?', [$targetId, $sid]);
+                Db::exec('UPDATE quotes SET ticket_id = ? WHERE ticket_id = ?', [$targetId, $sid]);
                 // tickets previously merged into the source now point to the target
                 Db::exec('UPDATE tickets SET merged_into = ? WHERE merged_into = ?', [$targetId, $sid]);
                 Db::exec("UPDATE tickets SET merged_into = ?, status = 'closed', closed_at = NOW(), updated_at = NOW() WHERE id = ?", [$targetId, $sid]);

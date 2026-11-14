@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Canned, CustomerAuth, Customers, Db, Departments, EmailTemplates, Html, Invoices, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, Operators, Router, Session, Settings, Tasks, Throttle, Tickets, View};
+use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Canned, CustomerAuth, Customers, Db, Departments, EmailTemplates, Html, Invoices, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, Operators, Quotes, Router, Session, Settings, Tasks, Throttle, Tickets, View};
 
 // ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
@@ -309,6 +309,7 @@ $r->get('/ticket/{id}', static function (array $p) use ($loadTicket): void {
         'participants' => Tickets::participants((int) $t['id']),
         'tasks'        => Tasks::forTicket((int) $t['id']),
         'invoices'     => Invoices::forTicket((int) $t['id']),
+        'quotes'       => Quotes::forTicket((int) $t['id']),
         // messages received by email whose source can be opened
         'sources'      => array_flip(array_map('intval', Db::column(
             'SELECT mm.ticket_message_id FROM mail_messages mm JOIN ticket_messages tm ON tm.id = mm.ticket_message_id WHERE tm.ticket_id = ? AND mm.raw_path IS NOT NULL',
@@ -813,8 +814,101 @@ $r->post('/billing/invoices/{id}/delete', static function (array $p) use ($loadI
     redirect('/op/billing/invoices');
 });
 
+$loadQuote = static function (array $p): array {
+    $q = Quotes::find((int) $p['id']);
+    if (!$q) {
+        http_response_code(404);
+        View::render('op', 'error', ['title' => __('error.not_found.title'), 'message' => __('error.not_found.message')]);
+        exit;
+    }
+    return $q;
+};
+
+$quoteForm = static function (?array $quote, array $values, array $errors, ?array $ticket = null): void {
+    View::render('op', 'billing/quote_form', [
+        'title'   => $quote ? __('quote.edit_title', ['id' => $quote['id']]) : __('quote.new_title'),
+        'op'      => Auth::user(),
+        'quote'   => $quote,
+        'values'  => $values,
+        'errors'  => $errors,
+        'ticket'  => $ticket,
+    ]);
+};
+
 $r->get('/billing/quotes', static function (): void {
-    View::render('op', 'billing/quotes', ['title' => __('quote.title'), 'op' => Auth::require()]);
+    $op = Auth::require();
+    $f = ['q' => trim((string) ($_GET['q'] ?? ''))];
+    $page = max(1, (int) ($_GET['page'] ?? 1));
+    $res = Quotes::search($f, $page);
+    View::render('op', 'billing/quotes', [
+        'title'   => __('quote.title'),
+        'op'      => $op,
+        'filters' => $f,
+        'rows'    => $res['rows'],
+        'total'   => $res['total'],
+        'sum'     => $res['sum'],
+        'page'    => $page,
+        'perPage' => 30,
+    ]);
+});
+
+$r->get('/billing/quotes/new', static function () use ($quoteForm, $invoiceTicket): void {
+    $op = Auth::require();
+    // from a ticket: its main customer and a text with the ticket reference
+    $ticket = $invoiceTicket($op, $_GET['ticket'] ?? 0);
+    $c = $ticket ? Customers::find((int) $ticket['customer_id']) : (isset($_GET['customer']) ? Customers::find((int) $_GET['customer']) : null);
+    $quoteForm(null, [
+        'customer_email' => $c['email'] ?? '', 'customer_name' => $c['name'] ?? '',
+        'description' => $ticket ? __('inv.text_from_ticket', ['number' => $ticket['number'], 'subject' => $ticket['subject']]) : '',
+        'amount_input' => '',
+    ], [], $ticket);
+});
+
+$r->post('/billing/quotes', static function () use ($quoteForm, $invoiceTicket): void {
+    $op = Auth::require();
+    $ticket = $invoiceTicket($op, $_POST['ticket_id'] ?? 0);
+    $res = Quotes::validate($_POST);
+    if ($res['errors']) {
+        http_response_code(422);
+        $quoteForm(null, $res['values'], $res['errors'], $ticket);
+        return;
+    }
+    $id = Quotes::create($res['values'], $op, $ticket);
+    flash('success', 'quote.created', ['id' => $id]);
+    redirect($ticket ? '/op/ticket/' . (int) $ticket['id'] : '/op/billing/quotes');
+});
+
+$r->get('/billing/quotes/{id}', static function (array $p) use ($quoteForm, $loadQuote): void {
+    Auth::require();
+    $q = $loadQuote($p);
+    $quoteForm($q, [
+        'customer_email' => $q['customer_email'], 'customer_name' => $q['customer_name'], 'description' => $q['description'],
+        'amount_input' => number_format((float) $q['amount'], 2, __('inv.dec_point'), ''),
+    ], []);
+});
+
+$r->post('/billing/quotes/{id}', static function (array $p) use ($quoteForm, $loadQuote): void {
+    Auth::require();
+    $q = $loadQuote($p);
+    $res = Quotes::validate($_POST);
+    if ($res['errors']) {
+        http_response_code(422);
+        $quoteForm($q, $res['values'], $res['errors']);
+        return;
+    }
+    Quotes::update($q, $res['values']);
+    flash('success', 'quote.saved', ['id' => $q['id']]);
+    redirect('/op/billing/quotes');
+});
+
+$r->post('/billing/quotes/{id}/delete', static function (array $p) use ($loadQuote): void {
+    $op = Auth::require();
+    $q = $loadQuote($p);
+    if ($op['role'] === 'admin' || (int) $q['created_by'] === (int) $op['id']) {
+        Quotes::delete((int) $q['id']);
+        flash('success', 'quote.deleted', ['id' => $q['id']]);
+    }
+    redirect('/op/billing/quotes');
 });
 
 // =====================================================================
@@ -840,6 +934,7 @@ $customerForm = static function (?array $customer, array $values, array $errors)
         'errors'    => $errors,
         'tickets'   => $customer ? Customers::tickets((int) $customer['id'], Auth::user()) : [],
         'invoices'  => $customer ? Invoices::forCustomer((int) $customer['id']) : [],
+        'quotes'    => $customer ? Quotes::forCustomer((int) $customer['id']) : [],
         'languages' => Lang::available(true),
     ]);
 };

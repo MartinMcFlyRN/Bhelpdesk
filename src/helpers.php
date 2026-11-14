@@ -117,6 +117,8 @@ function system_message(string $body): string
                 'amount' => \Bhelpdesk\Invoices::money((float) ($ev['amount'] ?? 0)),
                 'type' => __('inv.rec_' . (in_array($ev['recurrence'] ?? '', \Bhelpdesk\Invoices::RECURRENCES, true) ? $ev['recurrence'] : 'once')),
             ]);
+        case 'quote_added':
+            return __('log.quote_added', ['who' => (string) ($ev['by'] ?? '?'), 'id' => (string) ($ev['id'] ?? '?'), 'amount' => \Bhelpdesk\Invoices::money((float) ($ev['amount'] ?? 0))]);
         case 'task_done':
             return __('log.task_done', ['who' => (string) ($ev['by'] ?? '?'), 'task' => (string) ($ev['task'] ?? '')]);
         case 'merged':
