@@ -63,16 +63,16 @@ final class Lang
     }
 
     /**
-     * Enabled languages that have a file in lang/.
+     * Languages that have a file in lang/ (only the enabled ones unless $all).
      * @return array<string, string> code => native name
      */
-    public static function available(): array
+    public static function available(bool $all = false): array
     {
-        static $list = null;
-        if ($list !== null) {
-            return $list;
+        static $cache = [];
+        if (isset($cache[(int) $all])) {
+            return $cache[(int) $all];
         }
-        $enabled = (array) config('enabled_languages', []);
+        $enabled = $all ? [] : (array) config('enabled_languages', []);
         $list = [];
         foreach (glob(BHD_ROOT . '/lang/*.php') ?: [] as $file) {
             $code = basename($file, '.php');
@@ -85,7 +85,7 @@ final class Lang
             $list[$code] = (string) (self::load($code)['lang.name'] ?? $code);
         }
         ksort($list);
-        return $list;
+        return $cache[(int) $all] = $list;
     }
 
     private static function load(string $code): array

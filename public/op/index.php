@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{Attachments, Auth, Db, IpGuard, Router, Session, Throttle, Tickets, View};
+use Bhelpdesk\{Attachments, Auth, Departments, IpGuard, Lang, Operators, Router, Session, Settings, Throttle, Tickets, View};
 
 // ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
@@ -139,62 +139,197 @@ $r->get('/file/{id}', static function (array $p): void {
     Attachments::send($file, isset($_GET['download']));
 });
 
-// ---------- Operator management (admins only) ----------
-$listOperators = static fn (): array => Db::all('SELECT id, username, name, email, role, active, last_login_at, last_login_ip FROM operators ORDER BY name');
+// =====================================================================
+//  Configuration (/op/config) - administrators only
+//  Inherits the /op IP filter of the web server and of the application.
+// =====================================================================
 
-$r->get('/operators', static function () use ($listOperators): void {
-    $op = Auth::requireAdmin();
-    View::render('op', 'operators', ['title' => __('ops.title'), 'op' => $op, 'operators' => $listOperators(), 'errors' => []]);
+$cfgView = static function (string $page, string $title, array $vars = []): void {
+    View::render('op', 'config/' . $page, $vars + [
+        'title'   => $title . ' · ' . __('cfg.title'),
+        'op'      => Auth::user(),
+        'cfgPage' => $page,
+    ]);
+};
+
+$r->get('/config', static function (): void {
+    Auth::requireAdmin();
+    redirect('/op/config/general');
 });
 
-$r->post('/operators', static function () use ($listOperators): void {
+// ---------- General ----------
+$generalPage = static function (array $values, array $errors) use ($cfgView): void {
+    $cfgView('general', __('cfg.menu.general'), [
+        'values'    => $values,
+        'errors'    => $errors,
+        'languages' => Lang::available(true),
+        'php'       => Settings::phpLimits(),
+        'file'      => $GLOBALS['bhd_config_file'] ?? [],
+    ]);
+};
+
+$r->get('/config/general', static function () use ($generalPage): void {
+    Auth::requireAdmin();
+    $values = [];
+    foreach (array_keys(Settings::FIELDS) as $k) {
+        $values[$k] = Settings::current($k);
+    }
+    $generalPage($values, []);
+});
+
+$r->post('/config/general', static function () use ($generalPage): void {
     $op = Auth::requireAdmin();
-    $in = [
-        'username' => trim((string) ($_POST['username'] ?? '')),
-        'name'     => trim((string) ($_POST['name'] ?? '')),
-        'email'    => mb_strtolower(trim((string) ($_POST['email'] ?? ''))),
-        'password' => (string) ($_POST['password'] ?? ''),
-        'role'     => ($_POST['role'] ?? '') === 'admin' ? 'admin' : 'agent',
-    ];
-    $errors = [];
-    if (!preg_match('/^[a-z0-9._-]{3,50}$/i', $in['username'])) {
-        $errors[] = __('val.username');
-    }
-    if ($in['name'] === '') {
-        $errors[] = __('val.ops_name_required');
-    }
-    if (!filter_var($in['email'], FILTER_VALIDATE_EMAIL)) {
-        $errors[] = __('val.email_invalid');
-    }
-    if (strlen($in['password']) < 12) {
-        $errors[] = __('val.password_short');
-    }
-    if (!$errors && Db::value('SELECT 1 FROM operators WHERE username = ? OR email = ?', [$in['username'], $in['email']])) {
-        $errors[] = __('val.duplicate');
-    }
-    if ($errors) {
+    $res = Settings::validate((array) ($_POST['s'] ?? []));
+    if ($res['errors']) {
         http_response_code(422);
-        View::render('op', 'operators', ['title' => __('ops.title'), 'op' => $op, 'operators' => $listOperators(), 'errors' => $errors]);
+        $generalPage($res['values'], $res['errors']);
         return;
     }
-    Db::insert(
-        'INSERT INTO operators (username, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)',
-        [$in['username'], $in['name'], $in['email'], password_hash($in['password'], PASSWORD_DEFAULT), $in['role']]
-    );
-    flash('success', 'ops.created');
-    redirect('/op/operators');
+    Settings::save($res['values'], (int) $op['id']);
+    flash('success', 'cfg.saved');
+    redirect('/op/config/general');
 });
 
-$r->post('/operators/{id}/toggle', static function (array $p): void {
-    $op = Auth::requireAdmin();
-    $id = (int) $p['id'];
-    if ($id === (int) $op['id']) {
+// ---------- Departments ----------
+$r->get('/config/departments', static function () use ($cfgView): void {
+    Auth::requireAdmin();
+    $cfgView('departments', __('cfg.menu.departments'), ['departments' => Departments::all(), 'errors' => []]);
+});
+
+$r->post('/config/departments', static function () use ($cfgView): void {
+    Auth::requireAdmin();
+    $res = Departments::validate($_POST + ['active' => 1]);
+    if ($res['errors']) {
+        http_response_code(422);
+        $cfgView('departments', __('cfg.menu.departments'), ['departments' => Departments::all(), 'errors' => $res['errors']]);
+        return;
+    }
+    Departments::create($res['values']);
+    flash('success', 'dep.created');
+    redirect('/op/config/departments');
+});
+
+$loadDep = static function (array $p): array {
+    $d = Departments::find((int) $p['id']);
+    if (!$d) {
+        http_response_code(404);
+        View::render('op', 'error', ['title' => __('error.not_found.title'), 'message' => __('error.not_found.message')]);
+        exit;
+    }
+    return $d;
+};
+
+$r->get('/config/departments/{id}', static function (array $p) use ($cfgView, $loadDep): void {
+    Auth::requireAdmin();
+    $d = $loadDep($p);
+    $cfgView('department_edit', __('dep.edit'), ['dep' => $d, 'errors' => []]);
+});
+
+$r->post('/config/departments/{id}', static function (array $p) use ($cfgView, $loadDep): void {
+    Auth::requireAdmin();
+    $d = $loadDep($p);
+    $res = Departments::validate($_POST, (int) $d['id']);
+    if ($res['errors']) {
+        http_response_code(422);
+        $cfgView('department_edit', __('dep.edit'), ['dep' => array_merge($d, $res['values']), 'errors' => $res['errors']]);
+        return;
+    }
+    Departments::update((int) $d['id'], $res['values']);
+    flash('success', 'dep.saved');
+    redirect('/op/config/departments');
+});
+
+$r->post('/config/departments/{id}/delete', static function (array $p) use ($loadDep): void {
+    Auth::requireAdmin();
+    $d = $loadDep($p);
+    if (Departments::delete((int) $d['id'])) {
+        flash('success', 'dep.deleted');
+        redirect('/op/config/departments');
+    }
+    flash('error', 'dep.in_use');
+    redirect('/op/config/departments/' . $d['id']);
+});
+
+// ---------- Operators ----------
+$r->get('/config/operators', static function () use ($cfgView): void {
+    Auth::requireAdmin();
+    $cfgView('operators', __('cfg.menu.operators'), ['operators' => Operators::all(), 'errors' => []]);
+});
+
+$r->post('/config/operators', static function () use ($cfgView): void {
+    Auth::requireAdmin();
+    $res = Operators::validate($_POST);
+    if ($res['errors']) {
+        http_response_code(422);
+        $cfgView('operators', __('cfg.menu.operators'), ['operators' => Operators::all(), 'errors' => $res['errors']]);
+        return;
+    }
+    Operators::create($res['values']);
+    flash('success', 'ops.created');
+    redirect('/op/config/operators');
+});
+
+$loadOp = static function (array $p): array {
+    $o = Operators::find((int) $p['id']);
+    if (!$o) {
+        http_response_code(404);
+        View::render('op', 'error', ['title' => __('error.not_found.title'), 'message' => __('error.not_found.message')]);
+        exit;
+    }
+    return $o;
+};
+
+$r->get('/config/operators/{id}', static function (array $p) use ($cfgView, $loadOp): void {
+    Auth::requireAdmin();
+    $cfgView('operator_edit', __('ops.edit'), ['target' => $loadOp($p), 'errors' => []]);
+});
+
+$r->post('/config/operators/{id}', static function (array $p) use ($cfgView, $loadOp): void {
+    $me = Auth::requireAdmin();
+    $o = $loadOp($p);
+    $res = Operators::validate($_POST, $o);
+    $v = $res['values'];
+    $errors = $res['errors'];
+
+    $isSelf = (int) $o['id'] === (int) $me['id'];
+    if ($isSelf && $v['role'] !== 'admin') {
+        $errors[] = __('ops.self_role');
+    }
+    if ($isSelf && !$v['active']) {
+        $errors[] = __('ops.self_disable');
+    }
+    $losesAdmin = $o['role'] === 'admin' && $o['active'] && ($v['role'] !== 'admin' || !$v['active']);
+    if ($losesAdmin && Operators::otherActiveAdmins((int) $o['id']) === 0) {
+        $errors[] = __('ops.last_admin');
+    }
+
+    if ($errors) {
+        http_response_code(422);
+        $cfgView('operator_edit', __('ops.edit'), ['target' => array_merge($o, $v), 'errors' => array_values(array_unique($errors))]);
+        return;
+    }
+    Operators::update((int) $o['id'], $v);
+    flash('success', 'ops.saved');
+    redirect('/op/config/operators');
+});
+
+$r->post('/config/operators/{id}/toggle', static function (array $p) use ($loadOp): void {
+    $me = Auth::requireAdmin();
+    $o = $loadOp($p);
+    if ((int) $o['id'] === (int) $me['id']) {
         flash('error', 'ops.self_disable');
+    } elseif ($o['active'] && $o['role'] === 'admin' && Operators::otherActiveAdmins((int) $o['id']) === 0) {
+        flash('error', 'ops.last_admin');
     } else {
-        Db::exec('UPDATE operators SET active = 1 - active WHERE id = ?', [$id]);
+        Operators::setActive((int) $o['id'], !$o['active']);
         flash('success', 'ops.state_updated');
     }
-    redirect('/op/operators');
+    redirect('/op/config/operators');
+});
+
+// old URL of the operators page
+$r->get('/operators', static function (): void {
+    header('Location: /op/config/operators', true, 301);
 });
 
 $r->dispatch();

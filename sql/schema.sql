@@ -90,6 +90,15 @@ CREATE TABLE IF NOT EXISTS attachments (
     CONSTRAINT fk_attachments_message FOREIGN KEY (message_id) REFERENCES ticket_messages(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Settings edited from /op/config/general (override config/config.php)
+CREATE TABLE IF NOT EXISTS settings (
+    name        VARCHAR(64)  NOT NULL PRIMARY KEY,
+    value       TEXT         NOT NULL,
+    updated_by  INT UNSIGNED NULL,
+    updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_settings_operator FOREIGN KEY (updated_by) REFERENCES operators(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Generic rate limiting (operator login, ticket creation, status lookup)
 CREATE TABLE IF NOT EXISTS throttle (
     id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

@@ -41,3 +41,12 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 });
+
+// Confirmation for destructive buttons: <button data-confirm="Are you sure?">
+document.addEventListener('submit', function (ev) {
+    var btn = ev.submitter;
+    var msg = (btn && btn.getAttribute('data-confirm')) || ev.target.getAttribute('data-confirm');
+    if (msg && !window.confirm(msg)) {
+        ev.preventDefault();
+    }
+});

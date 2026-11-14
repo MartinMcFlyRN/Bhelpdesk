@@ -16,7 +16,7 @@
             <?php if (!empty($op)): ?>
             <a href="/op/"><?= t('nav.tickets') ?></a>
             <a href="/op/?assigned=me"><?= t('nav.my_tickets') ?></a>
-            <?php if ($op['role'] === 'admin'): ?><a href="/op/operators"><?= t('nav.operators') ?></a><?php endif; ?>
+            <?php if ($op['role'] === 'admin'): ?><a href="/op/config"<?= str_starts_with((string) ($_SERVER['REQUEST_URI'] ?? ''), '/op/config') ? ' class="active"' : '' ?>><?= t('nav.config') ?></a><?php endif; ?>
             <span class="muted"><?= e($op['name']) ?></span>
             <form method="post" action="/op/logout" class="inline">
                 <?= \Bhelpdesk\Csrf::field() ?>

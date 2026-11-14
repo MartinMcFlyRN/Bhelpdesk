@@ -27,6 +27,14 @@ final class Db
         return self::$pdo;
     }
 
+    /** Align the MySQL session time zone with PHP (after the time zone setting is known) */
+    public static function syncTimezone(): void
+    {
+        if (self::$pdo !== null) {
+            self::$pdo->exec("SET time_zone = '" . date('P') . "'");
+        }
+    }
+
     public static function one(string $sql, array $params = []): ?array
     {
         $st = self::pdo()->prepare($sql);

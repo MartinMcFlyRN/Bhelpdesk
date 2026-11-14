@@ -19,11 +19,13 @@ final class View
         echo self::capture(BHD_ROOT . "/templates/$area/layout.php", $vars + ['content' => $content]);
     }
 
-    private static function capture(string $file, array $vars): string
+    private static function capture(string $__template, array $__vars): string
     {
-        extract($vars, EXTR_SKIP);
+        // unusual local names so template variables (e.g. $file) never collide
+        extract($__vars, EXTR_SKIP);
+        unset($__vars);
         ob_start();
-        require $file;
+        require $__template;
         return (string) ob_get_clean();
     }
 }

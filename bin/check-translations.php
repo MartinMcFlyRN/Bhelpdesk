@@ -40,6 +40,13 @@ foreach (['status.open', 'status.answered', 'status.on_hold', 'status.closed',
     $used[$k][] = '(dynamic)';
 }
 
+// keys built from a prefix at runtime (settings labels/help, config menu)
+foreach (array_keys($base) as $k) {
+    if (str_starts_with($k, 'set.') || str_starts_with($k, 'cfg.menu.')) {
+        $used[$k][] = '(dynamic)';
+    }
+}
+
 $fail = false;
 $missingBase = array_diff_key($used, $base);
 if ($missingBase) {

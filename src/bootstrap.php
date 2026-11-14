@@ -23,7 +23,15 @@ spl_autoload_register(static function (string $class): void {
 
 require __DIR__ . '/helpers.php';
 
+// values from config.php as written on disk (shown read-only in /op/config)
+$GLOBALS['bhd_config_file'] = $GLOBALS['bhd_config'];
+// settings saved from /op/config/general override config.php
+if (config('db.name')) {
+    \Bhelpdesk\Settings::apply();
+}
+
 date_default_timezone_set((string) config('timezone', 'Europe/Rome'));
+\Bhelpdesk\Db::syncTimezone();
 
 \Bhelpdesk\Lang::init();
 

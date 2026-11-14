@@ -8,7 +8,8 @@ One application, two areas:
 |---------------|------------|--------------------------------------------------------------|
 | `/`           | —          | redirects to `/customer/`                                    |
 | `/customer/`  | customers  | open tickets, check status (number + email), reply           |
-| `/op/`        | operators  | dashboard, ticket handling, replies, internal notes, users   |
+| `/op/`        | operators  | dashboard, ticket handling, replies, internal notes          |
+| `/op/config/` | admins     | configuration: general settings, departments, operators      |
 
 `/op/` is protected on **three levels**: IP filter in the web server, application IP filter (`op_allowed_ips`), username/password login.
 
@@ -31,7 +32,9 @@ bhelpdesk/
 │   ├── Throttle.php        rate limiting (login, ticket creation, status lookup)
 │   ├── Tickets.php         ticket logic
 │   ├── Attachments.php     uploads: validation, storage, protected download
-│   └── Captcha.php         self-hosted image captcha (GD)
+│   ├── Captcha.php         self-hosted image captcha (GD)
+│   ├── Settings.php        settings editable from /op/config (stored in DB)
+│   ├── Departments.php, Operators.php
 ├── templates/{customer,op}/
 ├── config/config.example.php
 ├── sql/schema.sql, sql/migrations/
@@ -99,7 +102,18 @@ Apply any new file in `sql/migrations/` after pulling (they are idempotent):
 ```bash
 mariadb bhelpdesk < sql/migrations/001_customer_language.sql
 mariadb bhelpdesk < sql/migrations/002_attachments.sql
+mariadb bhelpdesk < sql/migrations/003_settings.sql
 ```
+
+## Configuration area (/op/config)
+
+Reserved to operators with the **Administrator** role (others get 403; the link is not shown to them). It lives under `/op`, so it is covered by the same IP filters and login.
+
+- **General** — application name, public URL, time zone, default/offered languages, ticket reopening, captcha, attachment limits (with a warning when they exceed the PHP limits of the server), operator session timeout, rate limits. Saved in the `settings` table, they override `config/config.php`. Database, allowed IPs, trusted proxies, cookie and storage settings stay in `config.php` only and are shown read-only.
+- **Departments** — create, rename, reorder, activate/deactivate. A department used by tickets cannot be deleted (deactivate it: it disappears from the customer form but stays on existing tickets).
+- **Operators** — create, edit name/email/role, reset password, activate/deactivate. Safeguards: you cannot remove your own admin role or disable yourself, and at least one active administrator always remains.
+
+If the `settings` table does not exist yet (migration 003 not applied) the app keeps working with `config.php` values only.
 
 ## Apache (testing or hosting without nginx)
 
@@ -177,6 +191,6 @@ CSRF on every POST · separate sessions per area (cookie `BHD_CUST` path `/custo
 1. Email notifications (new ticket, replies) via SMTP, in the customer's language
 2. Attachments on replies (customer and operator)
 3. Tickets from email (piping/IMAP)
-4. Department management UI, canned responses, SLA/due dates
+4. Canned responses, SLA/due dates
 5. TOTP 2FA for operators
 6. Customer accounts with ticket history
