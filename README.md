@@ -74,6 +74,17 @@ nginx -t && systemctl reload nginx
 sudo -u bhelpdesk php /var/www/bhelpdesk/bin/create-operator.php --role=admin
 ```
 
+## Apache (per test o hosting senza nginx)
+
+Servono `mod_rewrite` e `AllowOverride All` sulla cartella del progetto. PHP può girare con PHP-FPM (`proxy_fcgi`) o con mod_php.
+
+- **Document root = `public/`** (consigliato): vengono usati `public/.htaccess` (redirect, front controller, blocco degli altri `.php`) e `public/op/.htaccess` (filtro IP).
+- **Document root = cartella del progetto** (es. hosting dove la root non si può cambiare): il `.htaccess` nella root blocca `src/`, `config/`, `sql/`, `templates/`, `bin/`, `deploy/` e i dotfile, e manda tutto il resto dentro `public/`.
+
+IP ammessi a `/op` su Apache: modifica la riga `Require ip` in `public/op/.htaccess` (IP singoli, CIDR, IPv6, separati da spazio).
+
+Per un test in HTTP semplice imposta `'cookie_secure' => false` in `config.php`, altrimenti il browser non rimanda il cookie di sessione e i form danno "Sessione scaduta".
+
 ## Filtro IP su /op
 
 - **nginx** (`snippets/bhelpdesk-op-allow.conf`): blocca prima ancora che PHP venga eseguito. È il filtro principale.

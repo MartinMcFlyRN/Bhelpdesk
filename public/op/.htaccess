@@ -1,0 +1,11 @@
+# Bhelpdesk - filtro IP area operatori (Apache 2.4)
+# Vale per tutto /op/, anche per gli URL riscritti verso op/index.php.
+# Indica gli IP/reti ammessi separati da spazio; tutto il resto riceve 403.
+
+<IfModule mod_authz_core.c>
+    Require ip 127.0.0.1 ::1
+    # Require ip 203.0.113.10 198.51.100.0/24 2001:db8::/48
+</IfModule>
+
+# Le regole di riscrittura sono in public/.htaccess: non aggiungere
+# "RewriteEngine" qui, altrimenti sostituiresti quelle del livello superiore.
