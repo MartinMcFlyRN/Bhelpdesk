@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 // Download the POP3 mailboxes of the email identities and open/update tickets.
 // Run it from cron every minute as the PHP-FPM user, e.g. /etc/cron.d/bhelpdesk:
-//   * * * * * bhelpdesk php /var/www/bhelpdesk/bin/fetch-mail.php --quiet
+//   * * * * * bhelpdesk php8.3 /var/www/bhelpdesk/bin/fetch-mail.php --quiet
 //
 // Usage:
 //   php bin/fetch-mail.php                     all identities with POP3 enabled
@@ -25,10 +25,20 @@ $quiet = isset($opts['quiet']);
 $identityId = isset($opts['identity']) ? (int) $opts['identity'] : null;
 
 if (isset($opts['file'])) {
+    $file = (string) $opts['file'];
     $identity = $identityId ? Db::one('SELECT * FROM mail_identities WHERE id = ?', [$identityId]) : null;
-    $raw = @file_get_contents((string) $opts['file']);
-    if (!$identity || $raw === false) {
-        fwrite(STDERR, "Usage: --file=message.eml --identity=<id of an existing identity>\n");
+    $raw = is_file($file) && is_readable($file) ? file_get_contents($file) : false;
+    if ($raw === false) {
+        fwrite(STDERR, "Cannot read the file '$file' (current directory: " . getcwd() . ").\n"
+            . "Save the message as .eml (\"Download message\" / \"Show original\" in the mail client) and give its path.\n");
+    }
+    if (!$identity) {
+        fwrite(STDERR, ($identityId ? "Identity $identityId does not exist." : 'Missing --identity=ID.') . " Identities:\n");
+        foreach (Db::all('SELECT id, email, pop_enabled FROM mail_identities ORDER BY id') as $i) {
+            fwrite(STDERR, sprintf("  --identity=%d  %s%s\n", $i['id'], $i['email'], $i['pop_enabled'] ? '' : ' (POP3 off)'));
+        }
+    }
+    if ($raw === false || !$identity) {
         exit(1);
     }
     $r = MailFetcher::process($identity, $raw);

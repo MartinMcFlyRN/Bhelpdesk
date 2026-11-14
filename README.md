@@ -166,7 +166,7 @@ Passwords are encrypted (libsodium secretbox) with a key created automatically i
 - **Ignored**: our own addresses (loop protection), `Auto-Submitted`, `Precedence: bulk/list/junk`, auto-reply headers, mailing lists (`List-Id`), bounces and delivery reports, no-reply senders, duplicates (same Message-ID), more than *N* new tickets per hour from one sender (setting, default 10), messages over 30 MB (`mail.max_message_mb`, left on the server).
 - **Retention on the server**: delete after download, keep the last N days (messages older than N days since download are deleted), or never delete. Messages that failed with an error are left on the server.
 
-Test without POP3: `sudo -u bhelpdesk php bin/fetch-mail.php --file=message.eml --identity=ID`.
+Test without POP3: `sudo -u bhelpdesk php8.3 bin/fetch-mail.php --file=/path/message.eml --identity=ID` (without a valid identity the command lists the existing ones). Use the same PHP version as PHP-FPM and the `bhelpdesk` user, so stored attachments get the right owner.
 
 **Notifications** (General → Email can turn them off), sent with the department's sending identity in each customer's language, one message per customer with their own direct link:
 
