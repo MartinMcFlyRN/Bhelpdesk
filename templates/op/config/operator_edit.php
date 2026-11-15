@@ -24,7 +24,7 @@
                         <option value="billing" <?= $target['role'] === 'billing' ? 'selected' : '' ?>><?= t('role.billing') ?></option>
                     </select>
                 </label>
-                <?php $role = $target['role']; require BHD_ROOT . '/templates/op/config/_departments_pick.php'; ?>
+                <?php $role = $target['role']; $allDeps = !empty($target['all_departments']); require BHD_ROOT . '/templates/op/config/_departments_pick.php'; ?>
                 <?php if ($isSelf): ?>
                     <input type="hidden" name="active" value="1">
                 <?php else: ?>

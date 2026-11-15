@@ -14,7 +14,7 @@
             <dt><?= t('ops.last_login') ?></dt><dd><?= fmt_date($me['last_login_at']) ?></dd>
             <dt>IP</dt><dd><?= e($me['last_login_ip'] ?? '—') ?></dd>
             <dt><?= t('ops.departments') ?></dt>
-            <dd><?= $me['role'] === 'billing' ? t('ops.billing_only') : ($me['role'] === 'admin' ? t('ops.all_departments') : e(implode(', ', \Bhelpdesk\Operators::departmentNames()[(int) $me['id']] ?? ['—']))) ?></dd>
+            <dd><?= $me['role'] === 'billing' ? t('ops.billing_only') : (!empty($me['all_departments']) ? t('ops.all_departments') : e(implode(', ', \Bhelpdesk\Operators::departmentNames()[(int) $me['id']] ?? ['—']))) ?></dd>
         </dl>
     </div>
 

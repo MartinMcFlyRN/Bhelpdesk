@@ -32,7 +32,8 @@ final class Tickets
         return Db::all(
             "SELECT o.id, o.name, o.role FROM operators o
               WHERE o.active = 1
-                AND (o.role = 'admin' OR EXISTS (SELECT 1 FROM operator_departments od WHERE od.operator_id = o.id AND od.department_id = ?))
+                AND o.role <> 'billing'
+                AND (o.all_departments = 1 OR EXISTS (SELECT 1 FROM operator_departments od WHERE od.operator_id = o.id AND od.department_id = ?))
               ORDER BY o.name",
             [(int) $departmentId]
         );
@@ -46,7 +47,7 @@ final class Tickets
      */
     public static function visibility(array $op, string $alias = 't'): array
     {
-        if (($op['role'] ?? '') === 'admin') {
+        if (Operators::seesAll($op)) {
             return ['1 = 1', []];
         }
         $deps = Operators::departmentIds((int) $op['id']);
@@ -61,7 +62,7 @@ final class Tickets
 
     public static function canSee(array $ticket, array $op): bool
     {
-        if (($op['role'] ?? '') === 'admin' || (int) $ticket['assigned_to'] === (int) $op['id']) {
+        if (Operators::seesAll($op) || (int) $ticket['assigned_to'] === (int) $op['id']) {
             return true;
         }
         return $ticket['department_id'] !== null
@@ -71,11 +72,11 @@ final class Tickets
     /** May this operator be assigned a ticket of that department? */
     public static function canWorkOn(int $operatorId, ?int $departmentId): bool
     {
-        $op = Db::one('SELECT id, role FROM operators WHERE id = ? AND active = 1', [$operatorId]);
-        if (!$op) {
+        $op = Db::one('SELECT id, role, all_departments FROM operators WHERE id = ? AND active = 1', [$operatorId]);
+        if (!$op || $op['role'] === 'billing') {
             return false;
         }
-        return $op['role'] === 'admin'
+        return Operators::seesAll($op)
             || ($departmentId && in_array($departmentId, Operators::departmentIds($operatorId), true));
     }
 

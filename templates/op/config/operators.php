@@ -16,10 +16,10 @@
                     <td><?= e($o['email']) ?></td>
                     <td><?= t('role.' . $o['role']) ?></td>
                     <td class="dep-list">
-                        <?php if ($o['role'] === 'admin'): ?>
-                            <span class="muted"><?= t('ops.all_departments') ?></span>
-                        <?php elseif ($o['role'] === 'billing'): ?>
+                        <?php if ($o['role'] === 'billing'): ?>
                             <span class="muted"><?= t('ops.billing_only') ?></span>
+                        <?php elseif (!empty($o['all_departments'])): ?>
+                            <span class="muted"><?= t('ops.all_departments') ?></span>
                         <?php elseif (!empty($depNames[(int) $o['id']])): ?>
                             <?= e(implode(', ', $depNames[(int) $o['id']])) ?>
                         <?php else: ?>
@@ -64,7 +64,7 @@
                         </select>
                     </label>
                 </div>
-                <?php $role = old('role', 'agent'); require BHD_ROOT . '/templates/op/config/_departments_pick.php'; ?>
+                <?php $role = old('role', 'agent'); $allDeps = (bool) old('all_departments', ''); require BHD_ROOT . '/templates/op/config/_departments_pick.php'; ?>
                 <label><?= t('ops.password') ?> <input type="password" name="password" required minlength="12" autocomplete="new-password"></label>
                 <button class="btn btn-primary" type="submit"><?= t('ops.create') ?></button>
             </form>

@@ -79,7 +79,7 @@ final class Auth
             return null;
         }
         $_SESSION['op_last'] = time();
-        $op = Db::one('SELECT id, username, name, email, role FROM operators WHERE id = ? AND active = 1', [$_SESSION['op_id']]);
+        $op = Db::one('SELECT id, username, name, email, role, all_departments FROM operators WHERE id = ? AND active = 1', [$_SESSION['op_id']]);
         if (!$op) {
             self::logout();
             return null;

@@ -134,6 +134,7 @@ mariadb bhelpdesk < sql/migrations/022_billing_role.sql
 mariadb bhelpdesk < sql/migrations/023_operator_2fa.sql
 mariadb bhelpdesk < sql/migrations/024_operator_password_reset.sql
 mariadb bhelpdesk < sql/migrations/025_email_blacklist.sql
+mariadb bhelpdesk < sql/migrations/026_operator_all_departments.sql
 ```
 
 ## Two-step verification (operators)
@@ -283,11 +284,10 @@ Department (only the operator's own departments; administrators see all), priori
 
 ## Departments and ticket visibility
 
-- **Administrators** see every ticket.
-- **Agents** see only the tickets of the departments assigned to them in */op/config/operators*, plus any ticket assigned to them personally (even if it belongs to another department).
+- Visibility depends on the departments of the operator, not on the role: in */op/config/operators* each **administrator or agent** gets either **All departments** (also those created later) or a list of departments. They see the tickets of those departments plus any ticket assigned to them personally. Administrators limited to some departments still manage the whole configuration. (Migration 026 gives *All departments* to the existing administrators.)
 - The rule is enforced on the server everywhere: dashboard list and counters, department filter, opening a ticket by URL (other tickets answer *not found*), replies and changes, attachment downloads, ticket history and counts in the customer pages.
-- A ticket can only be assigned to administrators or to agents of its department (the *Assigned to* menu lists only them). An agent who moves a ticket to a department they do not handle is sent back to the list.
-- Tickets without a department are visible to administrators only.
+- A ticket can only be assigned to operators who see its department (the *Assigned to* menu lists only them). An agent who moves a ticket to a department they do not handle is sent back to the list.
+- Tickets without a department are visible only to operators with *All departments*.
 - Upgrading: migration 009 gives existing agents all current departments, so nobody loses tickets; then narrow them down from the operator page.
 
 ## Customers on a ticket

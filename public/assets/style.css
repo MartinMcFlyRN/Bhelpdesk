@@ -322,7 +322,8 @@ fieldset.card legend { font-weight: 700; padding: 0 .4rem; }
 .canned-preview { max-width: 380px; }
 .mono-area { font-family: ui-monospace, monospace; font-size: .9rem; }
 .table + .card, .table + form + .card { margin-top: 1rem; }
-.dep-pick.is-admin .checks { opacity: .45; }
+.dep-pick.is-all .checks { opacity: .4; pointer-events: none; }
+.dep-pick .dep-all { margin-bottom: .4rem; }
 .dep-list { max-width: 260px; font-size: .85rem; }
 
 /* rich text (editor output) - also on the customer side */

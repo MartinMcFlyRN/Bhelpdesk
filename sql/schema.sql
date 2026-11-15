@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS operators (
     totp_enabled_at DATETIME NULL,                   -- NULL = 2FA to be set up at next login
     totp_last_step BIGINT NULL,                      -- last TOTP time step used (no replay)
     role           ENUM('admin','agent','billing') NOT NULL DEFAULT 'agent',  -- billing: only the Billing section
+    all_departments TINYINT(1) NOT NULL DEFAULT 0,   -- sees the tickets of every department (otherwise operator_departments)
     active         TINYINT(1) NOT NULL DEFAULT 1,
     alert_new      TINYINT(1) NOT NULL DEFAULT 1,    -- email: new tickets in my departments
     alert_reply    TINYINT(1) NOT NULL DEFAULT 1,    -- email: customer replies (my tickets / unassigned of my departments)

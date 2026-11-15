@@ -381,10 +381,11 @@ return [
 
     // ---- Operator departments ----
     'ops.departments'       => 'Reparti',
-    'ops.departments_help'  => 'Gli operatori vedono solo i ticket di questi reparti (più i ticket assegnati a loro). Gli amministratori vedono sempre tutti i reparti.',
-    'ops.all_departments'   => 'Tutti (amministratore)',
+    'ops.all_departments_check' => 'Tutti i reparti (anche quelli creati in seguito)',
+    'ops.departments_help'  => 'Amministratori e operatori vedono i ticket di questi reparti (più quelli assegnati a loro). Con "Tutti i reparti" vedono ogni reparto, anche quelli creati in seguito. Gli amministratori gestiscono comunque la configurazione.',
+    'ops.all_departments'   => 'Tutti i reparti',
     'ops.no_departments'    => 'Nessun reparto',
-    'val.ops_departments'   => 'Seleziona almeno un reparto per un operatore.',
+    'val.ops_departments'   => 'Seleziona almeno un reparto, oppure "Tutti i reparti".',
     'opticket.transferred'  => 'Ticket spostato in un reparto che non gestisci: non è più nel tuo elenco.',
 
     // ---- Editor, images and operator attachments ----

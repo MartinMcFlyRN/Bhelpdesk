@@ -124,10 +124,10 @@ final class Alerts
     {
         $cond = $flag ? ' AND ' . $flag . ' = 1' : '';
         if ($departmentId === null) {
-            return self::operators("role = 'admin'" . $cond, []);
+            return self::operators("all_departments = 1 AND role <> 'billing'" . $cond, []);
         }
         return self::operators(
-            "(role = 'admin' OR id IN (SELECT operator_id FROM operator_departments WHERE department_id = ?))" . $cond,
+            "role <> 'billing' AND (all_departments = 1 OR id IN (SELECT operator_id FROM operator_departments WHERE department_id = ?))" . $cond,
             [$departmentId]
         );
     }

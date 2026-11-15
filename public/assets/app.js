@@ -172,9 +172,16 @@ document.querySelectorAll('select[name="role"]').forEach(function (sel) {
     if (!pick) {
         return;
     }
-    // administrators see every department, billing operators no tickets: no departments to pick
-    var sync = function () { pick.classList.toggle('is-admin', sel.value === 'admin' || sel.value === 'billing'); };
+    // billing operators see no tickets: no departments; "all departments" makes the list irrelevant
+    var all = pick.querySelector('[data-all-deps]');
+    var sync = function () {
+        pick.hidden = sel.value === 'billing';
+        pick.classList.toggle('is-all', !!(all && all.checked));
+    };
     sel.addEventListener('change', sync);
+    if (all) {
+        all.addEventListener('change', sync);
+    }
     sync();
 });
 

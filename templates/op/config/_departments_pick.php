@@ -1,11 +1,13 @@
 <?php
 /**
- * Department checkboxes for an operator.
- * Expects: $departments (all), $selDeps (selected ids), $role (current role)
+ * Departments an operator works on (administrators and agents; not billing).
+ * Expects: $departments (all), $selDeps (selected ids), $role (current role), $allDeps (bool)
  */
+$allDeps = !empty($allDeps);
 ?>
-<div class="field dep-pick" data-role-field>
+<div class="field dep-pick<?= $allDeps ? ' is-all' : '' ?>" data-role-field>
     <span class="label"><?= t('ops.departments') ?></span>
+    <label class="check dep-all"><input type="checkbox" name="all_departments" value="1" data-all-deps <?= $allDeps ? 'checked' : '' ?>> <strong><?= t('ops.all_departments_check') ?></strong></label>
     <div class="checks">
         <?php foreach ($departments as $d): ?>
             <label class="check">

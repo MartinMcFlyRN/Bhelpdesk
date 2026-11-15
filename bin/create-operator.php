@@ -47,8 +47,9 @@ if ($err) {
 
 try {
     $id = Db::insert(
-        'INSERT INTO operators (username, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)',
-        [$username, $name, $email, password_hash($password, PASSWORD_DEFAULT), $role]
+        'INSERT INTO operators (username, name, email, password_hash, role, all_departments) VALUES (?, ?, ?, ?, ?, ?)',
+        // the first administrator created here sees every department (change it later in the configuration)
+        [$username, $name, $email, password_hash($password, PASSWORD_DEFAULT), $role, (int) ($role === 'admin')]
     );
 } catch (PDOException $ex) {
     fwrite(STDERR, __('cli.db_error', ['error' => $ex->getMessage()]) . PHP_EOL);

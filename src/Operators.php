@@ -11,6 +11,12 @@ final class Operators
     private static array $depCache = [];
 
     /** Departments assigned to an operator */
+    /** Does this operator see the tickets of every department? (flag, independent of the role) */
+    public static function seesAll(array $op): bool
+    {
+        return !empty($op['all_departments']) && ($op['role'] ?? '') !== 'billing';
+    }
+
     public static function departmentIds(int $operatorId): array
     {
         return self::$depCache[$operatorId] ??= array_map('intval', array_column(
@@ -41,7 +47,7 @@ final class Operators
     public static function all(): array
     {
         return Db::all(
-            'SELECT o.id, o.username, o.name, o.email, o.role, o.active, o.last_login_at, o.last_login_ip,
+            'SELECT o.id, o.username, o.name, o.email, o.role, o.all_departments, o.active, o.last_login_at, o.last_login_ip,
                     (SELECT COUNT(*) FROM tickets t WHERE t.assigned_to = o.id AND t.status <> \'closed\') AS open_tickets
                FROM operators o
               ORDER BY o.active DESC, o.name'
@@ -50,7 +56,7 @@ final class Operators
 
     public static function find(int $id): ?array
     {
-        return Db::one('SELECT id, username, name, email, language, role, active, alert_new, alert_reply, alert_assign, totp_enabled_at, last_login_at, last_login_ip, created_at FROM operators WHERE id = ?', [$id]);
+        return Db::one('SELECT id, username, name, email, language, role, all_departments, active, alert_new, alert_reply, alert_assign, totp_enabled_at, last_login_at, last_login_ip, created_at FROM operators WHERE id = ?', [$id]);
     }
 
     /**
@@ -68,7 +74,13 @@ final class Operators
             'active'   => $existing ? (!empty($in['active']) ? 1 : 0) : 1,
             'password' => (string) ($in['password'] ?? ''),
             'departments' => array_values(array_unique(array_filter(array_map('intval', (array) ($in['departments'] ?? []))))),
+            'all_departments' => !empty($in['all_departments']),
         ];
+        if ($v['role'] === 'billing') {
+            // billing operators see no tickets
+            $v['departments'] = [];
+            $v['all_departments'] = false;
+        }
         $errors = [];
         if (!$existing && !preg_match('/^[a-z0-9._-]{3,50}$/i', $v['username'])) {
             $errors[] = __('val.username');
@@ -79,8 +91,8 @@ final class Operators
         if (!filter_var($v['email'], FILTER_VALIDATE_EMAIL) || strlen($v['email']) > 190) {
             $errors[] = __('val.email_invalid');
         }
-        // agents work only on the tickets of their departments: at least one is needed
-        if ($v['role'] === 'agent' && !$v['departments']) {
+        // administrators and agents work on the tickets of their departments: all, or at least one
+        if ($v['role'] !== 'billing' && !$v['all_departments'] && !$v['departments']) {
             $errors[] = __('val.ops_departments');
         }
         // password required on create, optional on edit
@@ -102,20 +114,20 @@ final class Operators
     public static function create(array $v): int
     {
         $id = Db::insert(
-            'INSERT INTO operators (username, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)',
-            [$v['username'], $v['name'], $v['email'], password_hash($v['password'], PASSWORD_DEFAULT), $v['role']]
+            'INSERT INTO operators (username, name, email, password_hash, role, all_departments) VALUES (?, ?, ?, ?, ?, ?)',
+            [$v['username'], $v['name'], $v['email'], password_hash($v['password'], PASSWORD_DEFAULT), $v['role'], (int) $v['all_departments']]
         );
-        self::setDepartments($id, $v['departments'] ?? []);
+        self::setDepartments($id, $v['all_departments'] ? [] : ($v['departments'] ?? []));
         return $id;
     }
 
     public static function update(int $id, array $v): void
     {
-        Db::exec('UPDATE operators SET name = ?, email = ?, role = ?, active = ? WHERE id = ?', [$v['name'], $v['email'], $v['role'], $v['active'], $id]);
+        Db::exec('UPDATE operators SET name = ?, email = ?, role = ?, all_departments = ?, active = ? WHERE id = ?', [$v['name'], $v['email'], $v['role'], (int) $v['all_departments'], $v['active'], $id]);
         if ($v['password'] !== '') {
             Db::exec('UPDATE operators SET password_hash = ? WHERE id = ?', [password_hash($v['password'], PASSWORD_DEFAULT), $id]);
         }
-        self::setDepartments($id, $v['departments'] ?? []);
+        self::setDepartments($id, $v['all_departments'] ? [] : ($v['departments'] ?? []));
     }
 
     /**

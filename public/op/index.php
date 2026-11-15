@@ -216,7 +216,7 @@ $r->get('/', static function (): void {
         'counts'      => Tickets::countsByStatus($op),
         'allDepartments' => Tickets::departments(false),
         // department filter: agents only see their own departments
-        'departments' => $op['role'] === 'admin'
+        'departments' => Operators::seesAll($op)
             ? Tickets::departments(false)
             : array_values(array_filter(Tickets::departments(false), static fn ($d) => in_array((int) $d['id'], Operators::departmentIds((int) $op['id']), true))),
     ]);
@@ -303,7 +303,7 @@ $r->post('/tickets/bulk', static function (): void {
 /** Departments the operator may open tickets in: all active ones for admins, their own for agents */
 $allowedDepartments = static function (array $op): array {
     $all = Tickets::departments(true);
-    if ($op['role'] === 'admin') {
+    if (Operators::seesAll($op)) {
         return $all;
     }
     $mine = Operators::departmentIds((int) $op['id']);

@@ -386,10 +386,11 @@ return [
 
     // ---- Operator departments ----
     'ops.departments'       => 'Departments',
-    'ops.departments_help'  => 'Agents see only the tickets of these departments (plus tickets assigned to them). Administrators always see all departments.',
-    'ops.all_departments'   => 'All (administrator)',
+    'ops.all_departments_check' => 'All departments (also those created later)',
+    'ops.departments_help'  => 'Administrators and agents see the tickets of these departments (plus those assigned to them). With "All departments" they see every department, also those created later. Administrators manage the configuration anyway.',
+    'ops.all_departments'   => 'All departments',
     'ops.no_departments'    => 'No department',
-    'val.ops_departments'   => 'Select at least one department for an agent.',
+    'val.ops_departments'   => 'Select at least one department, or "All departments".',
     'opticket.transferred'  => 'Ticket moved to a department you do not handle: it is no longer in your list.',
 
     // ---- Editor, images and operator attachments ----
