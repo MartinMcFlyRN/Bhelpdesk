@@ -128,6 +128,63 @@ $fileVal = static function (array $file, string $key) {
             <button class="btn btn-primary" type="submit"><?= t('cfg.save') ?></button>
         </form>
 
+        <section class="card slack-cfg" id="slack">
+            <h2><?= t('slack.title') ?></h2>
+            <p class="muted hint"><?= t('slack.help') ?></p>
+            <?php if ($slackErrors): ?>
+                <div class="alert alert-error"><ul><?php foreach ($slackErrors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul></div>
+            <?php endif; ?>
+            <?php if (!$slack): ?>
+                <p class="muted"><?= t('slack.no_departments') ?></p>
+            <?php else: ?>
+            <form method="post" action="/op/config/slack" id="slack-form">
+                <?= \Bhelpdesk\Csrf::field() ?>
+            </form>
+            <table class="table slack-table">
+                <thead><tr><th><?= t('slack.col_department') ?></th><th><?= t('slack.col_webhook') ?></th><th><?= t('slack.col_send') ?></th><th><?= t('slack.col_state') ?></th><th></th></tr></thead>
+                <tbody>
+                <?php foreach ($slack as $id => $sd): $post = (array) ($slackPost[$id] ?? []); $f = 'slack[' . $id . ']'; ?>
+                    <tr class="<?= $sd['active'] ? '' : 'disabled' ?>">
+                        <td><strong><?= e($sd['name']) ?></strong></td>
+                        <td>
+                            <input form="slack-form" type="url" name="<?= $f ?>[webhook]" value="<?= e((string) ($post['webhook'] ?? '')) ?>" autocomplete="off"
+                                   placeholder="<?= $sd['configured'] ? t('slack.ph_keep') : 'https://hooks.slack.com/services/…' ?>">
+                            <?php if ($sd['configured']): ?>
+                                <label class="check small"><input form="slack-form" type="checkbox" name="<?= $f ?>[remove]" value="1"> <?= t('slack.remove') ?></label>
+                            <?php endif; ?>
+                        </td>
+                        <td class="nowrap">
+                            <label class="check small"><input form="slack-form" type="checkbox" name="<?= $f ?>[new]" value="1" <?= ($post ? !empty($post['new']) : $sd['notify_new']) ? 'checked' : '' ?>> <?= t('slack.send_new') ?></label>
+                            <label class="check small"><input form="slack-form" type="checkbox" name="<?= $f ?>[reply]" value="1" <?= ($post ? !empty($post['reply']) : $sd['notify_reply']) ? 'checked' : '' ?>> <?= t('slack.send_reply') ?></label>
+                        </td>
+                        <td class="small">
+                            <?php if (!$sd['configured']): ?>
+                                <span class="muted"><?= t('slack.state_off') ?></span>
+                            <?php elseif ($sd['last_at'] === null): ?>
+                                <span class="badge"><?= t('slack.state_configured') ?></span>
+                            <?php elseif ($sd['last_error'] === null): ?>
+                                <span class="badge badge-ok">✓ <?= e(fmt_date($sd['last_at'])) ?></span>
+                            <?php else: ?>
+                                <span class="badge badge-err" title="<?= e($sd['last_error']) ?>">✕ <?= e(fmt_date($sd['last_at'])) ?></span>
+                                <div class="slack-error"><?= e($sd['last_error']) ?></div>
+                            <?php endif; ?>
+                        </td>
+                        <td class="right">
+                            <?php if ($sd['configured']): ?>
+                            <form method="post" action="/op/config/slack/<?= (int) $id ?>/test" class="inline">
+                                <?= \Bhelpdesk\Csrf::field() ?>
+                                <button class="btn btn-small" type="submit"><?= t('slack.test') ?></button>
+                            </form>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <button form="slack-form" class="btn btn-primary" type="submit"><?= t('slack.save') ?></button>
+            <?php endif; ?>
+        </section>
+
         <section class="card readonly">
             <h2><?= t('set.readonly.title') ?></h2>
             <p class="muted hint"><?= t('set.readonly.help') ?></p>

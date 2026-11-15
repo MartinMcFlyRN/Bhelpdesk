@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Blacklist, Canned, CustomerAuth, Customers, Db, Departments, EmailTemplates, Html, Invoices, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, Oncall, OperatorPassword, Operators, Quotes, Router, Session, Settings, Tasks, Throttle, Tickets, Totp, TwoFactor, View};
+use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Blacklist, Canned, CustomerAuth, Customers, Db, Departments, EmailTemplates, Html, Invoices, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, Oncall, OperatorPassword, Operators, Quotes, Router, Session, Settings, Slack, Tasks, Throttle, Tickets, Totp, TwoFactor, View};
 
 // ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
@@ -1241,8 +1241,11 @@ $r->get('/config', static function (): void {
 });
 
 // ---------- General ----------
-$generalPage = static function (array $values, array $errors) use ($cfgView): void {
+$generalPage = static function (array $values, array $errors, array $slackErrors = [], array $slackPost = []) use ($cfgView): void {
     $cfgView('general', __('cfg.menu.general'), [
+        'slack'       => Slack::settings(),
+        'slackErrors' => $slackErrors,
+        'slackPost'   => $slackPost,
         'values'    => $values,
         'errors'    => $errors,
         'languages' => Lang::available(true),
@@ -1271,6 +1274,35 @@ $r->post('/config/general', static function () use ($generalPage): void {
     Settings::save($res['values'], (int) $op['id']);
     flash('success', 'cfg.saved');
     redirect('/op/config/general');
+});
+
+// ---------- Slack (per department, shown in General) ----------
+$generalValues = static function (): array {
+    $values = [];
+    foreach (array_keys(Settings::FIELDS) as $k) {
+        $values[$k] = Settings::current($k);
+    }
+    return $values;
+};
+
+$r->post('/config/slack', static function () use ($generalPage, $generalValues): void {
+    Auth::requireAdmin();
+    $in = (array) ($_POST['slack'] ?? []);
+    $errors = Slack::save($in);
+    if ($errors) {
+        http_response_code(422);
+        $generalPage($generalValues(), [], $errors, $in);
+        return;
+    }
+    flash('success', 'slack.saved');
+    redirect('/op/config/general#slack');
+});
+
+$r->post('/config/slack/{id}/test', static function (array $p): void {
+    Auth::requireAdmin();
+    $err = Slack::test((int) $p['id']);
+    $err === null ? flash('success', 'slack.test_ok') : flash('error', 'slack.test_failed', ['error' => $err]);
+    redirect('/op/config/general#slack');
 });
 
 // ---------- Departments ----------

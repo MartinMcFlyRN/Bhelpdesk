@@ -600,3 +600,11 @@ td.oncall-week-col select { width: 100%; font-size: .85rem; padding: .25rem; }
 /* ticket list auto refresh */
 .autorefresh { display: inline-flex; align-items: center; gap: .4rem; color: var(--muted); font-size: .9rem; margin: 0; }
 .autorefresh select { width: auto; padding: .3rem .4rem; font-size: .9rem; }
+
+/* Slack notifications per department (/op/config/general) */
+.slack-cfg { margin-top: 1.25rem; }
+.slack-table td { vertical-align: top; }
+.slack-table input[type=url] { width: 100%; min-width: 260px; }
+.badge-ok { background: #dcfce7; color: #166534; }
+.badge-err { background: #fee2e2; color: #991b1b; }
+.slack-error { font-size: .75rem; color: #991b1b; margin-top: .2rem; max-width: 220px; word-break: break-word; }

@@ -15,6 +15,7 @@ namespace Bhelpdesk;
  * alert_assign); texts are the operator_* templates of /op/config/templates. The operator who caused the event
  * gets nothing. Alerts are queued and sent after the page has been delivered
  * (fastcgi_finish_request), so nobody waits for the SMTP server.
+ * New tickets and customer replies are also posted to Slack (see Slack).
  */
 final class Alerts
 {
@@ -27,11 +28,13 @@ final class Alerts
     /** @param string $source 'web', 'email' or the name of the operator who opened it */
     public static function newTicket(int $ticketId, ?int $actorId, string $source): void
     {
+        Slack::newTicket($ticketId);
         self::enqueue('new', ['ticket' => $ticketId, 'actor' => $actorId, 'source' => $source]);
     }
 
     public static function customerReply(int $ticketId, int $messageId): void
     {
+        Slack::customerReply($ticketId, $messageId);
         self::enqueue('reply', ['ticket' => $ticketId, 'message' => $messageId]);
     }
 

@@ -136,6 +136,7 @@ mariadb bhelpdesk < sql/migrations/024_operator_password_reset.sql
 mariadb bhelpdesk < sql/migrations/025_email_blacklist.sql
 mariadb bhelpdesk < sql/migrations/026_operator_all_departments.sql
 mariadb bhelpdesk < sql/migrations/027_oncall.sql
+mariadb bhelpdesk < sql/migrations/028_department_slack.sql
 ```
 
 ## Two-step verification (operators)
@@ -226,6 +227,27 @@ Each operator chooses in **their profile** which alerts to receive (texts: templ
 - a ticket **assigned** to them.
 
 Nobody is alerted for what they did themselves. Alerts contain the ticket data, an excerpt of the customer's message and the link to `/op/ticket/N`, sent with the department's identity (`Auto-Submitted: auto-generated`). They are sent **after the page has been delivered** (`fastcgi_finish_request`), so operators and customers do not wait for the SMTP server. They can be turned off for everyone in *General → Email*. Emails coming from an operator's address are not turned into tickets: operators answer from the ticket page.
+
+## Slack notifications (/op/config/general)
+
+Each department can post to its own Slack channel, in the format of the
+osTicket Slack plugin:
+
+- **New ticket** (web form, email or opened by an operator): green bar,
+  "New Ticket #number created".
+- **Customer reply** (web or email): amber bar, "Ticket #number updated".
+
+Each message has the subject linked to the ticket, "Name (email) in
+*Department*" and the text of the message in a code block (first 2500
+characters). Texts use the default language of the system.
+
+Setup: in Slack create an app with **Incoming Webhooks**, add a webhook for
+the channel and paste its URL in the department row. The URL is stored
+encrypted with `storage/app.key`; leave the field empty to keep it. The
+**Test** button posts a test message; the last delivery (or its error) is
+shown in the table. Messages are posted after the page has been delivered
+(PHP curl extension, 10 s timeout); tickets without a department are not
+posted. Table `department_slack`, migration `028_department_slack.sql`.
 
 ## Tasks
 
