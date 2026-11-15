@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Blacklist, Canned, CustomerAuth, Customers, Db, Departments, EmailTemplates, Html, Invoices, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, OperatorPassword, Operators, Quotes, Router, Session, Settings, Tasks, Throttle, Tickets, Totp, TwoFactor, View};
+use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Blacklist, Canned, CustomerAuth, Customers, Db, Departments, EmailTemplates, Html, Invoices, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, Oncall, OperatorPassword, Operators, Quotes, Router, Session, Settings, Tasks, Throttle, Tickets, Totp, TwoFactor, View};
 
 // ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
@@ -1084,6 +1084,51 @@ $r->post('/billing/quotes/{id}/delete', static function (array $p) use ($loadQuo
     }
     redirect('/op/billing/quotes');
 });
+
+// =====================================================================
+//  On-call rota (every operator sees it, administrators change it)
+// =====================================================================
+// month shown: ?month=YYYY-MM, default the current one
+$oncallMonth = static function (mixed $v): string {
+    $v = (string) $v;
+    return preg_match('/^(\d{4})-(0[1-9]|1[0-2])$/', $v) && (int) $v >= 2000 && (int) $v <= 2100 ? $v : date('Y-m');
+};
+
+$r->get('/oncall', static function () use ($oncallMonth): void {
+    $op = Auth::require();
+    $month = $oncallMonth($_GET['month'] ?? '');
+    $first = new DateTimeImmutable($month . '-01');
+    View::render('op', 'oncall', [
+        'title'     => __('oncall.title'),
+        'op'        => $op,
+        'month'     => $month,
+        'monthNum'  => (int) $first->format('n'),
+        'year'      => (int) $first->format('Y'),
+        'prev'      => $first->modify('-1 month')->format('Y-m'),
+        'next'      => $first->modify('+1 month')->format('Y-m'),
+        'grid'      => Oncall::grid((int) $first->format('Y'), (int) $first->format('n')),
+        'canEdit'   => Oncall::canEdit($op),
+        'operators' => Oncall::operators(),
+    ]);
+});
+
+$oncallSave = static function (string $kind) use ($oncallMonth): void {
+    $op = Auth::require();
+    $back = '/op/oncall?month=' . $oncallMonth($_POST['month'] ?? '');
+    if (!Oncall::canEdit($op)) {
+        http_response_code(403);
+        View::render('op', 'error', ['title' => __('error.forbidden.title'), 'message' => __('oncall.not_allowed')]);
+        return;
+    }
+    $date = Oncall::date($_POST['date'] ?? '');
+    $ok = $date !== null && ($kind === 'week'
+        ? Oncall::setWeek($date, $_POST['operator_id'] ?? 0, $op)
+        : Oncall::setDay($date, $_POST['operator_id'] ?? 0, $op));
+    flash($ok ? 'success' : 'error', $ok ? 'oncall.saved' : 'oncall.invalid');
+    redirect($back);
+};
+$r->post('/oncall/week', static fn () => $oncallSave('week'));
+$r->post('/oncall/day', static fn () => $oncallSave('day'));
 
 // =====================================================================
 //  Customers (every operator)

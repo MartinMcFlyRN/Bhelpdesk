@@ -50,7 +50,7 @@ foreach (['status.open', 'status.answered', 'status.on_hold', 'status.closed',
 
 // keys built from a prefix at runtime (settings labels/help, config menu)
 foreach (array_keys($base) as $k) {
-    if (str_starts_with($k, 'set.') || str_starts_with($k, 'cfg.menu.') || str_starts_with($k, 'ph.') || str_starts_with($k, 'mi.sec_') || str_starts_with($k, 'mi.keep_') || str_starts_with($k, 'mailin.st_') || str_starts_with($k, 'tpl.') || str_starts_with($k, 'tasks.tab_') || str_starts_with($k, 'tasks.state_') || str_starts_with($k, 'inv.tab_') || str_starts_with($k, 'inv.rec_') || str_starts_with($k, 'bl.type_')) {
+    if (str_starts_with($k, 'set.') || str_starts_with($k, 'cfg.menu.') || str_starts_with($k, 'ph.') || str_starts_with($k, 'mi.sec_') || str_starts_with($k, 'mi.keep_') || str_starts_with($k, 'mailin.st_') || str_starts_with($k, 'tpl.') || str_starts_with($k, 'tasks.tab_') || str_starts_with($k, 'tasks.state_') || str_starts_with($k, 'inv.tab_') || str_starts_with($k, 'inv.rec_') || str_starts_with($k, 'bl.type_') || str_starts_with($k, 'oncall.month_') || str_starts_with($k, 'oncall.dow_')) {
         $used[$k][] = '(dynamic)';
     }
 }

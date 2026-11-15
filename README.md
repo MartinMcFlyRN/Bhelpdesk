@@ -135,6 +135,7 @@ mariadb bhelpdesk < sql/migrations/023_operator_2fa.sql
 mariadb bhelpdesk < sql/migrations/024_operator_password_reset.sql
 mariadb bhelpdesk < sql/migrations/025_email_blacklist.sql
 mariadb bhelpdesk < sql/migrations/026_operator_all_departments.sql
+mariadb bhelpdesk < sql/migrations/027_oncall.sql
 ```
 
 ## Two-step verification (operators)
@@ -235,6 +236,20 @@ Nobody is alerted for what they did themselves. Alerts contain the ticket data, 
 - **All tasks** shows every task to every operator, with assignee and state (scheduled, to do, overdue, done); **My tasks** only those assigned to me, to my departments or to everyone.
 - The assignees and the administrators mark tasks done; the creator and the administrators edit or delete them.
 - **Tasks of a ticket**: the *Tasks* box in the ticket sidebar lists the tasks linked to it and *+ New task* creates one already linked (back to the ticket after saving). The task shows the ticket (detail, list, box under the menu) and the ticket history records when a task is created and done. Merging tickets moves their tasks to the kept ticket; deleting a ticket keeps its tasks without the link.
+
+## On-call rota (/op/oncall)
+
+The **On call** menu item (operators, not the billing role) shows a monthly
+calendar, Monday to Sunday, with arrows to move between months.
+
+- Each week has one on-call operator, picked in the first column: it is shown
+  on every day of that week.
+- A single day can be given to another operator with ✎ on the day; that day
+  is highlighted and overrides the week. "Same as the week" removes it.
+- Every operator can see the rota; only administrators can change it.
+
+Tables: `oncall_weeks` (Monday of the week -> operator) and `oncall_days`
+(day -> operator), migration `027_oncall.sql`.
 
 ## Billing
 

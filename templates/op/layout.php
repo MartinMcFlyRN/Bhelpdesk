@@ -46,6 +46,9 @@ $todoTasks = !empty($op) && !$isBilling ? \Bhelpdesk\Tasks::activeFor($op) : [];
                         <a role="menuitem" href="/op/billing/quotes"<?= $navActive('/op/billing/quotes') ?>><?= t('nav.quotes') ?></a>
                     </div>
                 </details>
+                <?php if (!$isBilling): ?>
+                <a href="/op/oncall"<?= $navActive('/op/oncall') ?>><?= t('nav.oncall') ?></a>
+                <?php endif; ?>
             </nav>
             <?php endif; ?>
         </div>
