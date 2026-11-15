@@ -50,6 +50,7 @@
     <?php require BHD_ROOT . '/templates/flashes.php'; ?>
     <?= $content ?>
 </main>
-<footer class="wrap footer"><?= e(config('app_name', 'Bhelpdesk')) ?></footer>
+<?php $footer = site_footer('customer'); ?>
+<footer class="wrap footer site-footer"><?= $footer !== '' ? '<div class="rich">' . $footer . '</div>' : e(config('app_name', 'Bhelpdesk')) ?></footer>
 </body>
 </html>

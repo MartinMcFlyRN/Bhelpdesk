@@ -935,6 +935,12 @@ return [
     'cfg.back'              => "Torna all'elenco",
 
     'set.section.general'      => 'Applicazione',
+    'set.section.footer'    => 'Footer',
+    'set.footer.html'       => 'Testo del footer',
+    'set.footer.html.help'  => 'Mostrato in fondo alle pagine, es. ragione sociale, partita IVA, contatti, link. {year} = anno corrente, {app_name} = nome dell\'applicazione. Lascia vuoto per nessun footer.',
+    'set.footer.customer'   => 'Mostralo nell\'area clienti',
+    'set.footer.operators'  => 'Mostralo nell\'area operatori',
+    'val.set_html'          => ':field: troppo lungo (max :max caratteri).',
     'set.section.mail'         => 'Email',
     'set.section.languages'    => 'Lingue',
     'set.section.tickets'      => 'Ticket',

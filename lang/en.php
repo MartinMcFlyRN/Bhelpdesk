@@ -940,6 +940,12 @@ return [
     'cfg.back'              => 'Back to list',
 
     'set.section.general'      => 'Application',
+    'set.section.footer'    => 'Footer',
+    'set.footer.html'       => 'Footer text',
+    'set.footer.html.help'  => 'Shown at the bottom of the pages, e.g. company name, VAT number, contacts, links. {year} = current year, {app_name} = application name. Leave it empty for no footer.',
+    'set.footer.customer'   => 'Show it in the customer area',
+    'set.footer.operators'  => 'Show it in the operators area',
+    'val.set_html'          => ':field: too long (max :max characters).',
     'set.section.mail'         => 'Email',
     'set.section.languages'    => 'Languages',
     'set.section.tickets'      => 'Tickets',

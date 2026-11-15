@@ -27,6 +27,7 @@ $fileVal = static function (array $file, string $key) {
         <?php endif; ?>
 
         <form method="post" action="/op/config/general" class="form">
+            <input type="hidden" name="format" value="text">
             <?= \Bhelpdesk\Csrf::field() ?>
 
             <?php foreach ($sections as $section => $fields): ?>
@@ -90,6 +91,12 @@ $fileVal = static function (array $file, string $key) {
                                 </label>
                             </div>
                         </div>
+                        <?php break;
+
+                        case 'html': ?>
+                        <label><?= t('set.' . $key) ?>
+                            <textarea name="<?= e($name($key)) ?>" rows="5" data-editor="full"><?= e((string) $v) ?></textarea>
+                        </label>
                         <?php break;
 
                         case 'int': ?>

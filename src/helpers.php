@@ -100,6 +100,19 @@ function priority_label(string $p): string
  * System messages are stored as JSON events so they can be shown
  * in the language of whoever is reading them.
  */
+/**
+ * Footer of the pages ('customer' or 'operators') set in /op/config/general,
+ * with {year} and {app_name}; '' when empty or disabled for that area.
+ */
+function site_footer(string $area): string
+{
+    $html = (string) config('footer.html', '');
+    if ($html === '' || !config('footer.' . $area, true)) {
+        return '';
+    }
+    return \Bhelpdesk\Html::sanitize(strtr($html, ['{year}' => date('Y'), '{app_name}' => e((string) config('app_name', 'Bhelpdesk'))]));
+}
+
 function system_message(string $body): string
 {
     $ev = json_decode($body, true);

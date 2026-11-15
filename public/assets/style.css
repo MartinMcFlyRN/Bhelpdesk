@@ -548,3 +548,9 @@ input.readonly { background: #f9fafb !important; color: var(--muted); }
 .bl-quick button { opacity: .35; font-size: .85rem; margin-left: .25rem; }
 .mail-log tr:hover .bl-quick button { opacity: 1; }
 .bl-type { font-size: .72rem; }
+
+/* Footer set in the general configuration */
+.site-footer { margin-top: 2rem; padding: 1.2rem 1rem 1.6rem; border-top: 1px solid var(--border); color: var(--muted); font-size: .85rem; text-align: center; }
+.site-footer .rich p { margin: .2rem 0; }
+.site-footer a { color: inherit; text-decoration: underline; }
+.site-footer img { max-height: 48px; vertical-align: middle; }

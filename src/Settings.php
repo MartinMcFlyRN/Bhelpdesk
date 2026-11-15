@@ -41,6 +41,9 @@ final class Settings
         'attachments.op_max_files'    => ['section' => 'attachments', 'type' => 'int', 'min' => 1, 'max' => 50],
         'attachments.op_max_size_mb'  => ['section' => 'attachments', 'type' => 'int', 'min' => 1, 'max' => 500],
         'attachments.op_max_total_mb' => ['section' => 'attachments', 'type' => 'int', 'min' => 1, 'max' => 1000],
+        'footer.html'              => ['section' => 'footer',      'type' => 'html', 'max' => 10000],
+        'footer.customer'          => ['section' => 'footer',      'type' => 'bool'],
+        'footer.operators'         => ['section' => 'footer',      'type' => 'bool'],
         'op_session_idle'          => ['section' => 'security',    'type' => 'int', 'min' => 300, 'max' => 86400],
         'throttle.op_login_fail'   => ['section' => 'security',    'type' => 'pair'],
         'throttle.ticket_create'   => ['section' => 'security',    'type' => 'pair'],
@@ -77,6 +80,9 @@ final class Settings
         'attachments.op_max_files'    => 10,
         'attachments.op_max_size_mb'  => 20,
         'attachments.op_max_total_mb' => 50,
+        'footer.html'              => '',
+        'footer.customer'          => true,
+        'footer.operators'         => true,
         'op_session_idle'          => 1800,
         'throttle.op_login_fail'   => [5, 900],
         'throttle.ticket_create'   => [5, 3600],
@@ -178,6 +184,15 @@ final class Settings
                     break;
                 case 'bool':
                     $v = !empty($raw);
+                    break;
+                case 'html':
+                    // rich text (editor), may be empty
+                    $v = Html::sanitize((string) $raw);
+                    if (Html::isEmpty($v)) {
+                        $v = '';
+                    } elseif (mb_strlen($v) > ($def['max'] ?? 10000)) {
+                        $errors[] = __('val.set_html', ['field' => $label, 'max' => $def['max'] ?? 10000]);
+                    }
                     break;
                 case 'int':
                     $v = filter_var($raw, FILTER_VALIDATE_INT);

@@ -98,5 +98,8 @@ $todoTasks = !empty($op) && !$isBilling ? \Bhelpdesk\Tasks::activeFor($op) : [];
     <?php require BHD_ROOT . '/templates/flashes.php'; ?>
     <?= $content ?>
 </main>
+<?php $footer = site_footer('operators'); if ($footer !== ''): ?>
+<footer class="wrap wide footer site-footer"><div class="rich"><?= $footer ?></div></footer>
+<?php endif; ?>
 </body>
 </html>
