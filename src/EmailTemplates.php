@@ -177,7 +177,9 @@ final class EmailTemplates
         foreach ($vars as $k => $v) {
             $v = (string) $v;
             $plain['{' . $k . '}'] = in_array($k, self::HTML_VARS, true) ? Html::toText($v) : $v;
-            if (in_array($k, self::HTML_VARS, true)) {
+            if ($k === 'signature' && $v !== '') {
+                $html['{' . $k . '}'] = self::compactSignature($v);
+            } elseif (in_array($k, self::HTML_VARS, true)) {
                 $html['{' . $k . '}'] = $v;
             } elseif (in_array($k, self::URL_VARS, true) && $v !== '') {
                 $html['{' . $k . '}'] = '<a href="' . e($v) . '">' . e($v) . '</a>';
@@ -198,6 +200,8 @@ final class EmailTemplates
         $body = strtr($body, $html);
         $body = (string) preg_replace('#<p>(\s|<br\s*/?>)*</p>#i', '', $body);
 
+        $body = self::inlineEditorClasses($body);
+
         $forText = (string) preg_replace('#<hr\s*/?>#i', "\n" . str_repeat('-', 40) . "\n", $body);
         $forText = (string) preg_replace('#</(p|blockquote|ul|ol)>#i', '</$1><br>', $forText); // blank line between paragraphs
         return [
@@ -205,6 +209,43 @@ final class EmailTemplates
             'html'    => '<div style="font-family:' . e(Settings::MAIL_FONTS[(string) config('mail.font', 'arial')] ?? Settings::MAIL_FONTS['arial']) . ';font-size:14px;line-height:1.5;color:#1f2937">' . $body . '</div>',
             'text'    => Html::toText($forText),
         ];
+    }
+
+    /**
+     * Signature lines without the space between paragraphs (the editor makes
+     * a paragraph of every line): one block, separated from the text above.
+     */
+    private static function compactSignature(string $html): string
+    {
+        $html = (string) preg_replace('#<p(\s[^>]*)?>#i', '<p$1 style="margin:0">', $html);
+        return '<div style="margin:1.2em 0">' . $html . '</div>';
+    }
+
+    /** Editor classes (size, alignment) as inline styles: email clients have no stylesheet */
+    private static function inlineEditorClasses(string $html): string
+    {
+        $map = [
+            'ql-size-small' => 'font-size:0.8em', 'ql-size-large' => 'font-size:1.5em', 'ql-size-huge' => 'font-size:2.2em',
+            'ql-align-center' => 'text-align:center', 'ql-align-right' => 'text-align:right', 'ql-align-justify' => 'text-align:justify',
+        ];
+        return (string) preg_replace_callback('#<(\w+)([^>]*?)\sclass="([^"]*)"([^>]*)>#i', static function (array $m) use ($map): string {
+            $styles = [];
+            foreach (preg_split('/\s+/', trim($m[3])) as $c) {
+                if (isset($map[$c])) {
+                    $styles[] = $map[$c];
+                }
+            }
+            if (!$styles) {
+                return $m[0];
+            }
+            $attrs = $m[2] . $m[4];
+            if (preg_match('/\sstyle="([^"]*)"/i', $attrs, $sm)) {
+                $attrs = str_replace($sm[0], ' style="' . rtrim($sm[1], ';') . ';' . implode(';', $styles) . '"', $attrs);
+            } else {
+                $attrs .= ' style="' . implode(';', $styles) . '"';
+            }
+            return '<' . $m[1] . $attrs . '>';
+        }, $html);
     }
 
     /** Example values to preview / test a template */
