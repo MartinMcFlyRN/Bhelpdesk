@@ -291,3 +291,23 @@ document.querySelectorAll('input[type=checkbox][data-confirm-on]').forEach(funct
         }
     });
 });
+
+// 2FA setup: QR code of the otpauth:// URI, drawn in the browser (vendor/qrcode-generator, MIT)
+document.querySelectorAll('[data-otpauth]').forEach(function (box) {
+    if (typeof window.qrcode !== 'function') {
+        return;
+    }
+    var qr = window.qrcode(0, 'M');
+    qr.addData(box.getAttribute('data-otpauth'));
+    qr.make();
+    var img = document.createElement('img');
+    img.src = qr.createDataURL(5, 4);
+    img.alt = 'QR code';
+    img.width = img.height = qr.getModuleCount() * 5 + 8 * 5;
+    box.appendChild(img);
+});
+
+// "Print" buttons (recovery codes)
+document.querySelectorAll('[data-print]').forEach(function (btn) {
+    btn.addEventListener('click', function () { window.print(); });
+});

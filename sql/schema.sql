@@ -20,6 +20,9 @@ CREATE TABLE IF NOT EXISTS operators (
     email          VARCHAR(190) NOT NULL,
     language       VARCHAR(10)  NULL,                -- language of the alert emails (NULL = default)
     password_hash  VARCHAR(255) NOT NULL,
+    totp_secret    TEXT NULL,                        -- 2FA secret, encrypted (Crypto)
+    totp_enabled_at DATETIME NULL,                   -- NULL = 2FA to be set up at next login
+    totp_last_step BIGINT NULL,                      -- last TOTP time step used (no replay)
     role           ENUM('admin','agent','billing') NOT NULL DEFAULT 'agent',  -- billing: only the Billing section
     active         TINYINT(1) NOT NULL DEFAULT 1,
     alert_new      TINYINT(1) NOT NULL DEFAULT 1,    -- email: new tickets in my departments
@@ -343,4 +346,28 @@ CREATE TABLE IF NOT EXISTS quotes (
     CONSTRAINT fk_quotes_customer   FOREIGN KEY (customer_id) REFERENCES customers(id),
     CONSTRAINT fk_quotes_ticket     FOREIGN KEY (ticket_id)   REFERENCES tickets(id)   ON DELETE SET NULL,
     CONSTRAINT fk_quotes_created_by FOREIGN KEY (created_by)  REFERENCES operators(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS operator_recovery_codes (
+    id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    operator_id  INT UNSIGNED NOT NULL,
+    code_hash    CHAR(64) NOT NULL,                    -- sha256 of the normalised code
+    used_at      DATETIME NULL,
+    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY ix_recovery_operator (operator_id),
+    CONSTRAINT fk_recovery_operator FOREIGN KEY (operator_id) REFERENCES operators(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS operator_trusted_devices (
+    id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    operator_id   INT UNSIGNED NOT NULL,
+    token_hash    CHAR(64) NOT NULL,                   -- sha256 of the cookie value
+    user_agent    VARCHAR(255) NULL,
+    ip            VARCHAR(45) NULL,
+    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_used_at  DATETIME NULL,
+    expires_at    DATETIME NOT NULL,
+    UNIQUE KEY uq_trusted_token (token_hash),
+    KEY ix_trusted_operator (operator_id),
+    CONSTRAINT fk_trusted_operator FOREIGN KEY (operator_id) REFERENCES operators(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -87,8 +87,10 @@ cp deploy/nginx-bhelpdesk.conf /etc/nginx/sites-available/bhelpdesk.conf
 ln -s ../sites-available/bhelpdesk.conf /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
 
-# 8. first administrator
+# 8. first administrator (at the first login it sets up the two-step verification)
 sudo -u bhelpdesk php /var/www/bhelpdesk/bin/create-operator.php --role=admin
+# the server clock must be right for the 2FA codes
+timedatectl set-ntp true
 
 # 9. cron: download the POP3 mailboxes of the email identities every minute
 cp /var/www/bhelpdesk/deploy/bhelpdesk.cron /etc/cron.d/bhelpdesk && chmod 644 /etc/cron.d/bhelpdesk
@@ -129,7 +131,19 @@ mariadb bhelpdesk < sql/migrations/019_invoices.sql
 mariadb bhelpdesk < sql/migrations/020_invoice_ticket.sql
 mariadb bhelpdesk < sql/migrations/021_quotes.sql
 mariadb bhelpdesk < sql/migrations/022_billing_role.sql
+mariadb bhelpdesk < sql/migrations/023_operator_2fa.sql
 ```
+
+## Two-step verification (operators)
+
+Mandatory for **every operator** (customers do not use it).
+
+- After username and password the operator enters the 6-digit code of an authenticator app (Google Authenticator, Microsoft Authenticator, Authy, 1Password, Bitwarden: TOTP, RFC 6238, 30 seconds). Until then no page of the operators area is accessible.
+- **First login** (and after a reset): the setup page shows a QR code (drawn in the browser with `assets/vendor/qrcode-generator-1.4.4`, MIT; the secret never leaves the server) and the key to type by hand; the operator confirms with a code and gets **10 recovery codes**, shown once (print / save), each usable once instead of the app code.
+- **Trusted computer**: after the second factor the computer is remembered for **30 days** (cookie `BHD_OP_DEVICE`, path `/op/`, HttpOnly, only its sha256 in the DB); the checkbox can be unchecked on shared computers. Changing the password forgets the other computers.
+- Codes accept ±30 s of clock drift; a code cannot be used twice; wrong codes are rate limited like the login (`throttle.op_2fa`). Secrets are encrypted with `storage/app.key`.
+- **Profile**: status, recovery codes left, new recovery codes (with a current code), forget the other / all computers.
+- **Configuration -> Operators -> edit**: an administrator can **reset** an operator's two-step verification (lost phone): it is set up again at the next login. From the command line (e.g. the only administrator lost the phone): `sudo -u bhelpdesk php8.3 bin/reset-2fa.php <username>`.
 
 ## Operators area
 

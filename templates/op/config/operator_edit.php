@@ -36,5 +36,23 @@
                 <button class="btn btn-primary" type="submit"><?= t('cfg.save_short') ?></button>
             </form>
         </div>
+
+        <?php if (isset($tfa)): ?>
+        <div class="card narrow-left">
+            <h2><?= t('tfa.title') ?></h2>
+            <?php if (!empty($target['totp_enabled_at'])): ?>
+                <p><span class="badge status-answered">✓ <?= t('tfa.enabled_since', ['date' => fmt_date((string) $target['totp_enabled_at'])]) ?></span>
+                   · <?= t('tfa.recovery_left_label') ?>: <?= (int) $tfa['recovery_left'] ?> · <?= t('tfa.devices_label') ?>: <?= (int) $tfa['devices'] ?></p>
+                <p class="muted hint"><?= t('tfa.reset_hint') ?></p>
+                <form method="post" action="/op/config/operators/<?= (int) $target['id'] ?>/reset-2fa" class="inline">
+                    <?= \Bhelpdesk\Csrf::field() ?>
+                    <button class="btn btn-danger btn-small" type="submit" data-confirm="<?= t('tfa.reset_confirm', ['name' => $target['name']]) ?>"><?= t('tfa.reset') ?></button>
+                </form>
+            <?php else: ?>
+                <p><span class="badge status-on_hold"><?= t('tfa.not_set') ?></span></p>
+                <p class="muted hint"><?= t('tfa.not_set_hint') ?></p>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
     </div>
 </div>

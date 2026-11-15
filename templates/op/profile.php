@@ -49,4 +49,33 @@
 
         <button class="btn btn-primary" type="submit"><?= t('cfg.save_short') ?></button>
     </form>
+    <div class="card tfa-profile" id="tfa">
+        <h2><?= t('tfa.title') ?></h2>
+        <?php if (!empty($me['totp_enabled_at'])): ?>
+        <p><span class="badge status-answered">✓ <?= t('tfa.enabled_since', ['date' => fmt_date((string) $me['totp_enabled_at'])]) ?></span></p>
+        <?php else: ?>
+        <p><span class="badge status-on_hold"><?= t('tfa.not_set') ?></span> <span class="muted"><?= t('tfa.not_set_hint') ?></span></p>
+        <?php endif; ?>
+        <dl class="meta">
+            <dt><?= t('tfa.recovery_left_label') ?></dt><dd><?= (int) $tfa['recovery_left'] ?></dd>
+            <dt><?= t('tfa.devices_label') ?></dt><dd><?= (int) $tfa['devices'] ?></dd>
+        </dl>
+        <form method="post" action="/op/profile/recovery" class="form row-inline left">
+            <?= \Bhelpdesk\Csrf::field() ?>
+            <label class="grow"><?= t('tfa.new_codes_label') ?>
+                <input type="text" name="code" required inputmode="numeric" maxlength="7" autocomplete="one-time-code" placeholder="123456">
+            </label>
+            <button class="btn" type="submit"><?= t('tfa.new_codes') ?></button>
+        </form>
+        <form method="post" action="/op/profile/forget-devices" class="inline">
+            <?= \Bhelpdesk\Csrf::field() ?>
+            <input type="hidden" name="keep_current" value="1">
+            <button class="btn btn-small" type="submit" data-confirm="<?= t('tfa.forget_confirm') ?>"><?= t('tfa.forget_others') ?></button>
+        </form>
+        <form method="post" action="/op/profile/forget-devices" class="inline">
+            <?= \Bhelpdesk\Csrf::field() ?>
+            <button class="btn btn-small" type="submit" data-confirm="<?= t('tfa.forget_confirm') ?>"><?= t('tfa.forget_all') ?></button>
+        </form>
+        <p class="muted hint"><?= t('tfa.lost_phone') ?></p>
+    </div>
 </div>

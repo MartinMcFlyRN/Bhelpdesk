@@ -50,7 +50,7 @@ final class Operators
 
     public static function find(int $id): ?array
     {
-        return Db::one('SELECT id, username, name, email, language, role, active, alert_new, alert_reply, alert_assign, last_login_at, last_login_ip, created_at FROM operators WHERE id = ?', [$id]);
+        return Db::one('SELECT id, username, name, email, language, role, active, alert_new, alert_reply, alert_assign, totp_enabled_at, last_login_at, last_login_ip, created_at FROM operators WHERE id = ?', [$id]);
     }
 
     /**

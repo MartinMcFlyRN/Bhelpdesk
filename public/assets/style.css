@@ -526,3 +526,18 @@ span.inv-toggle { cursor: default; }
 .tabs-search { display: flex; gap: .4rem; align-items: center; }
 .tabs-search .inline-select { width: auto; margin: 0; padding: .4rem .5rem; border: 1px solid var(--border); border-radius: 6px; font: inherit; background: #fff; }
 input.readonly { background: #f9fafb !important; color: var(--muted); }
+
+/* Two-factor authentication */
+.tfa-card { max-width: 560px; margin-left: auto; margin-right: auto; }
+.tfa-setup { max-width: 640px; }
+.tfa-input { font-size: 1.4rem !important; letter-spacing: .25em; text-align: center; font-family: ui-monospace, Menlo, Consolas, monospace; }
+.tfa-steps { padding-left: 1.2rem; }
+.tfa-steps > li { margin-bottom: 1.2rem; }
+.tfa-qr { margin: .75rem 0; }
+.tfa-qr img { display: block; image-rendering: pixelated; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+.tfa-secret { display: inline-block; font-size: 1.05rem; letter-spacing: .08em; background: #f3f4f6; padding: .35rem .6rem; border-radius: 6px; user-select: all; }
+.tfa-codes { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: .4rem 1rem; font-size: 1.1rem; }
+.tfa-codes code { letter-spacing: .08em; }
+.tfa-help { margin-top: 1rem; }
+.tfa-profile form { margin-bottom: .6rem; }
+@media print { .topbar, .flash, button, .btn { display: none !important; } .tfa-card { box-shadow: none; border: 0; } }

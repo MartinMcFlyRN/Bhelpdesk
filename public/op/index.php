@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Canned, CustomerAuth, Customers, Db, Departments, EmailTemplates, Html, Invoices, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, Operators, Quotes, Router, Session, Settings, Tasks, Throttle, Tickets, View};
+use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Canned, CustomerAuth, Customers, Db, Departments, EmailTemplates, Html, Invoices, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, Operators, Quotes, Router, Session, Settings, Tasks, Throttle, Tickets, Totp, TwoFactor, View};
 
 // ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
@@ -32,13 +32,111 @@ $r->post('/login', static function (): void {
         View::render('op', 'login', ['title' => __('login.title'), 'error' => __('login.too_many')]);
         return;
     }
-    $ok = Auth::attempt(trim((string) ($_POST['username'] ?? '')), (string) ($_POST['password'] ?? ''), $ip);
-    if (!$ok) {
+    $res = Auth::attempt(trim((string) ($_POST['username'] ?? '')), (string) ($_POST['password'] ?? ''), $ip);
+    if ($res === 'invalid') {
         http_response_code(401);
         View::render('op', 'login', ['title' => __('login.title'), 'error' => __('login.invalid')]);
         return;
     }
+    redirect(match ($res) { 'code' => '/op/2fa', 'setup' => '/op/2fa/setup', default => '/op/' });
+});
+
+// ---------- Second factor (mandatory for every operator) ----------
+$twoFaPage = static function (string $template, array $vars = []): void {
+    View::render('op', $template, $vars + ['title' => __('tfa.title')]);
+};
+
+$r->get('/2fa', static function () use ($twoFaPage): void {
+    $op = Auth::pending();
+    if (!$op) {
+        redirect('/op/login');
+    }
+    if (!TwoFactor::isEnabled($op)) {
+        redirect('/op/2fa/setup');
+    }
+    $twoFaPage('tfa_code', ['pending' => $op, 'error' => null]);
+});
+
+$r->post('/2fa', static function () use ($twoFaPage): void {
+    $op = Auth::pending();
+    if (!$op) {
+        redirect('/op/login');
+    }
+    $ip = client_ip();
+    if (Throttle::tooMany('op_2fa', $ip)) {
+        http_response_code(429);
+        $twoFaPage('tfa_code', ['pending' => $op, 'error' => __('login.too_many')]);
+        return;
+    }
+    $how = TwoFactor::verify((int) $op['id'], (string) ($_POST['code'] ?? ''));
+    if ($how === null) {
+        Throttle::hit('op_2fa', $ip);
+        http_response_code(401);
+        $twoFaPage('tfa_code', ['pending' => $op, 'error' => __('tfa.wrong_code')]);
+        return;
+    }
+    Throttle::clear('op_2fa', $ip);
+    Auth::complete((int) $op['id'], $ip);
+    if (!empty($_POST['remember'])) {
+        TwoFactor::trustDevice((int) $op['id']);
+    }
+    if ($how === 'recovery') {
+        flash('error', 'tfa.recovery_used', ['n' => TwoFactor::recoveryLeft((int) $op['id'])]);
+    }
     redirect('/op/');
+});
+
+// first login without 2FA: set it up now (QR code + confirmation code)
+$r->get('/2fa/setup', static function () use ($twoFaPage): void {
+    $op = Auth::pending();
+    if (!$op) {
+        redirect('/op/login');
+    }
+    if (TwoFactor::isEnabled($op)) {
+        redirect('/op/2fa');
+    }
+    $_SESSION['op_2fa_secret'] ??= Totp::newSecret();
+    $twoFaPage('tfa_setup', ['pending' => $op, 'secret' => $_SESSION['op_2fa_secret'], 'error' => null]);
+});
+
+$r->post('/2fa/setup', static function () use ($twoFaPage): void {
+    $op = Auth::pending();
+    $secret = (string) ($_SESSION['op_2fa_secret'] ?? '');
+    if (!$op || $secret === '') {
+        redirect('/op/login');
+    }
+    $ip = client_ip();
+    if (Throttle::tooMany('op_2fa', $ip)) {
+        http_response_code(429);
+        $twoFaPage('tfa_setup', ['pending' => $op, 'secret' => $secret, 'error' => __('login.too_many')]);
+        return;
+    }
+    $step = Totp::verify($secret, (string) ($_POST['code'] ?? ''));
+    if ($step === null) {
+        Throttle::hit('op_2fa', $ip);
+        http_response_code(422);
+        $twoFaPage('tfa_setup', ['pending' => $op, 'secret' => $secret, 'error' => __('tfa.wrong_setup_code')]);
+        return;
+    }
+    TwoFactor::enable((int) $op['id'], $secret, $step);
+    $codes = TwoFactor::newRecoveryCodes((int) $op['id']);
+    Auth::complete((int) $op['id'], $ip);
+    if (!empty($_POST['remember'])) {
+        TwoFactor::trustDevice((int) $op['id']);
+    }
+    $_SESSION['recovery_codes'] = $codes; // shown once
+    redirect('/op/2fa/recovery');
+});
+
+// recovery codes: shown once after setup / regeneration
+$r->get('/2fa/recovery', static function (): void {
+    $op = Auth::require();
+    $codes = $_SESSION['recovery_codes'] ?? null;
+    unset($_SESSION['recovery_codes']);
+    if (!$codes) {
+        redirect('/op/profile');
+    }
+    View::render('op', 'tfa_recovery', ['title' => __('tfa.recovery_title'), 'op' => $op, 'codes' => $codes]);
 });
 
 $r->post('/logout', static function (): void {
@@ -512,10 +610,29 @@ $profilePage = static function (array $form, array $errors): void {
         'title'  => __('profile.title'),
         'op'     => $op,
         'me'     => Operators::find((int) $op['id']),
+        'tfa'    => ['recovery_left' => TwoFactor::recoveryLeft((int) $op['id']), 'devices' => TwoFactor::trustedCount((int) $op['id'])],
         'form'   => $form,
         'errors' => $errors,
     ]);
 };
+
+// profile: new recovery codes (current TOTP code required) / forget trusted computers
+$r->post('/profile/recovery', static function (): void {
+    $op = Auth::require();
+    if (TwoFactor::verify((int) $op['id'], (string) ($_POST['code'] ?? '')) !== 'totp') {
+        flash('error', 'tfa.wrong_code');
+        redirect('/op/profile#tfa');
+    }
+    $_SESSION['recovery_codes'] = TwoFactor::newRecoveryCodes((int) $op['id']);
+    redirect('/op/2fa/recovery');
+});
+
+$r->post('/profile/forget-devices', static function (): void {
+    $op = Auth::require();
+    TwoFactor::forgetDevices((int) $op['id'], !empty($_POST['keep_current']));
+    flash('success', 'tfa.devices_forgotten');
+    redirect('/op/profile#tfa');
+});
 
 $r->get('/profile', static function () use ($profilePage): void {
     $op = Auth::require();
@@ -537,6 +654,8 @@ $r->post('/profile', static function () use ($profilePage): void {
     Operators::updateProfile((int) $op['id'], $res['values']);
     if ($res['values']['new_password'] !== '') {
         Session::regenerate();
+        // new password: the other trusted computers must give the second factor again
+        TwoFactor::forgetDevices((int) $op['id'], true);
     }
     flash('success', 'profile.saved');
     redirect('/op/profile');
@@ -1515,7 +1634,8 @@ $loadOp = static function (array $p): array {
 $r->get('/config/operators/{id}', static function (array $p) use ($cfgView, $loadOp): void {
     Auth::requireAdmin();
     $o = $loadOp($p);
-    $cfgView('operator_edit', __('ops.edit'), ['target' => $o, 'errors' => [], 'departments' => Departments::all(), 'selDeps' => Operators::departmentIds((int) $o['id'])]);
+    $cfgView('operator_edit', __('ops.edit'), ['target' => $o, 'errors' => [], 'departments' => Departments::all(), 'selDeps' => Operators::departmentIds((int) $o['id']),
+        'tfa' => ['recovery_left' => TwoFactor::recoveryLeft((int) $o['id']), 'devices' => TwoFactor::trustedCount((int) $o['id'])]]);
 });
 
 $r->post('/config/operators/{id}', static function (array $p) use ($cfgView, $loadOp): void {
@@ -1543,8 +1663,19 @@ $r->post('/config/operators/{id}', static function (array $p) use ($cfgView, $lo
         return;
     }
     Operators::update((int) $o['id'], $v);
+    if ($v['password'] !== '') {
+        TwoFactor::forgetDevices((int) $o['id']);
+    }
     flash('success', 'ops.saved');
     redirect('/op/config/operators');
+});
+
+$r->post('/config/operators/{id}/reset-2fa', static function (array $p) use ($loadOp): void {
+    Auth::requireAdmin();
+    $o = $loadOp($p);
+    TwoFactor::reset((int) $o['id']);
+    flash('success', 'tfa.reset_done', ['name' => $o['name']]);
+    redirect('/op/config/operators/' . (int) $o['id']);
 });
 
 $r->post('/config/operators/{id}/toggle', static function (array $p) use ($loadOp): void {
