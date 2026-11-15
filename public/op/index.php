@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Canned, CustomerAuth, Customers, Db, Departments, EmailTemplates, Html, Invoices, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, Operators, Quotes, Router, Session, Settings, Tasks, Throttle, Tickets, Totp, TwoFactor, View};
+use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Canned, CustomerAuth, Customers, Db, Departments, EmailTemplates, Html, Invoices, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, OperatorPassword, Operators, Quotes, Router, Session, Settings, Tasks, Throttle, Tickets, Totp, TwoFactor, View};
 
 // ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
@@ -39,6 +39,53 @@ $r->post('/login', static function (): void {
         return;
     }
     redirect(match ($res) { 'code' => '/op/2fa', 'setup' => '/op/2fa/setup', default => '/op/' });
+});
+
+// ---------- Forgot your password? ----------
+$r->get('/password', static function (): void {
+    View::render('op', 'password_request', ['title' => __('opw.title'), 'sent' => false, 'error' => null]);
+});
+
+$r->post('/password', static function (): void {
+    $ip = client_ip();
+    if (Throttle::tooMany('op_password_mail', $ip)) {
+        http_response_code(429);
+        View::render('op', 'password_request', ['title' => __('opw.title'), 'sent' => false, 'error' => __('login.too_many')]);
+        return;
+    }
+    Throttle::hit('op_password_mail', $ip);
+    OperatorPassword::request((string) ($_POST['login'] ?? ''));
+    // same answer whether the operator exists or not
+    View::render('op', 'password_request', ['title' => __('opw.title'), 'sent' => true, 'error' => null]);
+});
+
+$r->get('/password/{token}', static function (array $p): void {
+    $op = OperatorPassword::operatorForToken((string) $p['token']);
+    if (!$op) {
+        http_response_code(410);
+        View::render('op', 'password_request', ['title' => __('opw.title'), 'sent' => false, 'error' => __('opw.link_invalid')]);
+        return;
+    }
+    View::render('op', 'password_set', ['title' => __('opw.set_title'), 'target' => $op, 'token' => (string) $p['token'], 'error' => null]);
+});
+
+$r->post('/password/{token}', static function (array $p): void {
+    $op = OperatorPassword::operatorForToken((string) $p['token']);
+    if (!$op) {
+        http_response_code(410);
+        View::render('op', 'password_request', ['title' => __('opw.title'), 'sent' => false, 'error' => __('opw.link_invalid')]);
+        return;
+    }
+    $error = OperatorPassword::check((string) ($_POST['password'] ?? ''), (string) ($_POST['confirm'] ?? ''));
+    if ($error !== null) {
+        http_response_code(422);
+        View::render('op', 'password_set', ['title' => __('opw.set_title'), 'target' => $op, 'token' => (string) $p['token'], 'error' => $error]);
+        return;
+    }
+    OperatorPassword::reset($op, (string) $_POST['password']);
+    Throttle::clear('op_login_fail', client_ip());
+    flash('success', 'opw.done');
+    redirect('/op/login');
 });
 
 // ---------- Second factor (mandatory for every operator) ----------

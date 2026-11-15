@@ -26,6 +26,7 @@ final class EmailTemplates
         'operator_new'            => ['operator', ['operator_name', 'ticket_number', 'ticket_subject', 'customer_name', 'customer_email', 'department_name', 'priority', 'ticket_status', 'assignee', 'source', 'excerpt', 'ticket_url', 'profile_url', 'app_name']],
         'operator_reply'          => ['operator', ['operator_name', 'ticket_number', 'ticket_subject', 'customer_name', 'customer_email', 'department_name', 'priority', 'ticket_status', 'assignee', 'excerpt', 'ticket_url', 'profile_url', 'app_name']],
         'operator_assigned'       => ['operator', ['operator_name', 'ticket_number', 'ticket_subject', 'customer_name', 'customer_email', 'department_name', 'priority', 'ticket_status', 'by', 'excerpt', 'ticket_url', 'profile_url', 'app_name']],
+        'operator_password_reset' => ['operator', ['operator_name', 'username', 'password_link', 'link_minutes', 'ip', 'app_name']],
         'operator_transfer'       => ['operator', ['operator_name', 'ticket_number', 'ticket_subject', 'customer_name', 'customer_email', 'department_name', 'priority', 'ticket_status', 'assignee', 'by', 'excerpt', 'ticket_url', 'profile_url', 'app_name']],
     ];
 
@@ -96,6 +97,15 @@ final class EmailTemplates
                 '<p>Ciao {operator_name},</p><p>{by} ti ha assegnato il ticket.</p>' . self::DETAILS
                 . '<p>{excerpt}</p><p>Apri il ticket / Open the ticket:<br>{ticket_url}</p>'
                 . '<p>————————————————————</p><p>Non rispondere a questa email: rispondi dalla pagina del ticket. Cambia i tuoi avvisi nel profilo: {profile_url}</p>',
+            ],
+            'operator_password_reset' => [
+                '{app_name} - reimposta la password / reset your password',
+                '<p>Ciao {operator_name},</p><p>è stata richiesta la reimpostazione della password dell\'utente operatore <strong>{username}</strong> (richiesta da {ip}). Apri questo link per sceglierne una nuova (valido {link_minutes} minuti, utilizzabile una sola volta):<br>{password_link}</p>'
+                . '<p>Dopo il cambio ti verrà chiesto anche il codice della verifica in due passaggi. Se non l\'hai richiesto ignora questa email: la password non cambia.</p>'
+                . '<p>————————————————————</p>'
+                . '<p>Hello {operator_name},</p><p>a password reset was requested for the operator user <strong>{username}</strong> (requested from {ip}). Open this link to choose a new one (valid for {link_minutes} minutes, single use):<br>{password_link}</p>'
+                . '<p>After the change the two-step verification code will be asked too. If you did not ask for it, ignore this email: your password does not change.</p>'
+                . '<p>{app_name}</p>',
             ],
             'operator_transfer' => [
                 '[#{ticket_number}] Spostato in / Moved to {department_name}: {ticket_subject}',
@@ -218,11 +228,13 @@ final class EmailTemplates
             'attachments'     => self::attachmentsHtml(['preventivo.pdf (240 KB)']),
             'excerpt'         => self::excerptHtml("La stampante dell'ufficio è bloccata da stamattina.\nIl display dice \"Errore 52\".", 1),
             'ticket_link'     => $base . '/customer/t/EXAMPLE-LINK',
-            'password_link'   => $base . '/customer/password/EXAMPLE-LINK',
+            'password_link'   => $base . ($code === 'operator_password_reset' ? '/op/password/EXAMPLE-LINK' : '/customer/password/EXAMPLE-LINK'),
             'ticket_url'      => $base . '/op/ticket/1',
             'profile_url'     => $base . '/op/profile',
             'link_days'       => (string) AccessLinks::days(),
-            'link_minutes'    => (string) CustomerAuth::PASSWORD_LINK_MINUTES,
+            'link_minutes'    => (string) ($code === 'operator_password_reset' ? OperatorPassword::LINK_MINUTES : CustomerAuth::PASSWORD_LINK_MINUTES),
+            'username'        => (string) ($op['username'] ?? 'admin'),
+            'ip'              => '203.0.113.10',
             'app_name'        => (string) config('app_name', 'Bhelpdesk'),
         ];
         return array_intersect_key($all, array_flip(self::CODES[$code][1]));

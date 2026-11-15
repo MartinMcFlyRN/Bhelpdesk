@@ -875,6 +875,26 @@ return [
     'tfa.reset_confirm'     => 'Azzerare la verifica in due passaggi di :name?',
     'tfa.reset_done'        => 'Verifica in due passaggi di :name azzerata: verrà riconfigurata al prossimo accesso.',
 
+    // ---- Operator password reset ----
+    'opw.forgot'            => 'Password dimenticata?',
+    'opw.title'             => 'Reimposta password',
+    'opw.intro'             => 'Inserisci il tuo nome utente o la tua email: riceverai un link per scegliere una nuova password.',
+    'opw.login'             => 'Nome utente o email',
+    'opw.submit'            => 'Invia il link',
+    'opw.sent'              => 'Se il nome utente o l\'email appartengono a un operatore attivo, sta arrivando un\'email con un link valido :minutes minuti.',
+    'opw.back'              => 'Torna all\'accesso',
+    'opw.link_invalid'      => 'Il link non è valido o è scaduto: richiedine uno nuovo.',
+    'opw.set_title'         => 'Nuova password',
+    'opw.set_intro'         => 'Scegli la nuova password dell\'utente :username. Poi accedi con la nuova password e il codice della verifica in due passaggi.',
+    'opw.rules'             => 'Almeno :min caratteri.',
+    'opw.set_submit'        => 'Salva la password',
+    'opw.done'              => 'Password cambiata: accedi con la nuova password.',
+    'tpl.operator_password_reset' => 'Reimposta password',
+    'tpl.operator_password_reset.when' => 'All\'operatore che ha cliccato "Password dimenticata?" nella pagina di accesso.',
+    'tpl.var.username'      => 'nome utente dell\'operatore',
+    'tpl.var.ip'            => 'indirizzo IP della richiesta',
+    'set.throttle.op_password_mail' => 'Email di reimpostazione password operatori',
+
     // ---- Configuration (/op/config) ----
     'cfg.title'             => 'Configurazione',
     'cfg.menu.general'      => 'Generale',

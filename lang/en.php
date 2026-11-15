@@ -880,6 +880,26 @@ return [
     'tfa.reset_confirm'     => 'Reset the two-step verification of :name?',
     'tfa.reset_done'        => 'Two-step verification of :name reset: it will be set up again at the next login.',
 
+    // ---- Operator password reset ----
+    'opw.forgot'            => 'Forgot your password?',
+    'opw.title'             => 'Reset password',
+    'opw.intro'             => 'Enter your username or email: you will receive a link to choose a new password.',
+    'opw.login'             => 'Username or email',
+    'opw.submit'            => 'Send the link',
+    'opw.sent'              => 'If the username or email belongs to an active operator, an email with a link valid for :minutes minutes is on its way.',
+    'opw.back'              => 'Back to sign in',
+    'opw.link_invalid'      => 'The link is not valid or has expired: ask for a new one.',
+    'opw.set_title'         => 'New password',
+    'opw.set_intro'         => 'Choose the new password of the user :username. After that, sign in with the new password and the two-step verification code.',
+    'opw.rules'             => 'At least :min characters.',
+    'opw.set_submit'        => 'Save the password',
+    'opw.done'              => 'Password changed: sign in with the new password.',
+    'tpl.operator_password_reset' => 'Password reset',
+    'tpl.operator_password_reset.when' => 'To an operator who clicked "Forgot your password?" on the sign in page.',
+    'tpl.var.username'      => 'operator\'s username',
+    'tpl.var.ip'            => 'IP address of the request',
+    'set.throttle.op_password_mail' => 'Operator password reset emails',
+
     // ---- Configuration (/op/config) ----
     'cfg.title'             => 'Configuration',
     'cfg.menu.general'      => 'General',

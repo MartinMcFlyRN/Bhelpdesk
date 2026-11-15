@@ -132,6 +132,7 @@ mariadb bhelpdesk < sql/migrations/020_invoice_ticket.sql
 mariadb bhelpdesk < sql/migrations/021_quotes.sql
 mariadb bhelpdesk < sql/migrations/022_billing_role.sql
 mariadb bhelpdesk < sql/migrations/023_operator_2fa.sql
+mariadb bhelpdesk < sql/migrations/024_operator_password_reset.sql
 ```
 
 ## Two-step verification (operators)
@@ -142,6 +143,7 @@ Mandatory for **every operator** (customers do not use it).
 - **First login** (and after a reset): the setup page shows a QR code (drawn in the browser with `assets/vendor/qrcode-generator-1.4.4`, MIT; the secret never leaves the server) and the key to type by hand; the operator confirms with a code and gets **10 recovery codes**, shown once (print / save), each usable once instead of the app code.
 - **Trusted computer**: after the second factor the computer is remembered for **30 days** (cookie `BHD_OP_DEVICE`, path `/op/`, HttpOnly, only its sha256 in the DB); the checkbox can be unchecked on shared computers. Changing the password forgets the other computers.
 - Codes accept ±30 s of clock drift; a code cannot be used twice; wrong codes are rate limited like the login (`throttle.op_2fa`). Secrets are encrypted with `storage/app.key`.
+- **Forgot your password?** (operators sign in page, `/op/password`): username or email -> email (template *Password reset* in E-mail -> Template) with a single-use link valid 60 minutes, stored hashed; same answer whether the operator exists or not, one email every 2 minutes per operator, rate limit `throttle.op_password_mail`. The new password does not sign in: the operator signs in with it **and the second factor**; trusted computers are forgotten.
 - **Profile**: status, recovery codes left, new recovery codes (with a current code), forget the other / all computers.
 - **Configuration -> Operators -> edit**: an administrator can **reset** an operator's two-step verification (lost phone): it is set up again at the next login. From the command line (e.g. the only administrator lost the phone): `sudo -u bhelpdesk php8.3 bin/reset-2fa.php <username>`.
 

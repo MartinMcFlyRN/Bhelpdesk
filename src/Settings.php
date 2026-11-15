@@ -46,6 +46,7 @@ final class Settings
         'throttle.ticket_create'   => ['section' => 'security',    'type' => 'pair'],
         'throttle.customer_login_fail' => ['section' => 'security', 'type' => 'pair'],
         'throttle.password_mail'   => ['section' => 'security',    'type' => 'pair'],
+        'throttle.op_password_mail' => ['section' => 'security',   'type' => 'pair'],
     ];
 
     /** Settings stored by other pages (e.g. /op/config/email) */
@@ -81,6 +82,7 @@ final class Settings
         'throttle.ticket_create'   => [5, 3600],
         'throttle.customer_login_fail' => [10, 900],
         'throttle.password_mail'   => [5, 3600],
+        'throttle.op_password_mail' => [5, 3600],
     ];
 
     /**

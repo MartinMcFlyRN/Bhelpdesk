@@ -11,4 +11,5 @@
         </label>
         <button class="btn btn-primary" type="submit"><?= t('login.submit') ?></button>
     </form>
+    <p class="auth-links"><a href="/op/password"><?= t('opw.forgot') ?></a></p>
 </div>
