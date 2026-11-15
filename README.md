@@ -245,7 +245,7 @@ calendar, Monday to Sunday, with arrows to move between months.
 - Each week has one on-call operator, picked in the first column: it is shown
   on every day of that week.
 - A single day can be given to another operator with ✎ on the day; that day
-  is highlighted and overrides the week. "Same as the week" removes it.
+  is highlighted and overrides the week. ✕ (or "Same as the week") removes it.
 - Every operator can see the rota; only administrators can change it.
 - Next to the title of every operators page a box shows today's on-call
   operator (it links to the calendar).

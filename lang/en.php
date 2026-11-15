@@ -1094,4 +1094,5 @@ return [
     'oncall.dayname_5' => 'Friday',
     'oncall.dayname_6' => 'Saturday',
     'oncall.dayname_7' => 'Sunday',
+    'oncall.day_reset' => 'Remove the on-call operator of this day (back to the week\'s one)',
 ];

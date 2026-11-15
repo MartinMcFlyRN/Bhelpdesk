@@ -1089,4 +1089,5 @@ return [
     'oncall.dayname_5' => 'Venerdì',
     'oncall.dayname_6' => 'Sabato',
     'oncall.dayname_7' => 'Domenica',
+    'oncall.day_reset' => 'Togli il reperibile di questo giorno (torna quello della settimana)',
 ];

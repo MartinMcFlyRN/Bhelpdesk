@@ -53,6 +53,7 @@ $opSelect = static function (?int $selected, string $emptyLabel) use ($operators
                     <span class="oncall-name"<?= $oc['override'] ? ' title="' . t('oncall.override_title') . '"' : '' ?>><?= e($oc['name']) ?></span>
                 <?php endif; ?>
                 <?php if ($canEdit): ?>
+                <div class="oncall-actions">
                 <details class="oncall-edit">
                     <summary title="<?= t('oncall.day_change') ?>">✎</summary>
                     <form method="post" action="/op/oncall/day">
@@ -63,6 +64,16 @@ $opSelect = static function (?int $selected, string $emptyLabel) use ($operators
                         <noscript><button class="btn btn-small" type="submit"><?= t('cfg.save_short') ?></button></noscript>
                     </form>
                 </details>
+                <?php if ($oc && $oc['override']): ?>
+                <form method="post" action="/op/oncall/day" class="oncall-reset">
+                    <?= Csrf::field() ?>
+                    <input type="hidden" name="month" value="<?= e($month) ?>">
+                    <input type="hidden" name="date" value="<?= e($d['date']) ?>">
+                    <input type="hidden" name="operator_id" value="0">
+                    <button type="submit" title="<?= t('oncall.day_reset') ?>" aria-label="<?= t('oncall.day_reset') ?>">✕</button>
+                </form>
+                <?php endif; ?>
+                </div>
                 <?php endif; ?>
             <?php endif; ?>
         </td>
