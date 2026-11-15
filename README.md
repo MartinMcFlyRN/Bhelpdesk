@@ -216,6 +216,14 @@ Segoe UI, Georgia) is used for every email sent: replies with the department
 signature, notifications and alerts. Signatures and templates cannot carry
 their own fonts or colours (the HTML is sanitized).
 
+## Images in emails
+
+Images uploaded with the editor (the logo of a department signature, images
+pasted in a reply) are embedded in the email as inline parts (`cid:`), up to
+3 MB per message: they show even when the mail client blocks remote images.
+The department signature is added to replies and, with `{signature}`, to the
+"ticket opened" email.
+
 ## Email templates (/op/config/email/templates)
 
 The texts of all automatic emails are edited by administrators, with the same editor as signatures: ticket opened, operator reply, password creation and reset (customers); new ticket, customer reply, assignment, moved ticket (operator alerts). They are **not** in the translation files: every email is sent in a single version whatever the recipient's language, so the template contains all the languages needed (the defaults have Italian and English). Labels filled in by placeholders (status, priority) use the default language.

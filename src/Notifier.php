@@ -34,7 +34,11 @@ final class Notifier
         $errors = [];
         foreach (self::customers($ticket, $customerIds ?? [(int) $ticket['customer_id']]) as $c) {
             $url = AccessLinks::issue((int) $ticket['id'], (int) $c['id']);
-            $mail = self::defaultLanguage(static fn (): array => EmailTemplates::render('customer_opened', self::vars($ticket, $c) + ['ticket_link' => $url]));
+            $mail = self::defaultLanguage(static fn (): array => EmailTemplates::render('customer_opened', self::vars($ticket, $c) + [
+                'ticket_link' => $url,
+                // department signature (no operator yet: {operator_name} stays empty)
+                'signature'   => self::absoluteUrls(Canned::signature($ticket, [])),
+            ]));
             $err = self::deliver($ticket, $c, $mail, [], 'auto-replied', $inReplyTo);
             if ($err !== null) {
                 $errors[] = $c['email'] . ': ' . $err;

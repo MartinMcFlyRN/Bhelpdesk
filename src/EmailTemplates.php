@@ -19,7 +19,7 @@ final class EmailTemplates
 {
     /** code => [group, placeholders] */
     public const CODES = [
-        'customer_opened'         => ['customer', ['customer_name', 'customer_email', 'ticket_number', 'ticket_subject', 'department_name', 'ticket_link', 'link_days', 'app_name']],
+        'customer_opened'         => ['customer', ['customer_name', 'customer_email', 'ticket_number', 'ticket_subject', 'department_name', 'ticket_link', 'link_days', 'signature', 'app_name']],
         'customer_reply'          => ['customer', ['customer_name', 'customer_email', 'ticket_number', 'ticket_subject', 'department_name', 'ticket_status', 'operator_name', 'message', 'signature', 'attachments', 'ticket_link', 'link_days', 'app_name']],
         'customer_password_setup' => ['customer', ['customer_name', 'customer_email', 'password_link', 'link_minutes', 'app_name']],
         'customer_password_reset' => ['customer', ['customer_name', 'customer_email', 'password_link', 'link_minutes', 'app_name']],
@@ -52,7 +52,7 @@ final class EmailTemplates
                 . '<p>Hello {customer_name},</p><p>we received your request "{ticket_subject}" and opened ticket <strong>#{ticket_number}</strong>. We will reply as soon as possible.</p>'
                 . '<p>You can follow the ticket and reply here (link valid until {link_days} days after the last reply):<br>{ticket_link}</p>'
                 . '<p>You can also reply to this email to add information.</p>'
-                . '<p>{app_name}</p>',
+                . '<p>{signature}</p>',
             ],
             'customer_reply' => [
                 '[#{ticket_number}] {ticket_subject}',

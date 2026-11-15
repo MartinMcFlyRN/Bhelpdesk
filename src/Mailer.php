@@ -107,10 +107,17 @@ final class Mailer
     {
         $textPart = ['text/plain; charset=UTF-8', self::encodeBody($text)];
         if ($html !== '') {
+            [$html, $inline] = self::inlineImages($html);
+            $htmlPart = ['Content-Type' => 'text/html; charset=UTF-8', 'Content-Transfer-Encoding' => 'base64', '' => self::encodeBody($html)];
+            if ($inline) {
+                // images of the editor (logo of the signature...) travel inside the message
+                $rb = 'rel-' . bin2hex(random_bytes(8));
+                $htmlPart = ['Content-Type' => 'multipart/related; type="text/html"; boundary="' . $rb . '"', '' => self::multipart($rb, array_merge([$htmlPart], $inline))];
+            }
             $b = 'alt-' . bin2hex(random_bytes(8));
             $main = ['multipart/alternative; boundary="' . $b . '"', self::multipart($b, [
                 ['Content-Type' => 'text/plain; charset=UTF-8', 'Content-Transfer-Encoding' => 'base64', '' => $textPart[1]],
-                ['Content-Type' => 'text/html; charset=UTF-8', 'Content-Transfer-Encoding' => 'base64', '' => self::encodeBody($html)],
+                $htmlPart,
             ]), null];
         } else {
             $main = [$textPart[0], $textPart[1], 'base64'];
@@ -134,6 +141,44 @@ final class Mailer
         $b = 'mix-' . bin2hex(random_bytes(8));
         $first = ['Content-Type' => $main[0]] + ($main[2] ? ['Content-Transfer-Encoding' => $main[2]] : []) + ['' => $main[1]];
         return [['Content-Type' => 'multipart/mixed; boundary="' . $b . '"'], self::multipart($b, array_merge([$first], $files))];
+    }
+
+    /**
+     * Images uploaded with the editor (/customer/media/...) become inline parts
+     * referenced by cid:, so they show even when the mail client blocks remote
+     * images. Up to 3 MB in total; the others keep their URL.
+     * @return array{0: string, 1: list<array<string, string>>} html, MIME parts
+     */
+    private static function inlineImages(string $html): array
+    {
+        if (!preg_match_all('#\ssrc="((?:https?://[^"/]+)?/customer/media/([a-f0-9]{32}\.(png|jpe?g|gif|webp)))"#i', $html, $m, PREG_SET_ORDER)) {
+            return [$html, []];
+        }
+        $types = ['png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'gif' => 'image/gif', 'webp' => 'image/webp'];
+        $parts = [];
+        $done = [];
+        $total = 0;
+        foreach ($m as [, $src, $file, $ext]) {
+            $file = strtolower($file);
+            $path = Media::dir() . '/' . $file;
+            if (!isset($done[$file])) {
+                $size = is_file($path) ? (int) filesize($path) : 0;
+                if ($size === 0 || $total + $size > 3 * 1024 * 1024 || ($data = @file_get_contents($path)) === false) {
+                    continue;
+                }
+                $total += $size;
+                $done[$file] = $file . '@bhelpdesk';
+                $parts[] = [
+                    'Content-Type'              => $types[strtolower($ext)] . '; name="' . $file . '"',
+                    'Content-Transfer-Encoding' => 'base64',
+                    'Content-ID'                => '<' . $done[$file] . '>',
+                    'Content-Disposition'       => 'inline; filename="' . $file . '"',
+                    ''                          => rtrim(chunk_split(base64_encode($data), 76, "\r\n")),
+                ];
+            }
+            $html = str_replace('src="' . $src . '"', 'src="cid:' . $done[$file] . '"', $html);
+        }
+        return [$html, $parts];
     }
 
     /** @param list<array<string, string>> $parts headers + '' => body */
