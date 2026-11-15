@@ -1122,4 +1122,6 @@ return [
     'slack.ticket_updated' => 'Ticket :link updated',
     'slack.who' => ':name (:email) in :department',
     'slack.footer' => 'via :app',
+    'set.mail.font' => 'Email font',
+    'set.mail.font.help' => 'Font of every email sent (replies, signatures, alerts).',
 ];

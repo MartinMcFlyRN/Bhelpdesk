@@ -99,6 +99,16 @@ $fileVal = static function (array $file, string $key) {
                         </label>
                         <?php break;
 
+                        case 'choice': ?>
+                        <label><?= t('set.' . $key) ?>
+                            <select name="<?= e($name($key)) ?>">
+                                <?php foreach ($def['options'] as $ok => $css): ?>
+                                    <option value="<?= e($ok) ?>" <?= $ok === $v ? 'selected' : '' ?>><?= e(trim(explode(',', $css)[0], '"')) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </label>
+                        <?php break;
+
                         case 'int': ?>
                         <label class="inline-num"><?= t('set.' . $key) ?>
                             <input type="number" name="<?= e($name($key)) ?>" value="<?= e($v) ?>" min="<?= (int) $def['min'] ?>" max="<?= (int) $def['max'] ?>" required>

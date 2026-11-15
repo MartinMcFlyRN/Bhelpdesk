@@ -202,7 +202,7 @@ final class EmailTemplates
         $forText = (string) preg_replace('#</(p|blockquote|ul|ol)>#i', '</$1><br>', $forText); // blank line between paragraphs
         return [
             'subject' => $subject !== '' ? $subject : (string) config('app_name', 'Bhelpdesk'),
-            'html'    => '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#1f2937">' . $body . '</div>',
+            'html'    => '<div style="font-family:' . e(Settings::MAIL_FONTS[(string) config('mail.font', 'arial')] ?? Settings::MAIL_FONTS['arial']) . ';font-size:14px;line-height:1.5;color:#1f2937">' . $body . '</div>',
             'text'    => Html::toText($forText),
         ];
     }

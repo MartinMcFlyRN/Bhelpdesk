@@ -28,6 +28,7 @@ final class Settings
         'mail.alerts'              => ['section' => 'mail',        'type' => 'bool'],
         'mail.cc_participants'     => ['section' => 'mail',        'type' => 'bool'],
         'mail.max_new_per_hour'    => ['section' => 'mail',        'type' => 'int', 'min' => 0, 'max' => 1000],
+        'mail.font'                => ['section' => 'mail',        'type' => 'choice', 'options' => self::MAIL_FONTS],
         'default_language'         => ['section' => 'languages',   'type' => 'language'],
         'enabled_languages'        => ['section' => 'languages',   'type' => 'languages'],
         'allow_reopen'             => ['section' => 'tickets',     'type' => 'bool'],
@@ -52,6 +53,16 @@ final class Settings
         'throttle.op_password_mail' => ['section' => 'security',   'type' => 'pair'],
     ];
 
+    /** Fonts for the emails sent: key => CSS font-family (common, installed everywhere) */
+    public const MAIL_FONTS = [
+        'arial'     => 'Arial, Helvetica, sans-serif',
+        'verdana'   => 'Verdana, Geneva, sans-serif',
+        'tahoma'    => 'Tahoma, Verdana, Geneva, sans-serif',
+        'trebuchet' => '"Trebuchet MS", Helvetica, sans-serif',
+        'segoe'     => '"Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+        'georgia'   => 'Georgia, "Times New Roman", serif',
+    ];
+
     /** Settings stored by other pages (e.g. /op/config/email) */
     public const EXTRA_KEYS = ['mail.default_identity'];
 
@@ -67,6 +78,7 @@ final class Settings
         'mail.alerts'              => true,
         'mail.cc_participants'     => true,
         'mail.max_new_per_hour'    => 10,
+        'mail.font'                => 'arial',
         'default_language'         => 'en',
         'enabled_languages'        => [],
         'allow_reopen'             => true,
@@ -181,6 +193,12 @@ final class Settings
                     $others = array_values(array_diff(array_intersect($langs, array_map('strval', (array) $raw)), [Lang::BASE]));
                     $all = array_values(array_diff($langs, [Lang::BASE]));
                     $v = !$others ? [Lang::BASE] : (count($others) === count($all) ? [] : $others);
+                    break;
+                case 'choice':
+                    $v = (string) $raw;
+                    if (!array_key_exists($v, $def['options'])) {
+                        $v = (string) self::DEFAULTS[$key];
+                    }
                     break;
                 case 'bool':
                     $v = !empty($raw);

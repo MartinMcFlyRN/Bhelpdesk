@@ -209,6 +209,13 @@ Test without POP3: `sudo -u bhelpdesk php8.3 bin/fetch-mail.php --file=/path/mes
 
 Subjects carry `[#number]`; `Message-ID`, `In-Reply-To` and `References` keep the conversation threaded in mail clients and route replies back to the ticket. Send failures are shown to the operator and logged. Messages received by email have an *email* badge in the ticket.
 
+## Email font
+
+**Email font** in /op/config/general (Arial, Verdana, Tahoma, Trebuchet MS,
+Segoe UI, Georgia) is used for every email sent: replies with the department
+signature, notifications and alerts. Signatures and templates cannot carry
+their own fonts or colours (the HTML is sanitized).
+
 ## Email templates (/op/config/email/templates)
 
 The texts of all automatic emails are edited by administrators, with the same editor as signatures: ticket opened, operator reply, password creation and reset (customers); new ticket, customer reply, assignment, moved ticket (operator alerts). They are **not** in the translation files: every email is sent in a single version whatever the recipient's language, so the template contains all the languages needed (the defaults have Italian and English). Labels filled in by placeholders (status, priority) use the default language.

@@ -1117,4 +1117,6 @@ return [
     'slack.ticket_updated' => 'Ticket :link aggiornato',
     'slack.who' => ':name (:email) in :department',
     'slack.footer' => 'via :app',
+    'set.mail.font' => 'Carattere delle email',
+    'set.mail.font.help' => 'Carattere usato in tutte le email inviate (risposte, firme, avvisi).',
 ];
