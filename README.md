@@ -133,6 +133,7 @@ mariadb bhelpdesk < sql/migrations/021_quotes.sql
 mariadb bhelpdesk < sql/migrations/022_billing_role.sql
 mariadb bhelpdesk < sql/migrations/023_operator_2fa.sql
 mariadb bhelpdesk < sql/migrations/024_operator_password_reset.sql
+mariadb bhelpdesk < sql/migrations/025_email_blacklist.sql
 ```
 
 ## Two-step verification (operators)
@@ -193,6 +194,8 @@ Passwords are encrypted (libsodium secretbox) with a key created automatically i
 - **Retention on the server**: delete after download, keep the last N days (messages older than N days since download are deleted), or never delete. Messages that failed with an error are left on the server.
 
 **Source of the emails.** The original message of every downloaded email is saved compressed in `storage/mail/YYYY/MM/` (random name, `.eml.gz`). In the ticket the *✉ email* badge of a message received by email opens its source (headers and raw message, with *Download .eml*);  In *E-mail -> Log* administrators open the source of every downloaded message, ignored ones included. In the ticket the source is available to everyone who can see the ticket: the operators of its department, the assignee and the administrators. Sources of messages that did not become tickets or replies are deleted after 30 days; the others are deleted with their ticket. Messages downloaded before this feature have no source.
+
+**Blacklist** (*Configuration -> Blacklist*): email addresses or whole domains (one per line; a domain also covers its subdomains). Their messages are downloaded and recorded in the log with the result *blacklist* (and the rule that matched, source available) but nothing else happens: no ticket, no reply, no notification. Each rule counts the messages blocked; in *E-mail -> Log* the 🚫 next to a received message adds its sender to the blacklist. The blacklist is checked before any other rule, on the sender and on the From address.
 
 Test without POP3: `sudo -u bhelpdesk php8.3 bin/fetch-mail.php --file=/path/message.eml --identity=ID` (without a valid identity the command lists the existing ones). Use the same PHP version as PHP-FPM and the `bhelpdesk` user, so stored attachments get the right owner.
 

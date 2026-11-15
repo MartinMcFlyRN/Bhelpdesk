@@ -163,14 +163,14 @@ final class MailFetcher
     {
         return __('mailin.summary', [
             'new' => $s['downloaded'] ?? 0, 'tickets' => $s['ticket'] ?? 0, 'replies' => $s['reply'] ?? 0,
-            'ignored' => $s['ignored'] ?? 0, 'errors' => $s['error'] ?? 0, 'deleted' => $s['deleted'] ?? 0,
+            'ignored' => ($s['ignored'] ?? 0) + ($s['blocked'] ?? 0), 'errors' => $s['error'] ?? 0, 'deleted' => $s['deleted'] ?? 0,
         ]);
     }
 
     /** @return array<string, int> counters */
     public static function fetchIdentity(array $i): array
     {
-        $stats = ['downloaded' => 0, 'ticket' => 0, 'reply' => 0, 'ignored' => 0, 'error' => 0, 'deleted' => 0, 'left' => 0];
+        $stats = ['downloaded' => 0, 'ticket' => 0, 'reply' => 0, 'ignored' => 0, 'blocked' => 0, 'error' => 0, 'deleted' => 0, 'left' => 0];
         $maxBytes = max(1, (int) config('mail.max_message_mb', 30)) * 1048576;
         $pop = MailIdentities::pop3($i);
         try {
@@ -229,7 +229,7 @@ final class MailFetcher
         }
         if ($i['pop_keep'] === 'delete') {
             // processed messages are deleted right away; errors and too big ones stay
-            return in_array($rec['status'], ['ticket', 'reply', 'ignored'], true);
+            return in_array($rec['status'], ['ticket', 'reply', 'ignored', 'blocked'], true);
         }
         return strtotime((string) $rec['created_at']) < time() - max(1, (int) $i['pop_keep_days']) * 86400;
     }
@@ -255,6 +255,14 @@ final class MailFetcher
 
         if (!$sender) {
             return $ignore(__('mailin.ign_no_sender'));
+        }
+        foreach (array_unique(array_filter([$sender['email'], $m->addresses('from')[0]['email'] ?? null])) as $addr) {
+            if ($rule = Blacklist::match($addr)) {
+                Blacklist::hit((int) $rule['id']);
+                $note = __('mailin.blocked', ['rule' => $rule['pattern']]);
+                self::record($identity, $uid, $msgId, $address, $subject, null, 'blocked', $note);
+                return ['status' => 'blocked', 'ticket_id' => null, 'note' => $note];
+            }
         }
         if ($reason = self::automated($m, $sender['email'])) {
             return $ignore($reason);

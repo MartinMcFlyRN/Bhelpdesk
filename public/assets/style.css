@@ -541,3 +541,9 @@ input.readonly { background: #f9fafb !important; color: var(--muted); }
 .tfa-help { margin-top: 1rem; }
 .tfa-profile form { margin-bottom: .6rem; }
 @media print { .topbar, .flash, button, .btn { display: none !important; } .tfa-card { box-shadow: none; border: 0; } }
+
+/* Blacklist */
+.mail-blocked { background: #1f2937; color: #f9fafb; }
+.bl-quick button { opacity: .35; font-size: .85rem; margin-left: .25rem; }
+.mail-log tr:hover .bl-quick button { opacity: 1; }
+.bl-type { font-size: .72rem; }

@@ -42,7 +42,7 @@ $qs = static function (array $over) use ($filters): string {
             </select>
             <select name="status">
                 <option value=""><?= t('mailin.f_all_results') ?></option>
-                <?php foreach (['ticket', 'reply', 'ignored', 'error', 'big', 'sent', 'alert'] as $st): ?>
+                <?php foreach (['ticket', 'reply', 'ignored', 'blocked', 'error', 'big', 'sent', 'alert'] as $st): ?>
                     <option value="<?= $st ?>" <?= $filters['status'] === $st ? 'selected' : '' ?>><?= t('mailin.st_' . $st) ?></option>
                 <?php endforeach; ?>
             </select>
@@ -64,7 +64,16 @@ $qs = static function (array $over) use ($filters): string {
                         <td class="nowrap"><?= e(fmt_date((string) $row['created_at'])) ?></td>
                         <td title="<?= t($row['direction'] === 'in' ? 'mailin.dir_in' : 'mailin.dir_out') ?>"><?= $row['direction'] === 'in' ? '↓' : '↑' ?></td>
                         <td><small><?= e((string) ($row['identity_email'] ?? '—')) ?></small></td>
-                        <td><?= e((string) $row['address']) ?></td>
+                        <td><?= e((string) $row['address']) ?>
+                            <?php if ($row['direction'] === 'in' && $row['address'] && $row['status'] !== 'blocked'): ?>
+                                <form method="post" action="/op/config/blacklist" class="inline bl-quick">
+                                    <?= \Bhelpdesk\Csrf::field() ?>
+                                    <input type="hidden" name="patterns" value="<?= e((string) $row['address']) ?>">
+                                    <input type="hidden" name="note" value="<?= e(__('bl.from_log', ['subject' => mb_strimwidth((string) $row['subject'], 0, 80, '…')])) ?>">
+                                    <input type="hidden" name="back" value="<?= e($qs([])) ?>">
+                                    <button type="submit" class="btn-link" title="<?= t('bl.block_sender') ?>" data-confirm="<?= t('bl.block_confirm', ['address' => $row['address']]) ?>">🚫</button>
+                                </form>
+                            <?php endif; ?></td>
                         <td><?php if (!empty($row['raw_path'])): ?><a href="/op/config/email/source/<?= (int) $row['id'] ?>" target="_blank" rel="noopener" title="<?= t('src.open') ?>"><?= e((string) $row['subject']) ?> ↗</a><?php else: ?><?= e((string) $row['subject']) ?><?php endif; ?></td>
                         <td>
                             <span class="mail-status mail-<?= e($row['status']) ?>"><?= t('mailin.st_' . $row['status']) ?></span>

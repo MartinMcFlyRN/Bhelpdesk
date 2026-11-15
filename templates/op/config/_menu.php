@@ -8,6 +8,7 @@ $cfgMenu = [
         'templates' => ['/op/config/email/templates', 'cfg.menu.templates', ['templates', 'template_edit']],
         'log'       => ['/op/config/email/log', 'cfg.menu.email_log', ['email_log']],
     ]],
+    'blacklist'   => ['/op/config/blacklist', 'cfg.menu.blacklist', ['blacklist']],
     'canned'      => ['/op/config/canned', 'cfg.menu.canned', ['canned', 'canned_edit']],
     'operators'   => ['/op/config/operators', 'cfg.menu.operators', ['operators', 'operator_edit']],
 ];

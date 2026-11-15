@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Canned, CustomerAuth, Customers, Db, Departments, EmailTemplates, Html, Invoices, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, OperatorPassword, Operators, Quotes, Router, Session, Settings, Tasks, Throttle, Tickets, Totp, TwoFactor, View};
+use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Blacklist, Canned, CustomerAuth, Customers, Db, Departments, EmailTemplates, Html, Invoices, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, OperatorPassword, Operators, Quotes, Router, Session, Settings, Tasks, Throttle, Tickets, Totp, TwoFactor, View};
 
 // ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
@@ -1431,7 +1431,7 @@ $r->get('/config/email/log', static function () use ($cfgView): void {
     $f = [
         'identity'  => (int) ($_GET['identity'] ?? 0),
         'direction' => in_array($_GET['direction'] ?? '', ['in', 'out'], true) ? $_GET['direction'] : '',
-        'status'    => in_array($_GET['status'] ?? '', ['ticket', 'reply', 'ignored', 'error', 'big', 'sent', 'alert'], true) ? $_GET['status'] : '',
+        'status'    => in_array($_GET['status'] ?? '', ['ticket', 'reply', 'ignored', 'blocked', 'error', 'big', 'sent', 'alert'], true) ? $_GET['status'] : '',
         'q'         => trim((string) ($_GET['q'] ?? '')),
     ];
     $where = ['m.created_at >= NOW() - INTERVAL ' . MailFetcher::LOG_DAYS . ' DAY'];
@@ -1592,6 +1592,42 @@ $cannedPage = static function (?array $item, array $values, array $errors) use (
         'departments' => Departments::all(),
     ]);
 };
+
+// ---------- Email blacklist ----------
+$r->get('/config/blacklist', static function () use ($cfgView): void {
+    Auth::requireAdmin();
+    $cfgView('blacklist', __('cfg.menu.blacklist'), ['items' => Blacklist::all()]);
+});
+
+$r->post('/config/blacklist', static function (): void {
+    $op = Auth::requireAdmin();
+    $res = Blacklist::add((string) ($_POST['patterns'] ?? ''), trim((string) ($_POST['note'] ?? '')), (int) $op['id']);
+    if ($res['added']) {
+        flash('success', 'bl.added', ['list' => implode(', ', $res['added'])]);
+    }
+    if ($res['existing']) {
+        flash('error', 'bl.existing', ['list' => implode(', ', $res['existing'])]);
+    }
+    if ($res['invalid']) {
+        flash('error', 'bl.invalid', ['list' => implode(', ', $res['invalid'])]);
+    }
+    if (!$res['added'] && !$res['existing'] && !$res['invalid']) {
+        flash('error', 'bl.empty');
+    }
+    // "block sender" from the email log goes back there
+    $back = (string) ($_POST['back'] ?? '');
+    redirect(str_starts_with($back, '/op/config/email/log') ? $back : '/op/config/blacklist');
+});
+
+$r->post('/config/blacklist/{id}/delete', static function (array $p): void {
+    Auth::requireAdmin();
+    $row = Db::one('SELECT pattern FROM email_blacklist WHERE id = ?', [(int) $p['id']]);
+    if ($row) {
+        Blacklist::delete((int) $p['id']);
+        flash('success', 'bl.deleted', ['pattern' => $row['pattern']]);
+    }
+    redirect('/op/config/blacklist');
+});
 
 $r->get('/config/canned', static function () use ($cannedPage): void {
     Auth::requireAdmin();
