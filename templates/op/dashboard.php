@@ -9,7 +9,17 @@ $openTotal = $counts['open'] + $counts['answered'] + $counts['on_hold'];
 ?>
 <div class="page-head">
     <h1><?= t('dash.title') ?></h1>
-    <a class="btn btn-primary" href="/op/tickets/new">+ <?= t('nt.button') ?></a>
+    <div class="page-head-actions">
+        <label class="autorefresh"><?= t('dash.autorefresh') ?>
+            <select data-autorefresh aria-label="<?= t('dash.autorefresh') ?>">
+                <option value="0">OFF</option>
+                <option value="5">5s</option>
+                <option value="10">10s</option>
+                <option value="30">30s</option>
+            </select>
+        </label>
+        <a class="btn btn-primary" href="/op/tickets/new">+ <?= t('nt.button') ?></a>
+    </div>
 </div>
 <div class="tabs">
     <a class="<?= $filters['status'] === '' ? 'active' : '' ?>" href="<?= e($qs(['status' => '', 'page' => ''])) ?>"><?= t('dash.active') ?> <span class="count"><?= $openTotal ?></span></a>

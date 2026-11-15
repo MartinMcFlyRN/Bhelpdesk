@@ -4,6 +4,8 @@ $navActive = static fn (string $prefix): string => str_starts_with($uri, $prefix
 // tasks to do now for this operator: counter in the menu and box under the menu
 $isBilling = ($op['role'] ?? '') === 'billing';   // billing operators: only the Billing section
 $todoTasks = !empty($op) && !$isBilling ? \Bhelpdesk\Tasks::activeFor($op) : [];
+// today's on-call operator: box next to the page title (moved there by app.js)
+$oncallToday = !empty($op) && !$isBilling ? \Bhelpdesk\Oncall::forDay(date('Y-m-d')) : null;
 ?>
 <!doctype html>
 <html lang="<?= e(\Bhelpdesk\Lang::current()) ?>">
@@ -81,6 +83,12 @@ $todoTasks = !empty($op) && !$isBilling ? \Bhelpdesk\Tasks::activeFor($op) : [];
     </div>
 </header>
 <main class="wrap wide">
+    <?php if (!empty($op) && !$isBilling): ?>
+    <a class="oncall-today<?= $oncallToday ? '' : ' is-empty' ?>" href="/op/oncall" data-oncall-today>
+        <?= t('oncall.today_label', ['date' => __('oncall.dayname_' . date('N')) . ' ' . date('j') . ' ' . __('oncall.month_' . date('n'))]) ?>:
+        <strong><?= $oncallToday ? e($oncallToday['name']) : t('oncall.nobody_today') ?></strong>
+    </a>
+    <?php endif; ?>
     <?php if ($todoTasks): ?>
     <section class="task-banner" aria-label="<?= t('tasks.banner_title') ?>">
         <div class="task-banner-head">

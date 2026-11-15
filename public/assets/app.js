@@ -318,3 +318,64 @@ document.querySelectorAll('[data-otpauth]').forEach(function (box) {
 document.querySelectorAll('[data-print]').forEach(function (btn) {
     btn.addEventListener('click', function () { window.print(); });
 });
+
+// Today's on-call operator: the box is printed at the top of <main> and moved
+// next to the first page title, centred in the free space of the title row.
+(function () {
+    var box = document.querySelector('[data-oncall-today]');
+    var h1 = box && document.querySelector('main h1');
+    if (!h1) {
+        return;
+    }
+    var parent = h1.parentElement;
+    if (parent.classList.contains('page-head')) {
+        parent.classList.add('has-oncall');
+        h1.after(box);
+    } else if (parent.parentElement && parent.parentElement.classList.contains('ticket-head')) {
+        parent.after(box);           // ticket view: between title block and badges
+    } else {
+        var row = document.createElement('div');
+        row.className = 'page-head has-oncall';
+        parent.insertBefore(row, h1);
+        row.appendChild(h1);
+        row.appendChild(box);
+    }
+}());
+
+// Ticket list auto refresh (OFF / 5s / 10s / 30s), remembered in this browser.
+// The reload waits while the operator is working on the page (typing,
+// tickets selected for a bulk action, a menu open).
+document.querySelectorAll('select[data-autorefresh]').forEach(function (sel) {
+    var KEY = 'bhd.autorefresh', timer = null;
+    try { sel.value = window.localStorage.getItem(KEY) || '0'; } catch (e) { /* storage unavailable */ }
+    if (!sel.value) {
+        sel.value = '0';
+    }
+    var busy = function () {
+        var a = document.activeElement;
+        var typing = a && a !== sel && (/^(TEXTAREA|SELECT)$/.test(a.tagName)
+            || (a.tagName === 'INPUT' && !/^(checkbox|radio|button|submit)$/.test(a.type)));
+        return typing
+            || document.querySelector('main input[type=checkbox]:checked')
+            || document.querySelector('details[open]');
+    };
+    var schedule = function () {
+        clearTimeout(timer);
+        var s = parseInt(sel.value, 10) || 0;
+        if (s > 0) {
+            timer = setTimeout(function () {
+                if (busy() || document.hidden) {
+                    schedule();
+                } else {
+                    window.location.reload();
+                }
+            }, s * 1000);
+        }
+    };
+    sel.addEventListener('change', function () {
+        try { window.localStorage.setItem(KEY, sel.value); } catch (e) { /* storage unavailable */ }
+        sel.blur();
+        schedule();
+    });
+    schedule();
+});

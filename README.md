@@ -247,6 +247,8 @@ calendar, Monday to Sunday, with arrows to move between months.
 - A single day can be given to another operator with ✎ on the day; that day
   is highlighted and overrides the week. "Same as the week" removes it.
 - Every operator can see the rota; only administrators can change it.
+- Next to the title of every operators page a box shows today's on-call
+  operator (it links to the calendar).
 
 Tables: `oncall_weeks` (Monday of the week -> operator) and `oncall_days`
 (day -> operator), migration `027_oncall.sql`.
@@ -264,6 +266,12 @@ Tables: `oncall_weeks` (Monday of the week -> operator) and `oncall_days`
 - **Quotes** work like invoices (automatic ID, customer from the registry, text, amount, list with search and total, creation from a ticket with the reference, *Quotes* box in the ticket and in the customer page, history event, merge, delete by creator/admins) without issued state, billing date and type.
 - Every operator can use Billing; the creator, the administrators and the billing operators delete invoices and quotes.
 - **Billing role** (*Configuration -> Operators*, role *Billing*): these operators reach **only** the Billing section (and their profile): the top menu shows only Billing, any other page sends them to the invoices, customers and tickets are shown without links, and they get no tasks or alerts. They are the only ones who mark invoices issued / to issue.
+
+## Ticket list auto refresh
+
+The ticket list has a **Refresh** selector (OFF, 5s, 10s, 30s), remembered in
+the browser. The reload waits while the operator is typing in a field, has
+tickets selected for a bulk action or has a menu open.
 
 ## Bulk actions in the ticket list
 

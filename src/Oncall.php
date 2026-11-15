@@ -88,6 +88,14 @@ final class Oncall
         return true;
     }
 
+    /** On-call operator of a day (single-day override first, then the week): ['id', 'name'] or null */
+    public static function forDay(string $day): ?array
+    {
+        $r = Db::one('SELECT o.id, o.name FROM oncall_days d JOIN operators o ON o.id = d.operator_id WHERE d.day = ?', [$day])
+            ?? Db::one('SELECT o.id, o.name FROM oncall_weeks w JOIN operators o ON o.id = w.operator_id WHERE w.week_start = ?', [self::monday($day)]);
+        return $r ? ['id' => (int) $r['id'], 'name' => $r['name']] : null;
+    }
+
     /**
      * Calendar of a month, Monday-first weeks:
      * [ ['monday' => Y-m-d, 'number' => ISO week, 'oncall' => [id,name]|null,
