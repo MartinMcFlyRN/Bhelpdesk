@@ -52,6 +52,7 @@ $openTotal = $counts['open'] + $counts['answered'] + $counts['on_hold'];
 
 <div class="bulk-bar" id="bulk-bar" hidden>
     <span class="bulk-count"><strong data-bulk-count>0</strong> <?= t('bulk.selected') ?></span>
+    <button type="button" class="btn btn-small" data-open-dialog="dlg-assign"><?= t('bulk.assign') ?></button>
     <button type="button" class="btn btn-small" data-open-dialog="dlg-status"><?= t('bulk.status') ?></button>
     <button type="button" class="btn btn-small" data-open-dialog="dlg-move"><?= t('bulk.move') ?></button>
     <button type="button" class="btn btn-small" data-open-dialog="dlg-merge" data-min="2"><?= t('bulk.merge') ?></button>
@@ -89,6 +90,28 @@ $openTotal = $counts['open'] + $counts['answered'] + $counts['on_hold'];
     </tbody>
 </table>
 
+<!-- assign -->
+<dialog id="dlg-assign" class="dialog">
+    <h2><?= t('bulk.assign_title') ?></h2>
+    <p class="muted"><?= t('bulk.assign_text') ?></p>
+    <label><?= t('col.assignee') ?>
+        <select name="assign_to">
+            <option value=""><?= t('nt.choose') ?></option>
+            <?php foreach ($assignOperators as $o): ?>
+                <option value="<?= (int) $o['id'] ?>"><?= e($o['name']) ?></option>
+            <?php endforeach; ?>
+            <option value="none"><?= t('bulk.assign_nobody') ?></option>
+        </select>
+    </label>
+    <label><?= t('bulk.note') ?> <span class="optional"><?= t('bulk.note_hint') ?></span>
+        <textarea name="note[assign]" rows="3" maxlength="5000"></textarea>
+    </label>
+    <div class="dialog-actions">
+        <button type="button" class="btn" data-close-dialog><?= t('bulk.cancel') ?></button>
+        <button type="submit" class="btn btn-primary" name="action" value="assign"><?= t('bulk.assign_confirm') ?></button>
+    </div>
+</dialog>
+
 <!-- status -->
 <dialog id="dlg-status" class="dialog">
     <h2><?= t('bulk.status_title') ?></h2>
@@ -100,6 +123,9 @@ $openTotal = $counts['open'] + $counts['answered'] + $counts['on_hold'];
                 <option value="<?= e($k) ?>"><?= e(status_label($k)) ?></option>
             <?php endforeach; ?>
         </select>
+    </label>
+    <label><?= t('bulk.note') ?> <span class="optional"><?= t('bulk.note_hint') ?></span>
+        <textarea name="note[status]" rows="3" maxlength="5000"></textarea>
     </label>
     <div class="dialog-actions">
         <button type="button" class="btn" data-close-dialog><?= t('bulk.cancel') ?></button>
@@ -119,6 +145,9 @@ $openTotal = $counts['open'] + $counts['answered'] + $counts['on_hold'];
             <?php endforeach; ?>
         </select>
     </label>
+    <label><?= t('bulk.note') ?> <span class="optional"><?= t('bulk.note_hint') ?></span>
+        <textarea name="note[move]" rows="3" maxlength="5000"></textarea>
+    </label>
     <div class="dialog-actions">
         <button type="button" class="btn" data-close-dialog><?= t('bulk.cancel') ?></button>
         <button type="submit" class="btn btn-primary" name="action" value="move"><?= t('bulk.move_confirm') ?></button>
@@ -130,6 +159,9 @@ $openTotal = $counts['open'] + $counts['answered'] + $counts['on_hold'];
     <h2><?= t('bulk.merge_title') ?></h2>
     <p class="muted"><?= t('bulk.merge_text') ?></p>
     <div class="merge-targets" data-merge-targets></div>
+    <label><?= t('bulk.note') ?> <span class="optional"><?= t('bulk.note_hint_merge') ?></span>
+        <textarea name="note[merge]" rows="3" maxlength="5000"></textarea>
+    </label>
     <div class="dialog-actions">
         <button type="button" class="btn" data-close-dialog><?= t('bulk.cancel') ?></button>
         <button type="submit" class="btn btn-primary" name="action" value="merge"><?= t('bulk.merge_confirm') ?></button>
@@ -141,6 +173,7 @@ $openTotal = $counts['open'] + $counts['answered'] + $counts['on_hold'];
     <h2><?= t('bulk.delete_title') ?></h2>
     <p><?= t('bulk.delete_text') ?></p>
     <ul class="delete-list" data-delete-list></ul>
+    <p class="muted small"><?= t('bulk.delete_no_note') ?></p>
     <label class="check"><input type="checkbox" name="confirm" value="1" data-delete-confirm> <?= t('bulk.delete_check') ?></label>
     <div class="dialog-actions">
         <button type="button" class="btn" data-close-dialog><?= t('bulk.cancel') ?></button>

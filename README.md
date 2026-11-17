@@ -319,6 +319,13 @@ Select tickets with the checkboxes (or *select all*): an action bar appears with
 - **Merge** (2+ tickets) — choose the ticket to keep (the oldest is preselected). Messages, attachments, direct links and all customers (main and additional) of the other tickets move into it, in chronological order, so every customer sees the whole conversation; the history records which tickets were merged. The other tickets are closed, disappear from lists and keep only a redirect: their old numbers and links lead to the kept ticket (operators and customers).
 - **Delete** — permanent, after ticking *Yes, delete them permanently*: messages, attachment files on disk, links and tickets merged into them are removed.
 
+- **Assign**: assigns the selected tickets to an operator (or removes the
+  assignment); the operator gets the usual "assigned to you" email. Tickets of
+  departments the operator does not work on are skipped and listed.
+- Assign, change status, move and merge have an optional **internal note**,
+  added to every ticket after the action (merge: to the ticket that remains).
+  Delete has none: deleted tickets are erased with their notes.
+
 ## New ticket opened by an operator
 
 *New ticket* in the ticket list (or in a customer page, pre-filled) opens `/op/tickets/new`, for requests received by phone, email or in person:

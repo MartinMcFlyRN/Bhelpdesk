@@ -215,6 +215,7 @@ $r->get('/', static function (): void {
         'perPage'     => 25,
         'counts'      => Tickets::countsByStatus($op),
         'allDepartments' => Tickets::departments(false),
+        'assignOperators' => Db::all("SELECT id, name FROM operators WHERE active = 1 AND role <> 'billing' ORDER BY name"),
         // department filter: agents only see their own departments
         'departments' => Operators::seesAll($op)
             ? Tickets::departments(false)
@@ -244,8 +245,51 @@ $r->post('/tickets/bulk', static function (): void {
         redirect($back);
     }
     $ids = array_keys($tickets);
+    $action = (string) ($_POST['action'] ?? '');
+    // optional internal note of the dialog, added to the tickets after the action
+    $note = trim((string) (((array) ($_POST['note'] ?? []))[$action] ?? ''));
+    $addNote = static function (array $to) use ($note, $op): void {
+        if ($note === '') {
+            return;
+        }
+        foreach ($to as $id) {
+            Tickets::addMessage((int) $id, 'operator', (int) $op['id'], mb_substr($note, 0, 5000), true, client_ip());
+        }
+    };
 
-    switch ((string) ($_POST['action'] ?? '')) {
+    switch ($action) {
+        case 'assign':
+            $raw = (string) ($_POST['assign_to'] ?? '');
+            $to = $raw === 'none' ? 0 : (int) $raw;
+            $name = $to ? (string) Db::value("SELECT name FROM operators WHERE id = ? AND active = 1 AND role <> 'billing'", [$to]) : '';
+            if ($raw === '' || ($to && $name === '')) {
+                flash('error', 'bulk.choose_operator');
+                break;
+            }
+            $done = 0;
+            $refused = [];
+            $noted = [];
+            foreach ($tickets as $id => $t) {
+                if ((int) $t['assigned_to'] === $to) {
+                    $noted[] = $id;
+                    continue;
+                }
+                Tickets::update($t, $op, ['assigned_to' => $to]);
+                if ((int) Db::value('SELECT COALESCE(assigned_to, 0) FROM tickets WHERE id = ?', [$id]) === $to) {
+                    $done++;
+                    $noted[] = $id;
+                } else {
+                    $refused[] = '#' . $t['number'];
+                }
+            }
+            $addNote($noted); // not on the tickets that could not be assigned
+            $to ? flash('success', 'bulk.assigned', ['n' => $done, 'name' => $name]) : flash('success', 'bulk.unassigned', ['n' => $done]);
+            if ($refused) {
+                flash('error', 'bulk.assign_refused', ['name' => $name, 'tickets' => implode(', ', $refused)]);
+            }
+            break;
+
+
         case 'move':
             $dep = (int) ($_POST['department'] ?? 0);
             $name = (string) Db::value('SELECT name FROM departments WHERE id = ?', [$dep]);
@@ -254,6 +298,7 @@ $r->post('/tickets/bulk', static function (): void {
                 break;
             }
             $n = Tickets::moveMany($ids, $dep, $op);
+            $addNote($ids);
             flash('success', 'bulk.moved', ['n' => $n, 'department' => $name]);
             break;
 
@@ -264,6 +309,7 @@ $r->post('/tickets/bulk', static function (): void {
                 break;
             }
             $n = Tickets::statusMany($ids, $status, $op);
+            $addNote($ids);
             flash('success', 'bulk.status_done', ['n' => $n, 'status' => status_label($status)]);
             break;
 
@@ -278,6 +324,7 @@ $r->post('/tickets/bulk', static function (): void {
                 break;
             }
             $n = Tickets::merge($target, $ids, $op);
+            $addNote([$target]);
             flash('success', 'bulk.merged', ['n' => $n, 'number' => $tickets[$target]['number']]);
             redirect('/op/ticket/' . $target);
 
