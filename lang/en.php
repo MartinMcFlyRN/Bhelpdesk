@@ -1124,4 +1124,5 @@ return [
     'slack.footer' => 'via :app',
     'set.mail.font' => 'Email font',
     'set.mail.font.help' => 'Font of every email sent (replies, signatures, alerts).',
+    'opticket.assign_refused' => 'Not assigned: :name does not work on the :department department. Add the department to the operator in Configuration → Operators.',
 ];

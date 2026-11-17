@@ -1119,4 +1119,5 @@ return [
     'slack.footer' => 'via :app',
     'set.mail.font' => 'Carattere delle email',
     'set.mail.font.help' => 'Carattere usato in tutte le email inviate (risposte, firme, avvisi).',
+    'opticket.assign_refused' => 'Non assegnato: :name non lavora sul reparto :department. Aggiungilo al reparto in Configurazione → Operatori.',
 ];

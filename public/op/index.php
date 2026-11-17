@@ -552,9 +552,12 @@ $r->post('/ticket/{id}/reply', static function (array $p) use ($loadTicket): voi
         flash('success', 'opticket.note_added');
         redirect('/op/ticket/' . $t['id']);
     }
-    // after a reply to the customer, back to the ticket list
     flash('success', 'opticket.reply_sent_to', ['number' => $t['number']]);
-    redirect('/op/');
+    // reply that closes the ticket: back to the list of open tickets; otherwise stay on the ticket
+    if ((string) Db::value('SELECT status FROM tickets WHERE id = ?', [(int) $t['id']]) === 'closed') {
+        redirect('/op/');
+    }
+    redirect('/op/ticket/' . $t['id']);
 });
 
 // ---------- Images inserted with the editor (signatures, replies, canned responses) ----------
@@ -575,8 +578,15 @@ $r->post('/ticket/{id}/update', static function (array $p) use ($loadTicket): vo
         'department_id' => (int) ($_POST['department_id'] ?? 0),
         'assigned_to'   => (int) ($_POST['assigned_to'] ?? 0),
     ]);
+    // the chosen operator does not work on the ticket's department: say so (the assignment is not changed)
+    $wanted = (int) ($_POST['assigned_to'] ?? 0);
+    $now = Tickets::find((int) $t['id']);
+    if ($wanted && (int) $now['assigned_to'] !== $wanted) {
+        flash('error', 'opticket.assign_refused', ['name' => (string) Db::value('SELECT name FROM operators WHERE id = ?', [$wanted]), 'department' => (string) ($now['department_name'] ?? '—')]);
+        redirect('/op/ticket/' . $t['id']);
+    }
     // moved to a department the operator does not handle: back to the list
-    if (!Tickets::canSee(Tickets::find((int) $t['id']), $op)) {
+    if (!Tickets::canSee($now, $op)) {
         flash('success', 'opticket.transferred');
         redirect('/op/');
     }

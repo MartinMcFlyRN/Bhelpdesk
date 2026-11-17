@@ -69,38 +69,100 @@ document.addEventListener('keydown', function (ev) {
 });
 
 // Customer autocomplete: <input data-customer-lookup="datalist-id" data-name-field="input-id">
-// Suggests existing customers (name, company, email); picking one fills the name field.
+// Suggests existing customers (any part of name, company or email) in a menu
+// under the field; picking one fills the email and the name field.
+// (A custom menu instead of <datalist>: Safari filters a datalist by prefix
+// and does not refresh it while typing.)
 function bhdCustomerLookup(input) {
     var list = document.getElementById(input.getAttribute('data-customer-lookup'));
     var nameField = document.getElementById(input.getAttribute('data-name-field'));
-    var known = {};
-    var timer = null;
+    var timer = null, rows = [], active = -1, seq = 0;
     input.setAttribute('type', 'text'); // type=email does not allow searching by name
+    input.removeAttribute('list');
+    if (list) {
+        list.remove();
+    }
+    var menu = document.createElement('div');
+    menu.className = 'lookup-menu';
+    menu.hidden = true;
+    input.parentNode.classList.add('lookup-wrap');
+    input.after(menu);
+
+    var close = function () { menu.hidden = true; active = -1; };
+    var pick = function (c) {
+        input.value = c.email;
+        if (nameField) {
+            nameField.value = c.name;
+        }
+        close();
+        input.focus();
+    };
+    var highlight = function () {
+        Array.prototype.forEach.call(menu.children, function (el, i) { el.classList.toggle('active', i === active); });
+    };
+    var render = function () {
+        menu.textContent = '';
+        rows.forEach(function (c) {
+            var item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'lookup-item';
+            var n = document.createElement('strong');
+            n.textContent = c.name + (c.company ? ' · ' + c.company : '');
+            var em = document.createElement('span');
+            em.textContent = c.email;
+            item.appendChild(n);
+            item.appendChild(em);
+            // mousedown: before the field loses the focus
+            item.addEventListener('mousedown', function (ev) { ev.preventDefault(); pick(c); });
+            menu.appendChild(item);
+        });
+        active = -1;
+        menu.hidden = rows.length === 0;
+    };
     input.addEventListener('input', function () {
         var q = input.value.trim();
-        if (known[q.toLowerCase()] && nameField) {
-            nameField.value = known[q.toLowerCase()];
-        }
         clearTimeout(timer);
         if (q.length < 2) {
+            rows = [];
+            close();
             return;
         }
         timer = setTimeout(function () {
+            var mine = ++seq;
             fetch('/op/customers/lookup?q=' + encodeURIComponent(q), { credentials: 'same-origin' })
                 .then(function (r) { return r.ok ? r.json() : []; })
-                .then(function (rows) {
-                    list.textContent = '';
-                    rows.forEach(function (c) {
-                        known[c.email.toLowerCase()] = c.name;
-                        var opt = document.createElement('option');
-                        opt.value = c.email;
-                        opt.label = c.name + (c.company ? ' · ' + c.company : '');
-                        list.appendChild(opt);
-                    });
+                .then(function (res) {
+                    if (mine !== seq) {
+                        return; // an older answer arriving late
+                    }
+                    rows = res;
+                    if (rows.length === 1 && rows[0].email.toLowerCase() === q.toLowerCase()) {
+                        if (nameField && !nameField.value) {
+                            nameField.value = rows[0].name;
+                        }
+                        rows = [];
+                    }
+                    render();
                 })
                 .catch(function () {});
         }, 200);
     });
+    input.addEventListener('keydown', function (ev) {
+        if (menu.hidden) {
+            return;
+        }
+        if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+            ev.preventDefault();
+            active = (active + (ev.key === 'ArrowDown' ? 1 : -1) + rows.length) % rows.length;
+            highlight();
+        } else if (ev.key === 'Enter' && active >= 0) {
+            ev.preventDefault();
+            pick(rows[active]);
+        } else if (ev.key === 'Escape') {
+            close();
+        }
+    });
+    input.addEventListener('blur', function () { setTimeout(close, 150); });
 }
 document.querySelectorAll('input[data-customer-lookup]').forEach(bhdCustomerLookup);
 
@@ -117,14 +179,14 @@ document.querySelectorAll('[data-add-cc]').forEach(function (btn) {
         var row = first.cloneNode(true);
         var email = row.querySelector('input[name="cc_email[]"]');
         var name = row.querySelector('input[name="cc_name[]"]');
-        var list = row.querySelector('datalist');
+        var menu = row.querySelector('.lookup-menu');
+        if (menu) {
+            menu.remove();
+        }
         email.value = '';
         name.value = '';
-        list.textContent = '';
-        list.id = 'nt-cc-list-' + n;
         name.id = 'nt-cc-name-' + n;
-        email.setAttribute('list', list.id);
-        email.setAttribute('data-customer-lookup', list.id);
+        email.setAttribute('data-customer-lookup', 'nt-cc-list-' + n);
         email.setAttribute('data-name-field', name.id);
         n += 1;
         box.appendChild(row);
