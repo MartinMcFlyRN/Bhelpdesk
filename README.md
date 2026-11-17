@@ -260,6 +260,30 @@ Each operator chooses in **their profile** which alerts to receive (texts: templ
 
 Nobody is alerted for what they did themselves. Alerts contain the ticket data, an excerpt of the customer's message and the link to `/op/ticket/N`, sent with the department's identity (`Auto-Submitted: auto-generated`). They are sent **after the page has been delivered** (`fastcgi_finish_request`), so operators and customers do not wait for the SMTP server. They can be turned off for everyone in *General → Email*. Emails coming from an operator's address are not turned into tickets: operators answer from the ticket page.
 
+## Tools (/op/tools)
+
+The **Tools** menu (operators, not the billing role) runs network checks from
+the Bhelpdesk server:
+
+- **MTR**: `mtr --report` (5 cycles) to an IP or host name.
+- **Ping**: 4 pings to an IP or host name.
+- **Whois**: whois of a domain (a pasted URL is reduced to its host).
+- **IP info**: for an IP (or each IP of a host name) reverse DNS, AS number
+  and name, announced prefix, country and registry (Team Cymru DNS service)
+  plus the main lines of the RIR whois.
+
+Commands run without a shell (`proc_open` with an argument list) on input
+checked against strict patterns, with a time limit and one run at a time per
+operator. Requirements:
+
+```bash
+apt install mtr-tiny iputils-ping whois
+```
+
+and `proc_open` must not be in the pool's `disable_functions` (see
+`deploy/php-fpm-bhelpdesk.conf`; `exec`, `system`, `shell_exec`, `passthru`
+and `popen` stay disabled).
+
 ## Slack notifications (/op/config/general)
 
 Each department can post to its own Slack channel, in the format of the

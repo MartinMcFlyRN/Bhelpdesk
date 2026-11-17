@@ -50,6 +50,14 @@ $oncallToday = !empty($op) && !$isBilling ? \Bhelpdesk\Oncall::forDay(date('Y-m-
                 </details>
                 <?php if (!$isBilling): ?>
                 <a href="/op/oncall"<?= $navActive('/op/oncall') ?>><?= t('nav.oncall') ?></a>
+                <details class="nav-menu<?= str_starts_with($uri, '/op/tools') ? ' active' : '' ?>">
+                    <summary><?= t('nav.tools') ?> <span class="caret" aria-hidden="true">▾</span></summary>
+                    <div class="menu" role="menu">
+                        <?php foreach (\Bhelpdesk\NetTools::TOOLS as $tl): ?>
+                        <a role="menuitem" href="/op/tools/<?= $tl ?>"<?= $navActive('/op/tools/' . $tl) ?>><?= t('tools.' . $tl) ?></a>
+                        <?php endforeach; ?>
+                    </div>
+                </details>
                 <?php endif; ?>
             </nav>
             <?php endif; ?>

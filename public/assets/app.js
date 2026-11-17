@@ -441,3 +441,12 @@ document.querySelectorAll('select[data-autorefresh]').forEach(function (sel) {
     });
     schedule();
 });
+
+// Tools: disable the button while the command runs (mtr takes a while)
+document.querySelectorAll('form[data-tools-form]').forEach(function (f) {
+    f.addEventListener('submit', function () {
+        var b = f.querySelector('button[type=submit]');
+        b.disabled = true;
+        b.textContent = b.getAttribute('data-busy-label');
+    });
+});

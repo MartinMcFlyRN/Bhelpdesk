@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Blacklist, Canned, CustomerAuth, Customers, Db, Departments, EmailTemplates, Html, Invoices, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, Notifier, Oncall, OperatorPassword, Operators, Quotes, Router, Session, Settings, Slack, Tasks, Throttle, Tickets, Totp, TwoFactor, View};
+use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Blacklist, Canned, CustomerAuth, Customers, Db, Departments, EmailTemplates, Html, Invoices, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, NetTools, Notifier, Oncall, OperatorPassword, Operators, Quotes, Router, Session, Settings, Slack, Tasks, Throttle, Tickets, Totp, TwoFactor, View};
 
 // ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
@@ -1194,6 +1194,48 @@ $oncallSave = static function (string $kind) use ($oncallMonth): void {
 };
 $r->post('/oncall/week', static fn () => $oncallSave('week'));
 $r->post('/oncall/day', static fn () => $oncallSave('day'));
+
+// =====================================================================
+//  Tools: mtr, ping, whois, IP info (every operator, not billing)
+// =====================================================================
+$toolPage = static function (array $p): void {
+    $op = Auth::require();
+    $tool = (string) $p['tool'];
+    if (!in_array($tool, NetTools::TOOLS, true)) {
+        http_response_code(404);
+        View::render('op', 'error', ['title' => __('error.not_found.title'), 'message' => __('error.not_found.message')]);
+        return;
+    }
+    $q = trim((string) ($_POST['q'] ?? ''));
+    $vars = ['title' => __('tools.' . $tool), 'op' => $op, 'tool' => $tool, 'q' => $q, 'result' => null, 'info' => null, 'error' => null];
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $target = match ($tool) {
+            'mtr', 'ping' => NetTools::target($q),
+            'whois'       => NetTools::domain($q),
+            'ipinfo'      => NetTools::ip($q) ?? NetTools::hostname($q),
+        };
+        if ($target === null) {
+            $vars['error'] = __('tools.err_input_' . $tool);
+        } elseif (($lock = NetTools::lock((int) $op['id'])) === false) {
+            $vars['error'] = __('tools.err_busy');
+        } else {
+            @session_write_close(); // mtr takes a while: do not block the other tabs
+            $vars['target'] = $target;
+            if ($tool === 'ipinfo') {
+                $vars['info'] = NetTools::ipInfo($target);
+                if (!$vars['info']) {
+                    $vars['error'] = __('tools.err_resolve', ['host' => $target]);
+                }
+            } else {
+                $vars['result'] = match ($tool) { 'mtr' => NetTools::mtr($target), 'ping' => NetTools::ping($target), 'whois' => NetTools::whois($target) };
+            }
+            flock($lock, LOCK_UN);
+        }
+    }
+    View::render('op', 'tools/tool', $vars);
+};
+$r->get('/tools/{tool}', $toolPage);
+$r->post('/tools/{tool}', $toolPage);
 
 // =====================================================================
 //  Customers (every operator)
