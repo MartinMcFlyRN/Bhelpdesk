@@ -1138,4 +1138,11 @@ return [
     'bulk.note_hint' => '(optional, added to every ticket, not visible to the customer)',
     'bulk.note_hint_merge' => '(optional, added to the ticket that remains, not visible to the customer)',
     'bulk.delete_no_note' => 'Deleted tickets are erased with all their messages and notes: no note can be added here.',
+    'mailin.st_skipped' => 'alert not sent',
+    'alert.skip_subject' => 'Assignment alert to :name',
+    'alert.skip_disabled' => 'email alerts to operators are disabled in Configuration → General',
+    'alert.skip_inactive' => 'operator disabled',
+    'alert.skip_self' => 'the operator assigned the ticket to themselves',
+    'alert.skip_pref' => 'the operator turned off the "ticket assigned to me" alert in the profile',
+    'alert.skip_noemail' => 'the operator has no valid email address',
 ];

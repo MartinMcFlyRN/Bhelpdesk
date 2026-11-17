@@ -40,6 +40,10 @@ final class Alerts
 
     public static function assigned(int $ticketId, int $operatorId, array $by): void
     {
+        if (!config('mail.alerts', true)) {
+            self::logSkipped($ticketId, $operatorId, 'alert.skip_disabled');
+            return;
+        }
         self::enqueue('assigned', ['ticket' => $ticketId, 'operator' => $operatorId, 'actor' => (int) $by['id'], 'by' => (string) $by['name']]);
     }
 
@@ -107,7 +111,20 @@ final class Alerts
                 $excerptMsg = (int) $d['message'];
                 break;
             case 'assigned':
-                $to = self::operators('id = ? AND alert_assign = 1', [(int) $d['operator']]);
+                // the assignee only; when no email can be sent the reason goes in the email log
+                $o = Db::one('SELECT id, name, email, active, alert_assign FROM operators WHERE id = ?', [(int) $d['operator']]);
+                $why = match (true) {
+                    !$o || !(int) $o['active']                         => 'alert.skip_inactive',
+                    (int) $o['id'] === $actor                          => 'alert.skip_self',
+                    !(int) $o['alert_assign']                          => 'alert.skip_pref',
+                    !filter_var((string) $o['email'], FILTER_VALIDATE_EMAIL) => 'alert.skip_noemail',
+                    default                                            => null,
+                };
+                if ($why !== null) {
+                    self::logSkipped((int) $ticket['id'], (int) $d['operator'], $why);
+                    return;
+                }
+                $to = [['id' => (int) $o['id'], 'name' => $o['name'], 'email' => $o['email']]];
                 $excerptMsg = self::lastCustomerMessage((int) $ticket['id']);
                 break;
             default:
@@ -120,6 +137,19 @@ final class Alerts
             }
             self::send($kind, $ticket, $op, $msg, $d);
         }
+    }
+
+    /** An alert not sent, with the reason, in the email log (/op/config/email/log) */
+    private static function logSkipped(int $ticketId, int $operatorId, string $reasonKey): void
+    {
+        $o = Db::one('SELECT name, email FROM operators WHERE id = ?', [$operatorId]);
+        $number = (string) Db::value('SELECT number FROM tickets WHERE id = ?', [$ticketId]);
+        Notifier::defaultLanguage(static function () use ($ticketId, $o, $number, $reasonKey): void {
+            Db::exec(
+                "INSERT INTO mail_messages (direction, ticket_id, address, subject, status, note) VALUES ('out', ?, ?, ?, 'skipped', ?)",
+                [$ticketId, mb_substr((string) ($o['email'] ?? ''), 0, 190), mb_substr('[#' . $number . '] ' . __('alert.skip_subject', ['name' => (string) ($o['name'] ?? '?')]), 0, 255), mb_substr(__($reasonKey), 0, 255)]
+            );
+        });
     }
 
     /** Active operators who see tickets of a department (admins: all), optionally with an alert enabled */

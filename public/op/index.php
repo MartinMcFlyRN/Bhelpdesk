@@ -1565,7 +1565,7 @@ $r->get('/config/email/log', static function () use ($cfgView): void {
     $f = [
         'identity'  => (int) ($_GET['identity'] ?? 0),
         'direction' => in_array($_GET['direction'] ?? '', ['in', 'out'], true) ? $_GET['direction'] : '',
-        'status'    => in_array($_GET['status'] ?? '', ['ticket', 'reply', 'ignored', 'blocked', 'error', 'big', 'sent', 'alert'], true) ? $_GET['status'] : '',
+        'status'    => in_array($_GET['status'] ?? '', ['ticket', 'reply', 'ignored', 'blocked', 'error', 'big', 'sent', 'alert', 'skipped'], true) ? $_GET['status'] : '',
         'q'         => trim((string) ($_GET['q'] ?? '')),
     ];
     $where = ['m.created_at >= NOW() - INTERVAL ' . MailFetcher::LOG_DAYS . ' DAY'];

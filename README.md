@@ -224,6 +224,18 @@ pasted in a reply) are embedded in the email as inline parts (`cid:`), up to
 The department signature is added to replies and, with `{signature}`, to the
 "ticket opened" email.
 
+## Assignment alerts: troubleshooting
+
+When the "assigned to you" email is not sent, the email log
+(/op/config/email/log) has a row "alert not sent" with the reason (alerts
+disabled in General, operator disabled, ticket assigned to oneself, alert
+turned off in the operator's profile, no email address); a failed delivery
+is a row "error" with the SMTP error. To try from the command line:
+
+```bash
+sudo -u bhelpdesk php8.3 bin/test-alert.php --ticket=<ticket number> --operator=<username>
+```
+
 ## Email templates (/op/config/email/templates)
 
 The texts of all automatic emails are edited by administrators, with the same editor as signatures: ticket opened, operator reply, password creation and reset (customers); new ticket, customer reply, assignment, moved ticket (operator alerts). They are **not** in the translation files: every email is sent in a single version whatever the recipient's language, so the template contains all the languages needed (the defaults have Italian and English). Labels filled in by placeholders (status, priority) use the default language.

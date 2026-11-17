@@ -1133,4 +1133,11 @@ return [
     'bulk.note_hint' => '(facoltativa, aggiunta a ogni ticket, non visibile al cliente)',
     'bulk.note_hint_merge' => '(facoltativa, aggiunta al ticket che resta, non visibile al cliente)',
     'bulk.delete_no_note' => 'I ticket eliminati vengono cancellati con tutti i messaggi e le note: qui non si può aggiungere una nota.',
+    'mailin.st_skipped' => 'avviso non inviato',
+    'alert.skip_subject' => 'Avviso di assegnazione a :name',
+    'alert.skip_disabled' => 'gli avvisi email agli operatori sono disattivati in Configurazione → Generale',
+    'alert.skip_inactive' => 'operatore disattivato',
+    'alert.skip_self' => 'l\'operatore si è assegnato il ticket da solo',
+    'alert.skip_pref' => 'l\'operatore ha disattivato nel profilo l\'avviso "ticket assegnato a me"',
+    'alert.skip_noemail' => 'l\'operatore non ha un indirizzo email valido',
 ];

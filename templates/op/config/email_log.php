@@ -42,7 +42,7 @@ $qs = static function (array $over) use ($filters): string {
             </select>
             <select name="status">
                 <option value=""><?= t('mailin.f_all_results') ?></option>
-                <?php foreach (['ticket', 'reply', 'ignored', 'blocked', 'error', 'big', 'sent', 'alert'] as $st): ?>
+                <?php foreach (['ticket', 'reply', 'ignored', 'blocked', 'error', 'big', 'sent', 'alert', 'skipped'] as $st): ?>
                     <option value="<?= $st ?>" <?= $filters['status'] === $st ? 'selected' : '' ?>><?= t('mailin.st_' . $st) ?></option>
                 <?php endforeach; ?>
             </select>
