@@ -271,13 +271,17 @@ the Bhelpdesk server:
 - **IP info**: for an IP (or each IP of a host name) reverse DNS, AS number
   and name, announced prefix, country and registry (Team Cymru DNS service)
   plus the main lines of the RIR whois.
+- **DNS query**: `dig` for A, AAAA, CNAME, MX, NS, TXT, SOA, PTR (of an IP),
+  SRV, CAA or all the main ones, asking the server's resolver, the
+  authoritative name server of the domain, a public resolver (Google,
+  Cloudflare, Quad9, OpenDNS) or any server typed by the operator.
 
 Commands run without a shell (`proc_open` with an argument list) on input
 checked against strict patterns, with a time limit and one run at a time per
 operator. Requirements:
 
 ```bash
-apt install mtr-tiny iputils-ping whois
+apt install mtr-tiny iputils-ping whois dnsutils
 ```
 
 and `proc_open` must not be in the pool's `disable_functions` (see

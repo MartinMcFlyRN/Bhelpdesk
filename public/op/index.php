@@ -1207,21 +1207,36 @@ $toolPage = static function (array $p): void {
         return;
     }
     $q = trim((string) ($_POST['q'] ?? ''));
-    $vars = ['title' => __('tools.' . $tool), 'op' => $op, 'tool' => $tool, 'q' => $q, 'result' => null, 'info' => null, 'error' => null];
+    $dnsType = in_array($_POST['type'] ?? '', NetTools::DNS_TYPES, true) ? (string) $_POST['type'] : 'A';
+    // DNS server: a typed one wins over the list
+    $dnsCustom = trim((string) ($_POST['server_custom'] ?? ''));
+    $dnsServer = $dnsCustom !== '' ? $dnsCustom : trim((string) ($_POST['server'] ?? ''));
+    $vars = ['title' => __('tools.' . $tool), 'op' => $op, 'tool' => $tool, 'q' => $q, 'result' => null, 'info' => null, 'dns' => null, 'error' => null,
+             'dnsType' => $dnsType, 'dnsServer' => $dnsServer, 'dnsCustom' => $dnsCustom];
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $target = match ($tool) {
             'mtr', 'ping' => NetTools::target($q),
             'whois'       => NetTools::domain($q),
             'ipinfo'      => NetTools::ip($q) ?? NetTools::hostname($q),
+            'dns'         => NetTools::ip($q) ?? NetTools::dnsName($q),
         };
+        // DNS server: empty (the server's resolver), 'auth' or an IP / host name
+        $server = $dnsServer === '' || $dnsServer === 'auth' ? $dnsServer : NetTools::target($dnsServer);
         if ($target === null) {
             $vars['error'] = __('tools.err_input_' . $tool);
+        } elseif ($tool === 'dns' && $server === null) {
+            $vars['error'] = __('tools.err_dns_server');
         } elseif (($lock = NetTools::lock((int) $op['id'])) === false) {
             $vars['error'] = __('tools.err_busy');
         } else {
             @session_write_close(); // mtr takes a while: do not block the other tabs
             $vars['target'] = $target;
-            if ($tool === 'ipinfo') {
+            if ($tool === 'dns') {
+                $vars['dns'] = NetTools::dns($target, $dnsType, (string) $server);
+                if ($dnsServer === 'auth' && $vars['dns']['server'] === '') {
+                    $vars['error'] = __('tools.err_dns_auth', ['name' => $target]);
+                }
+            } elseif ($tool === 'ipinfo') {
                 $vars['info'] = NetTools::ipInfo($target);
                 if (!$vars['info']) {
                     $vars['error'] = __('tools.err_resolve', ['host' => $target]);

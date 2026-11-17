@@ -8,11 +8,18 @@ namespace Bhelpdesk;
  *
  * Commands run without a shell (proc_open with an argument list) on input
  * checked against strict patterns, with a time limit and one run at a time
- * per operator. Server packages: mtr-tiny (or mtr), iputils-ping, whois.
+ * per operator. Server packages: mtr-tiny (or mtr), iputils-ping, whois,
+ * dnsutils (dig).
  */
 final class NetTools
 {
-    public const TOOLS = ['mtr', 'ping', 'whois', 'ipinfo'];
+    public const TOOLS = ['mtr', 'ping', 'whois', 'ipinfo', 'dns'];
+
+    /** Record types of the DNS query tool ('ALL': the common ones one after the other) */
+    public const DNS_TYPES = ['A', 'AAAA', 'CNAME', 'MX', 'NS', 'TXT', 'SOA', 'PTR', 'SRV', 'CAA', 'ALL'];
+
+    /** Public resolvers suggested in the DNS server field */
+    public const DNS_SERVERS = ['8.8.8.8' => 'Google', '1.1.1.1' => 'Cloudflare', '9.9.9.9' => 'Quad9', '208.67.222.222' => 'OpenDNS'];
 
     private const MAX_OUTPUT = 200000;
 
@@ -48,6 +55,85 @@ final class NetTools
     {
         $h = self::hostname($q);
         return $h !== null && str_contains($h, '.') ? $h : null;
+    }
+
+    /** DNS name: like a host name but labels may contain "_" (_dmarc, _sip._tcp, selector._domainkey) */
+    public static function dnsName(string $q): ?string
+    {
+        $q = strtolower(rtrim(trim($q), '.'));
+        if (preg_match('#^[a-z][a-z0-9+.-]*://#', $q)) {
+            $q = (string) parse_url($q, PHP_URL_HOST);
+        }
+        if (function_exists('idn_to_ascii') && preg_match('/[^\x20-\x7e]/', $q)) {
+            $q = (string) idn_to_ascii($q, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46);
+        }
+        $label = '[a-z0-9_](?:[a-z0-9_-]{0,61}[a-z0-9_])?';
+        return strlen($q) <= 253 && preg_match('/^' . $label . '(?:\.' . $label . ')*$/', $q) ? $q : null;
+    }
+
+    /**
+     * DNS query with dig, optionally to a given server ('' = the server's resolver,
+     * 'auth' = the first authoritative name server of the zone).
+     * @return array{server: string, runs: list<array{type: string, status: ?string, answers: list<array>, result: array}>}
+     */
+    public static function dns(string $name, string $type, string $server): array
+    {
+        if ($server === 'auth') {
+            $server = self::authoritative($name) ?? '';
+        }
+        $types = $type === 'ALL' ? ['A', 'AAAA', 'CNAME', 'MX', 'NS', 'TXT', 'SOA', 'CAA'] : [$type];
+        $runs = [];
+        foreach ($types as $t) {
+            $cmd = ['dig', '+nocmd', '+nostats', '+time=3', '+tries=2'];
+            if ($server !== '') {
+                $cmd[] = '@' . $server;
+            }
+            if ($t === 'PTR' && self::ip($name) !== null) {
+                array_push($cmd, '-x', $name); // reverse of an IP
+            } else {
+                array_push($cmd, $name, $t);
+            }
+            $res = self::run($cmd, 20);
+            $runs[] = ['type' => $t, 'status' => self::digStatus($res['output']), 'answers' => self::digAnswers($res['output']), 'result' => $res];
+        }
+        return ['server' => $server, 'runs' => $runs];
+    }
+
+    /** First name server of the zone of $name (walking up the labels), as a name dig can use */
+    private static function authoritative(string $name): ?string
+    {
+        $labels = explode('.', $name);
+        while (count($labels) >= 2) {
+            $out = self::run(['dig', '+short', '+time=3', '+tries=2', implode('.', $labels), 'NS'], 15)['output'];
+            foreach (preg_split('/\R/', $out) as $line) {
+                $ns = self::hostname(rtrim(trim($line), '.'));
+                if ($ns !== null) {
+                    return $ns;
+                }
+            }
+            array_shift($labels);
+        }
+        return null;
+    }
+
+    private static function digStatus(string $out): ?string
+    {
+        return preg_match('/status: ([A-Z]+)/', $out, $m) ? $m[1] : null;
+    }
+
+    /** Records of the ANSWER SECTION: name, ttl, type, data */
+    private static function digAnswers(string $out): array
+    {
+        if (!preg_match('/;; ANSWER SECTION:\R(.*?)(?:\R\R|\R;;|$)/s', $out, $m)) {
+            return [];
+        }
+        $rows = [];
+        foreach (preg_split('/\R/', trim($m[1])) as $line) {
+            if (preg_match('/^(\S+)\s+(\d+)\s+IN\s+(\S+)\s+(.*)$/', $line, $r)) {
+                $rows[] = ['name' => rtrim($r[1], '.'), 'ttl' => (int) $r[2], 'type' => $r[3], 'data' => trim($r[4])];
+            }
+        }
+        return $rows;
     }
 
     public static function mtr(string $target): array
