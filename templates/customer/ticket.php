@@ -11,12 +11,6 @@
     </div>
     <div class="ticket-head-side">
         <span class="badge status-<?= e($ticket['status']) ?>"><?= e(status_label($ticket['status'])) ?></span>
-        <?php if ($ticket['status'] !== 'closed'): ?>
-        <form method="post" action="/customer/ticket/<?= e($ticket['number']) ?>/close" class="inline">
-            <?= \Bhelpdesk\Csrf::field() ?>
-            <button class="btn btn-small" type="submit" data-confirm="<?= t(config('allow_reopen', true) ? 'ticket.close_confirm' : 'ticket.close_confirm_final') ?>"><?= t('ticket.close') ?></button>
-        </form>
-        <?php endif; ?>
     </div>
 </div>
 
@@ -52,8 +46,18 @@
     <form method="post" action="/customer/ticket/<?= e($ticket['number']) ?>/reply" class="form">
         <?= \Bhelpdesk\Csrf::field() ?>
         <textarea name="message" rows="5" required></textarea>
-        <button class="btn btn-primary" type="submit"><?= t('ticket.send') ?></button>
+        <div class="reply-actions">
+            <button class="btn btn-primary" type="submit"><?= t('ticket.send') ?></button>
+            <?php if ($ticket['status'] !== 'closed'): ?>
+            <button class="btn btn-close-ticket" type="submit" form="close-ticket-form" data-confirm="<?= t(config('allow_reopen', true) ? 'ticket.close_confirm' : 'ticket.close_confirm_final') ?>"><?= t('ticket.close') ?></button>
+            <?php endif; ?>
+        </div>
     </form>
+    <?php if ($ticket['status'] !== 'closed'): ?>
+    <form method="post" action="/customer/ticket/<?= e($ticket['number']) ?>/close" id="close-ticket-form" hidden>
+        <?= \Bhelpdesk\Csrf::field() ?>
+    </form>
+    <?php endif; ?>
 </div>
 <?php else: ?>
     <p class="muted"><?= t('ticket.closed_info') ?> <a href="/customer/new"><?= t('ticket.closed_new') ?></a></p>

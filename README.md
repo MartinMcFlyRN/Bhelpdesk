@@ -262,10 +262,10 @@ Nobody is alerted for what they did themselves. Alerts contain the ticket data, 
 
 ## Customers closing their tickets
 
-In the customer area a ticket has a **Close ticket** button (with a
-confirmation). The operators get no alert; the ticket history shows "Ticket
+In the customer area a ticket has a **Close ticket** button next to Send
+(with a confirmation). The operators get no alert; the ticket history shows "Ticket
 closed by the customer". "My tickets" lists open and closed tickets
-separately. If reopening is allowed, the customer can reopen it by replying.
+separately (20 per page each) and can be filtered by status. If reopening is allowed, the customer can reopen it by replying.
 
 ## Tools (/op/tools)
 

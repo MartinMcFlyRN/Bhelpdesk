@@ -1204,4 +1204,7 @@ return [
     'mytickets.closed' => 'Chiusi',
     'mytickets.no_open' => 'Nessun ticket aperto.',
     'ticket.close_confirm_final' => 'Chiudere il ticket? Una volta chiuso non si potrà più rispondere.',
+    'mytickets.filter' => 'Filtra per stato',
+    'mytickets.all' => 'Tutti',
+    'mytickets.no_closed' => 'Nessun ticket chiuso.',
 ];

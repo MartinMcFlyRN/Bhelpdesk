@@ -1209,4 +1209,7 @@ return [
     'mytickets.closed' => 'Closed',
     'mytickets.no_open' => 'No open tickets.',
     'ticket.close_confirm_final' => 'Close the ticket? Once closed it can no longer be answered.',
+    'mytickets.filter' => 'Filter by status',
+    'mytickets.all' => 'All',
+    'mytickets.no_closed' => 'No closed tickets.',
 ];

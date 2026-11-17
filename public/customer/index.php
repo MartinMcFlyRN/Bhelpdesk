@@ -178,7 +178,25 @@ $r->get('/tickets', static function (): void {
     if (!$me) {
         redirect('/customer/login?next=' . rawurlencode('/customer/tickets'));
     }
-    View::render('customer', 'tickets', ['title' => __('mytickets.title'), 'me' => $me, 'tickets' => Customers::tickets((int) $me['id'])]);
+    // filter by status, open and closed lists paginated separately (20 per page)
+    $all = Customers::tickets((int) $me['id']);
+    $status = in_array($_GET['status'] ?? '', Tickets::STATUSES, true) ? (string) $_GET['status'] : '';
+    $list = $status === '' ? $all : array_values(array_filter($all, static fn ($t) => $t['status'] === $status));
+    $per = 20;
+    $section = static function (array $rows, string $param) use ($per): array {
+        $pages = max(1, (int) ceil(count($rows) / $per));
+        $page = min($pages, max(1, (int) ($_GET[$param] ?? 1)));
+        return ['rows' => array_slice($rows, ($page - 1) * $per, $per), 'total' => count($rows), 'page' => $page, 'pages' => $pages, 'param' => $param];
+    };
+    View::render('customer', 'tickets', [
+        'title'  => __('mytickets.title'),
+        'me'     => $me,
+        'count'  => count($all),
+        'status' => $status,
+        'counts' => array_count_values(array_column($all, 'status')),
+        'open'   => $section(array_values(array_filter($list, static fn ($t) => $t['status'] !== 'closed')), 'po'),
+        'closed' => $section(array_values(array_filter($list, static fn ($t) => $t['status'] === 'closed')), 'pc'),
+    ]);
 });
 
 // =====================================================================

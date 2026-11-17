@@ -659,3 +659,10 @@ table.kv td { padding: .35rem 0; border-bottom: 1px solid #f0f2f4; word-break: b
 .ticket-head-side form.inline { margin: 0; }
 .ticket-list-title { font-size: 1.1rem; margin: 1.2rem 0 .6rem; display: flex; align-items: center; gap: .5rem; }
 .ticket-card.is-closed { opacity: .75; }
+.reply-actions { display: flex; justify-content: space-between; align-items: center; gap: .75rem; }
+.btn-close-ticket { background: #fff; color: #d64545; border-color: #f3b4b4; }
+.btn-close-ticket:hover { background: #fdf0f0; border-color: #d64545; }
+.status-filter { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .5rem; }
+.status-filter a { display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .75rem; border: 1px solid var(--border); border-radius: 999px; background: #fff; color: var(--text); text-decoration: none; font-size: .9rem; }
+.status-filter a:hover { border-color: #2e9d4f; }
+.status-filter a.active { background: #eef7f1; border-color: #2e9d4f; color: #237a3d; font-weight: 600; }
