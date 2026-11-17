@@ -9,9 +9,11 @@
         <p><a class="btn btn-primary" href="/customer/new"><?= t('home.new.title') ?></a></p>
     </div>
 <?php else: ?>
-<div class="ticket-cards">
-    <?php foreach ($tickets as $tk): ?>
-    <a class="card card-link ticket-card" href="/customer/ticket/<?= e($tk['number']) ?>">
+<?php
+$open = array_values(array_filter($tickets, static fn ($tk) => $tk['status'] !== 'closed'));
+$closed = array_values(array_filter($tickets, static fn ($tk) => $tk['status'] === 'closed'));
+$card = static function (array $tk): void { ?>
+    <a class="card card-link ticket-card<?= $tk['status'] === 'closed' ? ' is-closed' : '' ?>" href="/customer/ticket/<?= e($tk['number']) ?>">
         <div class="ticket-card-main">
             <span class="ticket-card-number">#<?= e($tk['number']) ?></span>
             <strong><?= e($tk['subject']) ?></strong>
@@ -26,6 +28,16 @@
             <?php if ($tk['role'] === 'cc'): ?><span class="badge"><?= t('mytickets.cc') ?></span><?php endif; ?>
         </div>
     </a>
-    <?php endforeach; ?>
-</div>
+<?php }; ?>
+<h2 class="ticket-list-title"><?= t('mytickets.open') ?> <span class="count-pill"><?= count($open) ?></span></h2>
+<?php if ($open): ?>
+<div class="ticket-cards"><?php foreach ($open as $tk) { $card($tk); } ?></div>
+<?php else: ?>
+<p class="muted"><?= t('mytickets.no_open') ?></p>
+<?php endif; ?>
+
+<?php if ($closed): ?>
+<h2 class="ticket-list-title" id="closed"><?= t('mytickets.closed') ?> <span class="count-pill"><?= count($closed) ?></span></h2>
+<div class="ticket-cards"><?php foreach ($closed as $tk) { $card($tk); } ?></div>
+<?php endif; ?>
 <?php endif; ?>

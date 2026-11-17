@@ -371,6 +371,19 @@ $r->post('/ticket/{number}/reply', static function (array $p) use ($canSee, $den
     redirect('/customer/ticket/' . $number);
 });
 
+// ---------- Close by the customer (operators are not alerted) ----------
+$r->post('/ticket/{number}/close', static function (array $p) use ($canSee, $denied): void {
+    $number = (string) $p['number'];
+    $ticket = $canSee($number);
+    if (!$ticket) {
+        $denied($number);
+    }
+    Tickets::closeByCustomer($ticket, (int) $ticket['viewer_id']);
+    flash('success', 'ticket.closed_done', ['number' => $ticket['number']]);
+    // signed in: to the list, closed tickets section; direct link: stay on the ticket
+    redirect(CustomerAuth::user() ? '/customer/tickets#closed' : '/customer/ticket/' . rawurlencode($number));
+});
+
 // old URLs of previous versions
 $r->get('/status', static function (): void {
     header('Location: /customer/login', true, 301);

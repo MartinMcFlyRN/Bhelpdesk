@@ -380,6 +380,19 @@ final class Tickets
      * Customer reply (web or email); reopens the ticket when needed.
      * $files = validated files (Attachments::fromUpload / fromData). Returns the message id.
      */
+    /**
+     * Closed by a customer from the customer area: no alert to the operators,
+     * only an event in the ticket history.
+     */
+    public static function closeByCustomer(array $ticket, int $customerId): void
+    {
+        if ($ticket['status'] === 'closed') {
+            return;
+        }
+        self::setStatus((int) $ticket['id'], 'closed');
+        self::addMessage((int) $ticket['id'], 'system', null, json_encode(['event' => 'closed_by_customer', 'name' => self::customerLabel($customerId)], JSON_UNESCAPED_UNICODE), true, null);
+    }
+
     public static function customerReply(array $ticket, string $body, string $ip, ?int $customerId = null, array $files = [], bool $viaEmail = false): int
     {
         $pdo = Db::pdo();

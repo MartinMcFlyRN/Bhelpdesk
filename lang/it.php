@@ -1196,4 +1196,12 @@ return [
     'tools.dns_col_value' => 'Valore',
     'tools.dns_no_records' => 'Nessun record di questo tipo.',
     'tools.dns_raw' => 'Risposta completa di dig',
+    'ticket.close' => 'Chiudi ticket',
+    'ticket.close_confirm' => 'Chiudere il ticket? Se ti servirà ancora potrai riaprirlo rispondendo.',
+    'ticket.closed_done' => 'Ticket #:number chiuso.',
+    'log.closed_by_customer' => 'Ticket chiuso dal cliente :name',
+    'mytickets.open' => 'Aperti',
+    'mytickets.closed' => 'Chiusi',
+    'mytickets.no_open' => 'Nessun ticket aperto.',
+    'ticket.close_confirm_final' => 'Chiudere il ticket? Una volta chiuso non si potrà più rispondere.',
 ];

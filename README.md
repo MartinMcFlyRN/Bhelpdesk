@@ -260,6 +260,13 @@ Each operator chooses in **their profile** which alerts to receive (texts: templ
 
 Nobody is alerted for what they did themselves. Alerts contain the ticket data, an excerpt of the customer's message and the link to `/op/ticket/N`, sent with the department's identity (`Auto-Submitted: auto-generated`). They are sent **after the page has been delivered** (`fastcgi_finish_request`), so operators and customers do not wait for the SMTP server. They can be turned off for everyone in *General → Email*. Emails coming from an operator's address are not turned into tickets: operators answer from the ticket page.
 
+## Customers closing their tickets
+
+In the customer area a ticket has a **Close ticket** button (with a
+confirmation). The operators get no alert; the ticket history shows "Ticket
+closed by the customer". "My tickets" lists open and closed tickets
+separately. If reopening is allowed, the customer can reopen it by replying.
+
 ## Tools (/op/tools)
 
 The **Tools** menu (operators, not the billing role) runs network checks from

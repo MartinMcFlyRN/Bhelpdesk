@@ -9,7 +9,15 @@
                 <?= e(implode(', ', array_merge([$ticket['customer_name']], array_column($participants, 'name')))) ?></p>
         <?php endif; ?>
     </div>
-    <span class="badge status-<?= e($ticket['status']) ?>"><?= e(status_label($ticket['status'])) ?></span>
+    <div class="ticket-head-side">
+        <span class="badge status-<?= e($ticket['status']) ?>"><?= e(status_label($ticket['status'])) ?></span>
+        <?php if ($ticket['status'] !== 'closed'): ?>
+        <form method="post" action="/customer/ticket/<?= e($ticket['number']) ?>/close" class="inline">
+            <?= \Bhelpdesk\Csrf::field() ?>
+            <button class="btn btn-small" type="submit" data-confirm="<?= t(config('allow_reopen', true) ? 'ticket.close_confirm' : 'ticket.close_confirm_final') ?>"><?= t('ticket.close') ?></button>
+        </form>
+        <?php endif; ?>
+    </div>
 </div>
 
 <div class="thread">

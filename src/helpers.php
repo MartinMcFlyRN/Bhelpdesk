@@ -122,6 +122,8 @@ function system_message(string $body): string
     switch ($ev['event']) {
         case 'reopened':
             return __('log.reopened');
+        case 'closed_by_customer':
+            return __('log.closed_by_customer', ['name' => (string) ($ev['name'] ?? '?')]);
         case 'task_added':
             return __('log.task_added', ['who' => (string) ($ev['by'] ?? '?'), 'task' => (string) ($ev['task'] ?? ''), 'to' => (string) ($ev['to'] ?? ''), 'due' => (string) ($ev['due'] ?? '')]);
         case 'invoice_added':

@@ -653,3 +653,9 @@ table.kv td { padding: .35rem 0; border-bottom: 1px solid #f0f2f4; word-break: b
 }
 .tools-form select { width: auto; margin-top: 0; }
 .tools-dns-server input { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+/* Customer area: close ticket, open / closed lists */
+.ticket-head-side { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; justify-content: flex-end; }
+.ticket-head-side form.inline { margin: 0; }
+.ticket-list-title { font-size: 1.1rem; margin: 1.2rem 0 .6rem; display: flex; align-items: center; gap: .5rem; }
+.ticket-card.is-closed { opacity: .75; }
