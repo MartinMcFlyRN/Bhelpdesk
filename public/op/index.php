@@ -375,7 +375,7 @@ $r->get('/tickets/new', static function () use ($newTicketPage, $allowedDepartme
     $newTicketPage($op, [
         'email' => $c['email'] ?? '', 'name' => $c['name'] ?? '', 'cc' => [],
         'department' => count($deps) === 1 ? (int) $deps[0]['id'] : 0,
-        'subject' => '', 'priority' => 'normal', 'request' => '', 'reply' => '', 'status' => 'answered', 'assign_me' => 1,
+        'subject' => '', 'priority' => 'normal', 'request' => '', 'reply' => '', 'status' => 'answered', 'assign_me' => 1, 'no_notify' => 0,
     ], []);
 });
 
@@ -404,6 +404,8 @@ $r->post('/tickets/new', static function () use ($newTicketPage, $allowedDepartm
         'reply'      => $replyFormat === 'html' ? $reply : Html::fromText($reply),
         'status'     => in_array($_POST['status'] ?? '', Tickets::STATUSES, true) ? $_POST['status'] : 'answered',
         'assign_me'  => !empty($_POST['assign_me']) ? 1 : 0,
+        // "do not notify the recipients": no email to the customers (operators still get their alerts)
+        'no_notify'  => !empty($_POST['no_notify']) ? 1 : 0,
     ];
     $hasReply = $replyFormat === 'html' ? !Html::isEmpty($reply) : $reply !== '';
 
@@ -460,17 +462,23 @@ $r->post('/tickets/new', static function () use ($newTicketPage, $allowedDepartm
         Tickets::update(Tickets::find($tid), $op, ['assigned_to' => (int) $op['id']]);
     }
     // email to the customers: the reply when there is one, otherwise the confirmation
+    $mailErrors = [];
     if ($hasReply || $repFiles['files']) {
         $mid = Tickets::operatorReply(Tickets::find($tid), $op, $hasReply ? $reply : '', false, $v['status'], $ip, $replyFormat, $repFiles['files']);
-        $mailErrors = Notifier::operatorReply($tid, $mid);
-    } else {
+        if (!$v['no_notify']) {
+            $mailErrors = Notifier::operatorReply($tid, $mid);
+        }
+    } elseif (!$v['no_notify']) {
         $mailErrors = Notifier::ticketOpened($tid, array_merge([(int) $ticket['customer_id']], array_map('intval', array_column(Tickets::participants($tid), 'id'))));
+    }
+    if ($v['no_notify']) {
+        Tickets::addMessage($tid, 'operator', (int) $op['id'], __('nt.no_notify_note'), true, $ip);
     }
     foreach ($mailErrors as $err) {
         flash('error', 'mail.not_sent', ['error' => $err]);
     }
     // direct link for the main customer, to send by hand until email notifications exist
-    flash('link', 'nt.created', ['number' => $t['number'], 'url' => $t['link'], 'days' => AccessLinks::days()]);
+    flash('link', $v['no_notify'] ? 'nt.created_silent' : 'nt.created', ['number' => $t['number'], 'url' => $t['link'], 'days' => AccessLinks::days()]);
     redirect('/op/ticket/' . $tid);
 });
 

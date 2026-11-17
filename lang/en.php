@@ -1145,4 +1145,8 @@ return [
     'alert.skip_self' => 'the operator assigned the ticket to themselves',
     'alert.skip_pref' => 'the operator turned off the "ticket assigned to me" alert in the profile',
     'alert.skip_noemail' => 'the operator has no valid email address',
+    'nt.no_notify' => 'Do not notify the recipients',
+    'nt.no_notify_hint' => 'No email to the customers (neither confirmation nor reply); operators still get their alerts.',
+    'nt.no_notify_note' => 'Ticket created without emailing the customers.',
+    'nt.created_silent' => 'Ticket #:number created without emailing the customers. Direct link for the customer (valid until :days days after the last reply), if you need it:',
 ];

@@ -103,6 +103,8 @@ $ccRows = $values['cc'] ?: [['email' => '', 'name' => '']];
                 </select>
             </label>
             <label class="check"><input type="checkbox" name="assign_me" value="1" <?= $values['assign_me'] ? 'checked' : '' ?>> <?= t('nt.assign_me') ?></label>
+            <label class="check"><input type="checkbox" name="no_notify" value="1" <?= !empty($values['no_notify']) ? 'checked' : '' ?>> <?= t('nt.no_notify') ?></label>
+            <p class="muted small nt-no-notify-hint"><?= t('nt.no_notify_hint') ?></p>
             <button class="btn btn-primary btn-block" type="submit"><?= t('nt.create') ?></button>
             <p class="muted hint"><?= t('nt.link_hint') ?></p>
         </aside>

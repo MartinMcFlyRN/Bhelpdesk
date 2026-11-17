@@ -1140,4 +1140,8 @@ return [
     'alert.skip_self' => 'l\'operatore si è assegnato il ticket da solo',
     'alert.skip_pref' => 'l\'operatore ha disattivato nel profilo l\'avviso "ticket assegnato a me"',
     'alert.skip_noemail' => 'l\'operatore non ha un indirizzo email valido',
+    'nt.no_notify' => 'Non notificare i destinatari',
+    'nt.no_notify_hint' => 'Nessuna email ai clienti (né conferma né risposta); gli operatori ricevono comunque i loro avvisi.',
+    'nt.no_notify_note' => 'Ticket creato senza inviare email ai clienti.',
+    'nt.created_silent' => 'Ticket #:number creato senza inviare email ai clienti. Link diretto per il cliente (valido fino a :days giorni dall\'ultima risposta), se ti serve:',
 ];

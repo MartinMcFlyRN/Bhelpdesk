@@ -121,7 +121,9 @@ final class Alerts
                     default                                            => null,
                 };
                 if ($why !== null) {
-                    self::logSkipped((int) $ticket['id'], (int) $d['operator'], $why);
+                    if ($why !== 'alert.skip_self') { // assigning oneself is normal, not worth a log row
+                        self::logSkipped((int) $ticket['id'], (int) $d['operator'], $why);
+                    }
                     return;
                 }
                 $to = [['id' => (int) $o['id'], 'name' => $o['name'], 'email' => $o['email']]];

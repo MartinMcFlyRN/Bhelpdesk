@@ -224,12 +224,17 @@ pasted in a reply) are embedded in the email as inline parts (`cid:`), up to
 The department signature is added to replies and, with `{signature}`, to the
 "ticket opened" email.
 
+## New ticket without emailing the customers
+
+In "New ticket" (operators) the option **Do not notify the recipients** creates
+the ticket (and the reply, if written) without any email to the customers;
+operators still get their alerts. An internal note in the ticket records it.
+
 ## Assignment alerts: troubleshooting
 
 When the "assigned to you" email is not sent, the email log
 (/op/config/email/log) has a row "alert not sent" with the reason (alerts
-disabled in General, operator disabled, ticket assigned to oneself, alert
-turned off in the operator's profile, no email address); a failed delivery
+disabled in General, operator disabled, alert turned off in the operator's profile, no email address); a failed delivery
 is a row "error" with the SMTP error. To try from the command line:
 
 ```bash
