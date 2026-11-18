@@ -79,7 +79,7 @@ $openTotal = $counts['open'] + $counts['answered'] + $counts['on_hold'];
                 aria-label="#<?= e($row['number']) ?>"></td>
             <td><a href="/op/ticket/<?= (int) $row['id'] ?>">#<?= e($row['number']) ?></a></td>
             <td><a href="/op/ticket/<?= (int) $row['id'] ?>"><?= e($row['subject']) ?></a></td>
-            <td><a href="/op/customers/<?= (int) $row['customer_id'] ?>"><?= e($row['customer_name']) ?></a><?= !empty($row['customer_company']) ? ' <small class="muted">· ' . e($row['customer_company']) . '</small>' : '' ?><br><small class="muted"><?= e($row['customer_email']) ?><?= !empty($row['phone']) ? ' · ' . e($row['phone']) : '' ?></small></td>
+            <td><a class="icon-link" href="/op/customers/<?= (int) $row['customer_id'] ?>" title="<?= t('dash.customer_card') ?>" aria-label="<?= t('dash.customer_card') ?>"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="5" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2.5 14c.6-2.8 2.8-4.3 5.5-4.3s4.9 1.5 5.5 4.3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></a> <?= e($row['customer_name']) ?><?= !empty($row['customer_company']) ? ' <small class="muted">· ' . e($row['customer_company']) . '</small>' : '' ?><br><small class="muted"><?= e($row['customer_email']) ?><?= !empty($row['phone']) ? ' · ' . e($row['phone']) : '' ?></small></td>
             <td><?= e($row['department_name'] ?? '—') ?></td>
             <td><span class="badge prio-<?= e($row['priority']) ?>"><?= e(priority_label($row['priority'])) ?></span></td>
             <td><span class="badge status-<?= e($row['status']) ?>"><?= e(status_label($row['status'])) ?></span></td>

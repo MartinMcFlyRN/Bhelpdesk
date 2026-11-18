@@ -1219,4 +1219,5 @@ return [
     'mytickets.search' => 'Search',
     'mytickets.search_clear' => 'Clear search',
     'mytickets.search_found' => ':n tickets found for “:q”.',
+    'dash.customer_card' => 'Customer card',
 ];

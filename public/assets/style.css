@@ -670,3 +670,6 @@ table.kv td { padding: .35rem 0; border-bottom: 1px solid #f0f2f4; word-break: b
 .ticket-search input[type=search] { flex: 1; padding: .5rem .7rem; border: 1px solid var(--border); border-radius: 6px; font: inherit; background: #fff; }
 .pager { flex-wrap: wrap; align-items: center; }
 .pager-gap { padding: .3rem .3rem; color: var(--muted); }
+/* small icon link (customer card in the ticket list) */
+.icon-link { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 5px; color: var(--muted); vertical-align: -5px; margin: 0 .1rem 0 -.2rem; }
+.icon-link:hover { background: #eef7f1; color: #237a3d; }
