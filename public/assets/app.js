@@ -459,3 +459,12 @@ document.querySelectorAll('[data-nav-toggle]').forEach(function (btn) {
         btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
 });
+
+// Department links: ✕ empties the row (saved as removed)
+document.querySelectorAll('[data-clear-row]').forEach(function (b) {
+    b.addEventListener('click', function () {
+        var row = b.closest('.dlinks-row');
+        row.querySelectorAll('input').forEach(function (i) { i.value = ''; });
+        row.classList.add('is-cleared');
+    });
+});

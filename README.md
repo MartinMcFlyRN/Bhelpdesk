@@ -138,6 +138,7 @@ mariadb bhelpdesk < sql/migrations/026_operator_all_departments.sql
 mariadb bhelpdesk < sql/migrations/027_oncall.sql
 mariadb bhelpdesk < sql/migrations/028_department_slack.sql
 mariadb bhelpdesk < sql/migrations/029_tickets_customer_updated.sql
+mariadb bhelpdesk < sql/migrations/030_department_links.sql
 ```
 
 ## Two-step verification (operators)
@@ -270,6 +271,15 @@ separately (20 per page each, paginated in SQL, compact pager), can be
 filtered by status and searched by ticket number or subject; it stays fast
 with thousands of tickets per customer (index from migration
 `029_tickets_customer_updated.sql`). If reopening is allowed, the customer can reopen it by replying.
+
+## Department links
+
+In the configuration of a department (/op/config/departments/{id}) the box
+**Useful links** holds name + URL pairs (http/https only, up to 50). When the
+departments of an operator have at least one link, the top menu shows
+**Links** after Tools, with the links grouped by department; they open in a
+new tab. Operators who see every department see all the links; the billing
+role sees none. Table `department_links`, migration `030_department_links.sql`.
 
 ## Tools (/op/tools)
 

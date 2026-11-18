@@ -718,3 +718,15 @@ table.kv td { padding: .35rem 0; border-bottom: 1px solid #f0f2f4; word-break: b
     .page-head-actions { flex-wrap: wrap; }
     .oncall-today { width: auto; max-width: 100%; }
 }
+
+/* Department links (config) and "Links" menu */
+.dlinks-rows { display: grid; gap: .45rem; margin-bottom: .4rem; }
+.dlinks-head, .dlinks-row { display: grid; grid-template-columns: minmax(140px, 1fr) minmax(200px, 2fr) 2rem; gap: .5rem; align-items: center; }
+.dlinks-head span { font-size: .8rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.dlinks-remove { color: #d64545; padding: .2rem; }
+.nav-links .menu { min-width: 220px; max-height: 70vh; overflow-y: auto; }
+.nav-menu .menu-group { padding: .5rem .7rem .2rem; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.nav-menu .menu .ext { font-size: .75rem; opacity: .6; }
+@media (max-width: 1180px) { .area-op .nav-menu .menu-group { color: #8a96a0; } }
+@media (max-width: 640px) { .dlinks-head { display: none; } .dlinks-row { grid-template-columns: 1fr 2rem; } .dlinks-row input:nth-child(2) { grid-column: 1; } }
+.dlinks-row.is-cleared input { background: #fdf0f0; }

@@ -6,6 +6,8 @@ $isBilling = ($op['role'] ?? '') === 'billing';   // billing operators: only the
 $todoTasks = !empty($op) && !$isBilling ? \Bhelpdesk\Tasks::activeFor($op) : [];
 // today's on-call operator: box next to the page title (moved there by app.js)
 $oncallToday = !empty($op) && !$isBilling ? \Bhelpdesk\Oncall::forDay(date('Y-m-d')) : null;
+// "Links" menu: links of the operator's departments
+$navLinks = !empty($op) ? \Bhelpdesk\DepartmentLinks::forOperator($op) : [];
 ?>
 <!doctype html>
 <html lang="<?= e(\Bhelpdesk\Lang::current()) ?>">
@@ -55,6 +57,19 @@ $oncallToday = !empty($op) && !$isBilling ? \Bhelpdesk\Oncall::forDay(date('Y-m-
                     <div class="menu" role="menu">
                         <?php foreach (\Bhelpdesk\NetTools::TOOLS as $tl): ?>
                         <a role="menuitem" href="/op/tools/<?= $tl ?>"<?= $navActive('/op/tools/' . $tl) ?>><?= t('tools.' . $tl) ?></a>
+                        <?php endforeach; ?>
+                    </div>
+                </details>
+                <?php endif; ?>
+                <?php if ($navLinks): $groups = count($navLinks) > 1; ?>
+                <details class="nav-menu nav-links">
+                    <summary><?= t('nav.links') ?> <span class="caret" aria-hidden="true">▾</span></summary>
+                    <div class="menu" role="menu">
+                        <?php foreach ($navLinks as $depName => $lks): ?>
+                            <?php if ($groups): ?><div class="menu-group"><?= e($depName) ?></div><?php endif; ?>
+                            <?php foreach ($lks as $lk): ?>
+                            <a role="menuitem" href="<?= e($lk['url']) ?>" target="_blank" rel="noopener noreferrer"><?= e($lk['name']) ?> <span class="ext" aria-hidden="true">↗</span></a>
+                            <?php endforeach; ?>
                         <?php endforeach; ?>
                     </div>
                 </details>

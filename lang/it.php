@@ -1216,4 +1216,19 @@ return [
     'mytickets.search_found' => ':n ticket trovati per “:q”.',
     'dash.customer_card' => 'Scheda cliente',
     'menu.toggle' => 'Menu',
+
+    // department links
+    'nav.links' => 'Links',
+    'dlinks.title' => 'Link utili',
+    'dlinks.help' => 'Link mostrati agli operatori di questo reparto nel menu "Links" in alto (si aprono in una nuova scheda). Senza link il menu non compare.',
+    'dlinks.name' => 'Nome',
+    'dlinks.url' => 'Indirizzo (URL)',
+    'dlinks.name_ph' => 'es. Pannello Plesk',
+    'dlinks.remove' => 'Togli questo link',
+    'dlinks.more_rows' => 'Ci sono due righe vuote per aggiungere link: dopo il salvataggio ne compaiono altre. Per togliere un link svuota la riga o usa ✕.',
+    'dlinks.save' => 'Salva i link',
+    'dlinks.saved' => 'Link salvati.',
+    'dlinks.err_name' => 'Riga :n: il nome è obbligatorio (massimo 100 caratteri).',
+    'dlinks.err_url' => '":name": l\'indirizzo deve essere un URL http:// o https:// valido.',
+    'dlinks.err_max' => 'Al massimo :max link per reparto.',
 ];

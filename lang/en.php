@@ -1221,4 +1221,19 @@ return [
     'mytickets.search_found' => ':n tickets found for “:q”.',
     'dash.customer_card' => 'Customer card',
     'menu.toggle' => 'Menu',
+
+    // department links
+    'nav.links' => 'Links',
+    'dlinks.title' => 'Useful links',
+    'dlinks.help' => 'Links shown to the operators of this department in the "Links" menu at the top (they open in a new tab). Without links the menu does not appear.',
+    'dlinks.name' => 'Name',
+    'dlinks.url' => 'Address (URL)',
+    'dlinks.name_ph' => 'e.g. Plesk panel',
+    'dlinks.remove' => 'Remove this link',
+    'dlinks.more_rows' => 'There are two empty rows to add links: more appear after saving. To remove a link empty its row or use ✕.',
+    'dlinks.save' => 'Save links',
+    'dlinks.saved' => 'Links saved.',
+    'dlinks.err_name' => 'Row :n: the name is required (100 characters at most).',
+    'dlinks.err_url' => '":name": the address must be a valid http:// or https:// URL.',
+    'dlinks.err_max' => 'At most :max links per department.',
 ];

@@ -36,6 +36,32 @@
             </form>
         </div>
 
+        <div class="card narrow-left" id="links">
+            <h2><?= t('dlinks.title') ?></h2>
+            <p class="muted hint"><?= t('dlinks.help') ?></p>
+            <?php if ($linkErrors): ?>
+                <div class="alert alert-error"><ul><?php foreach ($linkErrors as $err): ?><li><?= e($err) ?></li><?php endforeach; ?></ul></div>
+            <?php endif; ?>
+            <form method="post" action="/op/config/departments/<?= (int) $dep['id'] ?>/links" class="form">
+                <?= \Bhelpdesk\Csrf::field() ?>
+                <div class="dlinks-rows">
+                    <div class="dlinks-head"><span><?= t('dlinks.name') ?></span><span><?= t('dlinks.url') ?></span><span></span></div>
+                    <?php $rows = array_merge($links, array_fill(0, 2, ['name' => '', 'url' => ''])); ?>
+                    <?php foreach ($rows as $i => $l): ?>
+                    <div class="dlinks-row">
+                        <input type="text" name="links[<?= $i ?>][name]" value="<?= e((string) ($l['name'] ?? '')) ?>" maxlength="100" placeholder="<?= t('dlinks.name_ph') ?>" aria-label="<?= t('dlinks.name') ?>">
+                        <input type="text" name="links[<?= $i ?>][url]" value="<?= e((string) ($l['url'] ?? '')) ?>" maxlength="500" placeholder="https://…" aria-label="<?= t('dlinks.url') ?>" inputmode="url" autocomplete="off" spellcheck="false">
+                        <?php if (($l['name'] ?? '') !== '' || ($l['url'] ?? '') !== ''): ?>
+                            <button type="button" class="btn btn-small btn-link dlinks-remove" data-clear-row title="<?= t('dlinks.remove') ?>" aria-label="<?= t('dlinks.remove') ?>">✕</button>
+                        <?php else: ?><span></span><?php endif; ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <small class="muted hint"><?= t('dlinks.more_rows') ?></small>
+                <button class="btn btn-primary" type="submit"><?= t('dlinks.save') ?></button>
+            </form>
+        </div>
+
         <div class="card narrow-left danger-zone">
             <h2><?= t('dep.delete') ?></h2>
             <?php if ((int) $dep['ticket_count'] > 0): ?>

@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__, 2) . '/src/bootstrap.php';
 
-use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Blacklist, Canned, CustomerAuth, Customers, Db, Departments, EmailTemplates, Html, Invoices, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, NetTools, Notifier, Oncall, OperatorPassword, Operators, Quotes, Router, Session, Settings, Slack, Tasks, Throttle, Tickets, Totp, TwoFactor, View};
+use Bhelpdesk\{AccessLinks, Alerts, Attachments, Auth, Blacklist, Canned, CustomerAuth, Customers, Db, DepartmentLinks, Departments, EmailTemplates, Html, Invoices, IpGuard, Lang, MailFetcher, MailIdentities, Mailer, Media, NetTools, Notifier, Oncall, OperatorPassword, Operators, Quotes, Router, Session, Settings, Slack, Tasks, Throttle, Tickets, Totp, TwoFactor, View};
 
 // ---------- Second-level IP filter (the first one is in nginx/Apache) ----------
 $allowed = (array) config('op_allowed_ips', []);
@@ -1459,7 +1459,7 @@ $loadDep = static function (array $p): array {
 $r->get('/config/departments/{id}', static function (array $p) use ($cfgView, $loadDep): void {
     Auth::requireAdmin();
     $d = $loadDep($p);
-    $cfgView('department_edit', __('dep.edit'), ['dep' => $d, 'errors' => [], 'identities' => MailIdentities::options()]);
+    $cfgView('department_edit', __('dep.edit'), ['dep' => $d, 'errors' => [], 'identities' => MailIdentities::options(), 'links' => DepartmentLinks::forDepartment((int) $d['id']), 'linkErrors' => []]);
 });
 
 $r->post('/config/departments/{id}', static function (array $p) use ($cfgView, $loadDep): void {
@@ -1468,12 +1468,26 @@ $r->post('/config/departments/{id}', static function (array $p) use ($cfgView, $
     $res = Departments::validate($_POST, (int) $d['id']);
     if ($res['errors']) {
         http_response_code(422);
-        $cfgView('department_edit', __('dep.edit'), ['dep' => array_merge($d, $res['values']), 'errors' => $res['errors'], 'identities' => MailIdentities::options()]);
+        $cfgView('department_edit', __('dep.edit'), ['dep' => array_merge($d, $res['values']), 'errors' => $res['errors'], 'identities' => MailIdentities::options(), 'links' => DepartmentLinks::forDepartment((int) $d['id']), 'linkErrors' => []]);
         return;
     }
     Departments::update((int) $d['id'], $res['values']);
     flash('success', 'dep.saved');
     redirect('/op/config/departments');
+});
+
+$r->post('/config/departments/{id}/links', static function (array $p) use ($cfgView, $loadDep): void {
+    Auth::requireAdmin();
+    $d = $loadDep($p);
+    $rows = array_values(array_filter((array) ($_POST['links'] ?? []), 'is_array'));
+    $errors = DepartmentLinks::save((int) $d['id'], $rows);
+    if ($errors) {
+        http_response_code(422);
+        $cfgView('department_edit', __('dep.edit'), ['dep' => $d, 'errors' => [], 'identities' => MailIdentities::options(), 'links' => $rows, 'linkErrors' => $errors]);
+        return;
+    }
+    flash('success', 'dlinks.saved');
+    redirect('/op/config/departments/' . $d['id'] . '#links');
 });
 
 $r->post('/config/departments/{id}/delete', static function (array $p) use ($loadDep): void {
