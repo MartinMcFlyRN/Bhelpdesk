@@ -1212,4 +1212,11 @@ return [
     'mytickets.filter' => 'Filter by status',
     'mytickets.all' => 'All',
     'mytickets.no_closed' => 'No closed tickets.',
+    'mytickets.pages' => 'Pages',
+    'mytickets.prev' => 'Previous page',
+    'mytickets.next' => 'Next page',
+    'mytickets.search_ph' => 'Search by number or subject',
+    'mytickets.search' => 'Search',
+    'mytickets.search_clear' => 'Clear search',
+    'mytickets.search_found' => ':n tickets found for “:q”.',
 ];

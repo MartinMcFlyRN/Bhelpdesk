@@ -2,7 +2,7 @@
 use Bhelpdesk\Tickets;
 // link keeping the other parameters (status filter, page of the other list)
 $url = static function (array $over): string {
-    $q = array_filter(array_merge(['status' => $_GET['status'] ?? '', 'po' => $_GET['po'] ?? '', 'pc' => $_GET['pc'] ?? ''], $over), static fn ($v) => $v !== '' && $v !== 1 && $v !== '1');
+    $q = array_filter(array_merge(['q' => $_GET['q'] ?? '', 'status' => $_GET['status'] ?? '', 'po' => $_GET['po'] ?? '', 'pc' => $_GET['pc'] ?? ''], $over), static fn ($v) => $v !== '' && $v !== 1 && $v !== '1');
     return '/customer/tickets' . ($q ? '?' . http_build_query($q) : '');
 };
 $card = static function (array $tk): void { ?>
@@ -25,11 +25,15 @@ $card = static function (array $tk): void { ?>
 $pager = static function (array $sec, string $anchor) use ($url): void {
     if ($sec['pages'] < 2) {
         return;
-    } ?>
-    <nav class="pager">
-        <?php for ($i = 1; $i <= $sec['pages']; $i++): ?>
-            <a class="<?= $i === $sec['page'] ? 'active' : '' ?>" href="<?= e($url([$sec['param'] => $i]) . '#' . $anchor) ?>"><?= $i ?></a>
-        <?php endfor; ?>
+    }
+    $link = static fn (int $n): string => e($url([$sec['param'] => $n]) . '#' . $anchor); ?>
+    <nav class="pager" aria-label="<?= t('mytickets.pages') ?>">
+        <?php if ($sec['page'] > 1): ?><a href="<?= $link($sec['page'] - 1) ?>" aria-label="<?= t('mytickets.prev') ?>">‹</a><?php endif; ?>
+        <?php foreach (pager_pages($sec['page'], $sec['pages']) as $n): ?>
+            <?php if ($n === null): ?><span class="pager-gap">…</span>
+            <?php else: ?><a class="<?= $n === $sec['page'] ? 'active' : '' ?>" href="<?= $link($n) ?>"><?= $n ?></a><?php endif; ?>
+        <?php endforeach; ?>
+        <?php if ($sec['page'] < $sec['pages']): ?><a href="<?= $link($sec['page'] + 1) ?>" aria-label="<?= t('mytickets.next') ?>">›</a><?php endif; ?>
     </nav>
 <?php };
 ?>
@@ -44,14 +48,21 @@ $pager = static function (array $sec, string $anchor) use ($url): void {
         <p><a class="btn btn-primary" href="/customer/new"><?= t('home.new.title') ?></a></p>
     </div>
 <?php else: ?>
+<form method="get" action="/customer/tickets" class="ticket-search" role="search">
+    <?php if ($status !== ''): ?><input type="hidden" name="status" value="<?= e($status) ?>"><?php endif; ?>
+    <input type="search" name="q" value="<?= e($q) ?>" placeholder="<?= t('mytickets.search_ph') ?>" maxlength="100" aria-label="<?= t('mytickets.search_ph') ?>">
+    <button class="btn" type="submit"><?= t('mytickets.search') ?></button>
+    <?php if ($q !== ''): ?><a class="btn btn-link" href="<?= e($url(['q' => '', 'po' => '', 'pc' => ''])) ?>"><?= t('mytickets.search_clear') ?></a><?php endif; ?>
+</form>
+<?php if ($q !== ''): ?><p class="muted"><?= t('mytickets.search_found', ['n' => (int) $found, 'q' => $q]) ?></p><?php endif; ?>
 <nav class="status-filter" aria-label="<?= t('mytickets.filter') ?>">
-    <a href="<?= e($url(['status' => '', 'po' => '', 'pc' => ''])) ?>"<?= $status === '' ? ' class="active"' : '' ?>><?= t('mytickets.all') ?> <span class="count-pill"><?= (int) $count ?></span></a>
+    <a href="<?= e($url(['status' => '', 'po' => '', 'pc' => ''])) ?>"<?= $status === '' ? ' class="active"' : '' ?>><?= t('mytickets.all') ?> <span class="count-pill"><?= (int) $found ?></span></a>
     <?php foreach (Tickets::STATUSES as $st): ?>
         <a href="<?= e($url(['status' => $st, 'po' => '', 'pc' => ''])) ?>"<?= $status === $st ? ' class="active"' : '' ?>><?= e(status_label($st)) ?> <span class="count-pill"><?= (int) ($counts[$st] ?? 0) ?></span></a>
     <?php endforeach; ?>
 </nav>
 
-<?php if ($status !== 'closed'): ?>
+<?php if ($open !== null): ?>
 <h2 class="ticket-list-title" id="open"><?= t('mytickets.open') ?> <span class="count-pill"><?= (int) $open['total'] ?></span></h2>
 <?php if ($open['rows']): ?>
 <div class="ticket-cards"><?php foreach ($open['rows'] as $tk) { $card($tk); } ?></div>
@@ -61,7 +72,7 @@ $pager = static function (array $sec, string $anchor) use ($url): void {
 <?php endif; ?>
 <?php endif; ?>
 
-<?php if ($status === '' || $status === 'closed'): ?>
+<?php if ($closed !== null): ?>
 <h2 class="ticket-list-title" id="closed"><?= t('mytickets.closed') ?> <span class="count-pill"><?= (int) $closed['total'] ?></span></h2>
 <?php if ($closed['rows']): ?>
 <div class="ticket-cards"><?php foreach ($closed['rows'] as $tk) { $card($tk); } ?></div>

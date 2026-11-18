@@ -108,6 +108,77 @@ final class Customers
     }
 
     /**
+     * Tickets of a customer (main or added) for the customer area, paginated in SQL.
+     * $f: status ('' = any), closed (true: closed only, false: not closed),
+     *     q (number or part of the subject), page, per.
+     * @return array{rows: list<array>, total: int, page: int, pages: int}
+     */
+    public static function ticketPage(int $customerId, array $f): array
+    {
+        [$where, $params] = self::ticketWhere($customerId, (string) ($f['q'] ?? ''));
+        $status = (string) ($f['status'] ?? '');
+        if ($status !== '') {
+            $where .= ' AND t.status = ?';
+            $params[] = $status;
+        }
+        $where .= !empty($f['closed']) ? " AND t.status = 'closed'" : " AND t.status <> 'closed'";
+        $per = max(1, (int) ($f['per'] ?? 20));
+        $total = (int) Db::value('SELECT COUNT(*) FROM ' . self::TICKETS_OF . ' WHERE ' . $where, $params);
+        $pages = max(1, (int) ceil($total / $per));
+        $page = min($pages, max(1, (int) ($f['page'] ?? 1)));
+        $rows = $total === 0 ? [] : Db::all(
+            'SELECT t.id, t.number, t.subject, t.status, t.priority, t.created_at, t.updated_at, d.name AS department_name,
+                    IF(t.customer_id = ?, \'main\', \'cc\') AS role
+               FROM ' . self::TICKETS_OF . ' LEFT JOIN departments d ON d.id = t.department_id
+              WHERE ' . $where . '
+              ORDER BY t.updated_at DESC, t.id DESC
+              LIMIT ' . $per . ' OFFSET ' . (($page - 1) * $per),
+            array_merge([$customerId], $params)
+        );
+        return ['rows' => $rows, 'total' => $total, 'page' => $page, 'pages' => $pages];
+    }
+
+    /** Number of tickets of a customer per status (with the same search) */
+    public static function ticketCounts(int $customerId, string $q = ''): array
+    {
+        [$where, $params] = self::ticketWhere($customerId, $q);
+        $out = [];
+        foreach (Db::all('SELECT t.status, COUNT(*) AS n FROM ' . self::TICKETS_OF . ' WHERE ' . $where . ' GROUP BY t.status', $params) as $r) {
+            $out[$r['status']] = (int) $r['n'];
+        }
+        return $out;
+    }
+
+    /**
+     * The customer's tickets as a derived table joined by primary key: two
+     * indexed lookups (main customer, added customer) instead of a scan of
+     * all the tickets. Two placeholders: the customer id twice.
+     */
+    private const TICKETS_OF = '(SELECT id FROM tickets WHERE customer_id = ?
+                                 UNION SELECT ticket_id FROM ticket_customers WHERE customer_id = ?) mine
+                                JOIN tickets t ON t.id = mine.id';
+
+    /** Conditions on the customer's tickets: not merged, optionally searched */
+    private static function ticketWhere(int $customerId, string $q): array
+    {
+        $where = 't.merged_into IS NULL';
+        $params = [$customerId, $customerId]; // for the two placeholders of TICKETS_OF
+        $q = trim($q);
+        if ($q !== '') {
+            $num = ltrim($q, '#');
+            $like = '%' . addcslashes($q, '%_\\') . '%';
+            if ($num !== '' && ctype_digit($num)) {
+                $where .= ' AND (t.number LIKE ? OR t.subject LIKE ?)';
+                array_push($params, addcslashes($num, '%_\\') . '%', $like);
+            } else {
+                $where .= ' AND t.subject LIKE ?';
+                $params[] = $like;
+            }
+        }
+        return [$where, $params];
+    }
+
+    /**
      * @return array{values: array, errors: list<string>}
      */
     public static function validate(array $in, ?int $id = null): array

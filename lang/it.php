@@ -1207,4 +1207,11 @@ return [
     'mytickets.filter' => 'Filtra per stato',
     'mytickets.all' => 'Tutti',
     'mytickets.no_closed' => 'Nessun ticket chiuso.',
+    'mytickets.pages' => 'Pagine',
+    'mytickets.prev' => 'Pagina precedente',
+    'mytickets.next' => 'Pagina successiva',
+    'mytickets.search_ph' => 'Cerca per numero o oggetto',
+    'mytickets.search' => 'Cerca',
+    'mytickets.search_clear' => 'Annulla ricerca',
+    'mytickets.search_found' => ':n ticket trovati per “:q”.',
 ];

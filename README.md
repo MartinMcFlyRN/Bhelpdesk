@@ -137,6 +137,7 @@ mariadb bhelpdesk < sql/migrations/025_email_blacklist.sql
 mariadb bhelpdesk < sql/migrations/026_operator_all_departments.sql
 mariadb bhelpdesk < sql/migrations/027_oncall.sql
 mariadb bhelpdesk < sql/migrations/028_department_slack.sql
+mariadb bhelpdesk < sql/migrations/029_tickets_customer_updated.sql
 ```
 
 ## Two-step verification (operators)
@@ -265,7 +266,10 @@ Nobody is alerted for what they did themselves. Alerts contain the ticket data, 
 In the customer area a ticket has a **Close ticket** button next to Send
 (with a confirmation). The operators get no alert; the ticket history shows "Ticket
 closed by the customer". "My tickets" lists open and closed tickets
-separately (20 per page each) and can be filtered by status. If reopening is allowed, the customer can reopen it by replying.
+separately (20 per page each, paginated in SQL, compact pager), can be
+filtered by status and searched by ticket number or subject; it stays fast
+with thousands of tickets per customer (index from migration
+`029_tickets_customer_updated.sql`). If reopening is allowed, the customer can reopen it by replying.
 
 ## Tools (/op/tools)
 

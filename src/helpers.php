@@ -165,3 +165,24 @@ function system_message(string $body): string
             return $body;
     }
 }
+
+/**
+ * Compact page list for a pager: first, last, current and its neighbours,
+ * null where pages are skipped. 1 … 6 7 [8] 9 10 … 140
+ * @return list<int|null>
+ */
+function pager_pages(int $page, int $pages, int $around = 2): array
+{
+    $out = [];
+    $last = 0;
+    for ($i = 1; $i <= $pages; $i++) {
+        if ($i === 1 || $i === $pages || abs($i - $page) <= $around) {
+            if ($last && $i - $last > 1) {
+                $out[] = $i - $last === 2 ? $last + 1 : null; // a single hidden page is shown instead of "…"
+            }
+            $out[] = $i;
+            $last = $i;
+        }
+    }
+    return $out;
+}

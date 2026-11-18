@@ -83,6 +83,7 @@ CREATE TABLE IF NOT EXISTS tickets (
     KEY ix_tickets_status_updated (status, updated_at),
     KEY ix_tickets_assigned (assigned_to),
     KEY ix_tickets_customer (customer_id),
+    KEY ix_tickets_customer_updated (customer_id, updated_at),
     CONSTRAINT fk_tickets_customer   FOREIGN KEY (customer_id)   REFERENCES customers(id),
     CONSTRAINT fk_tickets_department FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL,
     CONSTRAINT fk_tickets_operator   FOREIGN KEY (assigned_to)   REFERENCES operators(id)   ON DELETE SET NULL,
