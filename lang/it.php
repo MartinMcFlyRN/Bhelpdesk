@@ -1215,4 +1215,5 @@ return [
     'mytickets.search_clear' => 'Annulla ricerca',
     'mytickets.search_found' => ':n ticket trovati per “:q”.',
     'dash.customer_card' => 'Scheda cliente',
+    'menu.toggle' => 'Menu',
 ];

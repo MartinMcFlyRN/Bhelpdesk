@@ -450,3 +450,12 @@ document.querySelectorAll('form[data-tools-form]').forEach(function (f) {
         b.textContent = b.getAttribute('data-busy-label');
     });
 });
+
+// Top menu on phones: the ☰ button opens and closes the menu
+document.querySelectorAll('[data-nav-toggle]').forEach(function (btn) {
+    var bar = btn.closest('.topbar');
+    btn.addEventListener('click', function () {
+        var open = bar.classList.toggle('nav-open');
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+});

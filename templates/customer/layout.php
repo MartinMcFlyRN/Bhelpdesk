@@ -15,10 +15,12 @@
     <div class="wrap">
         <a class="brand" href="/customer/"><?= e(config('app_name', 'Bhelpdesk')) ?></a>
         <nav>
-            <a href="/customer/new"><?= t('nav.open_ticket') ?></a>
-            <?php if ($me): ?>
-                <a href="/customer/tickets"><?= t('nav.my_tickets_customer') ?></a>
-            <?php endif; ?>
+            <span class="cust-links">
+                <a href="/customer/new"><?= t('nav.open_ticket') ?></a>
+                <?php if ($me): ?>
+                    <a href="/customer/tickets"><?= t('nav.my_tickets_customer') ?></a>
+                <?php endif; ?>
+            </span>
             <?php require BHD_ROOT . '/templates/lang_switch.php'; ?>
             <?php if ($me): ?>
             <details class="user-menu">
@@ -43,6 +45,7 @@
             <?php else: ?>
                 <a class="btn btn-small btn-login" href="/customer/login"><?= t('nav.login') ?></a>
             <?php endif; ?>
+            <button type="button" class="nav-toggle" data-nav-toggle aria-expanded="false" aria-label="<?= t('menu.toggle') ?>"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
         </nav>
     </div>
 </header>

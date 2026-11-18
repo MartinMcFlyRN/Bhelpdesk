@@ -673,3 +673,48 @@ table.kv td { padding: .35rem 0; border-bottom: 1px solid #f0f2f4; word-break: b
 /* small icon link (customer card in the ticket list) */
 .icon-link { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 5px; color: var(--muted); vertical-align: -5px; margin: 0 .1rem 0 -.2rem; }
 .icon-link:hover { background: #eef7f1; color: #237a3d; }
+
+/* ===== Responsive top menu (phones and small tablets) ===== */
+.nav-toggle { display: none; background: none; border: 0; color: #fff; padding: .35rem; border-radius: 6px; cursor: pointer; line-height: 0; }
+.nav-toggle:hover, .topbar.nav-open .nav-toggle { background: rgba(255,255,255,.12); }
+.cust-links { display: contents; }
+
+/* operators: the menu has many items, it collapses below 1180px */
+@media (max-width: 1180px) {
+    .area-op .topbar .wrap { flex-wrap: wrap; height: auto; min-height: 56px; gap: 0 .75rem; padding-top: .35rem; padding-bottom: .35rem; }
+    .area-op .topbar-left { display: contents; }
+    .area-op .topbar .brand { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .area-op .topbar-right { gap: .6rem; }
+    .area-op .nav-toggle { display: inline-flex; }
+    .area-op .main-nav { order: 3; flex: 0 0 100%; display: none; flex-direction: column; align-items: stretch; gap: .15rem; padding: .5rem 0 .4rem; border-top: 1px solid rgba(255,255,255,.1); margin-top: .35rem; }
+    .area-op .topbar.nav-open .main-nav { display: flex; }
+    .area-op .main-nav a, .area-op .nav-menu summary { padding: .65rem .75rem; font-size: 1rem; }
+    .area-op .main-nav a.active, .area-op .nav-menu.active summary { box-shadow: inset 3px 0 0 #2e9d4f; }
+    /* dropdowns open inside the list instead of floating */
+    .area-op .nav-menu .menu { position: static; box-shadow: none; border: 0; background: rgba(255,255,255,.05); margin: .15rem 0 .3rem .75rem; padding: .2rem; min-width: 0; }
+    .area-op .nav-menu .menu a { color: #c9d3db; }
+    .area-op .nav-menu .menu a:hover, .area-op .nav-menu .menu a.active { background: rgba(255,255,255,.08); color: #fff; }
+    .area-op .nav-menu summary { display: flex; justify-content: space-between; align-items: center; }
+}
+@media (max-width: 600px) {
+    .topbar .brand small { display: none; }
+    .lang-switch { font-size: .85rem; }
+}
+
+/* customers: two links, they collapse on phones */
+@media (max-width: 640px) {
+    .area-customer .topbar .wrap { flex-wrap: wrap; height: auto; min-height: 56px; gap: 0 .6rem; padding-top: .35rem; padding-bottom: .35rem; }
+    .area-customer .topbar nav { display: contents; }
+    .area-customer .topbar .brand { flex: 1; min-width: 0; }
+    .area-customer .nav-toggle { display: inline-flex; order: 10; }
+    .area-customer .cust-links { display: none; }
+    .area-customer .topbar.nav-open .cust-links { display: flex; flex-direction: column; order: 20; flex: 0 0 100%; padding: .4rem 0; border-top: 1px solid rgba(255,255,255,.1); margin-top: .35rem; }
+    .area-customer .topbar.nav-open .cust-links a { padding: .65rem .75rem; font-size: 1rem; border-radius: 6px; }
+    .area-customer .topbar.nav-open .cust-links a:hover { background: rgba(255,255,255,.08); text-decoration: none; }
+}
+/* page title row on phones: actions and the on-call box wrap instead of overflowing */
+@media (max-width: 640px) {
+    .page-head { flex-wrap: wrap; gap: .6rem; }
+    .page-head-actions { flex-wrap: wrap; }
+    .oncall-today { width: auto; max-width: 100%; }
+}
